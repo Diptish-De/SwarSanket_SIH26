@@ -28,6 +28,7 @@ from faster_whisper import WhisperModel
 
 from model_loader import model, imputer, production_features
 from audio_analyzer import decode_and_inspect_audio
+from explainability import explain_single_prediction, SCIENTIFIC_FRAMING_DISCLAIMER
 
 # Load full spaCy English pipeline once
 nlp = spacy.load("en_core_web_sm")
@@ -239,6 +240,9 @@ def run_screening_pipeline(
 
         status = "Elevated screening signal" if predicted_class == 1 else "Lower screening signal"
 
+        # 9. Compute local Tree SHAP explanation for the production vector
+        shap_explanation = explain_single_prediction(df_imputed, top_k=5, apply_imputation=False)
+
         # Production features dictionary for reporting
         production_features_dict = {}
         for idx, col in enumerate(production_features):
@@ -246,6 +250,7 @@ def run_screening_pipeline(
                 "raw_value": None if np.isnan(raw_production_vector[col]) else round(float(raw_production_vector[col]), 6),
                 "imputed_value": round(float(imputed_array[0, idx]), 6),
                 "is_live_extracted": col in VALIDATED_LIVE_FEATURES,
+                "shap_contribution": shap_explanation["shap_contributions"].get(col, 0.0),
             }
 
         return {
@@ -276,6 +281,17 @@ def run_screening_pipeline(
                 "technical_confidence_percent": tech_confidence_percent,
                 "status": status,
                 "interpretation": "Screening result only — not a diagnosis.",
+            },
+            "explanation": {
+                "base_value": shap_explanation["base_value"],
+                "shap_margin_sum": shap_explanation["shap_margin_sum"],
+                "reconstructed_probability": shap_explanation["reconstructed_probability"],
+                "reconstruction_error": shap_explanation["reconstruction_error"],
+                "top_positive_contributions": shap_explanation["top_positive_contributions"],
+                "top_negative_contributions": shap_explanation["top_negative_contributions"],
+                "shap_contributions": shap_explanation["shap_contributions"],
+                "human_readable_explanation": shap_explanation["human_readable_explanation"],
+                "disclaimer": shap_explanation["disclaimer"],
             },
         }
     except Exception as e:

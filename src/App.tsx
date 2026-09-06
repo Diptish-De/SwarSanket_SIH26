@@ -791,9 +791,11 @@ export default function App() {
   const handleRunRealScreening = useCallback(async () => {
     const audioBlob = audioBlobRef.current || currentAudioBlob || getLastRecordedAudioBlob();
 
-    if (!audioBlob || audioBlob.size === 0) {
-      console.warn("[SwarSanket] No recorded audio Blob available for analysis.");
-      setAnalysisError("No voice recording was found to analyze. Please record your voice again.");
+    if (!audioBlob || audioBlob.size < 1000) {
+      console.warn("[SwarSanket] Recorded audio Blob is empty or too short:", audioBlob?.size);
+      setAnalysisError("Recording is too short or quiet. Please record for at least 3-5 seconds speaking clearly into the microphone.");
+      setIsAnalyzing(false);
+      setAnalysisStep("idle");
       return;
     }
 
@@ -820,6 +822,10 @@ export default function App() {
       console.log("[SwarSanket] Predicted class:", apiResult.screening.predicted_class);
       console.log("[SwarSanket] Screening probability:", apiResult.screening.probability);
       console.log("[SwarSanket] Technical confidence:", apiResult.screening.technical_confidence_percent + "%");
+      if (apiResult.explanation) {
+        console.log("[SwarSanket] Top positive SHAP:", apiResult.explanation.top_positive_contributions);
+        console.log("[SwarSanket] Top negative SHAP:", apiResult.explanation.top_negative_contributions);
+      }
 
       setScreeningApiResult(apiResult);
       setAnalysisStep("complete");
@@ -836,10 +842,31 @@ export default function App() {
       const speechRateWpm = Math.max(10, Math.round(wordRate * 60));
       const pauseRatio = Math.round(apiResult.audio?.silence_percentage || 20);
 
+      // Extract real SHAP factors if available from backend
+      const realShapContributions: Array<{ feature: string; impact: "positive" | "negative"; weight: number }> = [];
+      if (apiResult.explanation?.top_positive_contributions) {
+        for (const item of apiResult.explanation.top_positive_contributions.slice(0, 3)) {
+          realShapContributions.push({
+            feature: item.feature,
+            impact: "positive",
+            weight: Number(item.shap_value.toFixed(4)),
+          });
+        }
+      }
+      if (apiResult.explanation?.top_negative_contributions) {
+        for (const item of apiResult.explanation.top_negative_contributions.slice(0, 3)) {
+          realShapContributions.push({
+            feature: item.feature,
+            impact: "negative",
+            weight: Number(item.shap_value.toFixed(4)),
+          });
+        }
+      }
+
       const newSession: ScreeningSession = {
         id: `sc_${Date.now()}`,
-        patientName: userName || "Rama Devi",
-        patientAge: userAge || 72,
+        patientName: userName || "Participant",
+        patientAge: userAge || 65,
         language: lang,
         assistedMode,
         createdAt: new Date().toISOString(),
@@ -869,14 +896,14 @@ export default function App() {
           classicalModel: {
             name: "Production XGBoost (20-Feature Contract)",
             riskScore: apiResult.screening.probability,
-            aucScore: 0.91,
+            aucScore: 0.898,
           },
           quantumHybridModel: {
-            name: "NLP Feature Engine (Whisper + spaCy)",
+            name: "Tree SHAP Factor Attribution",
             riskScore: apiResult.screening.probability,
-            aucScore: 0.91,
+            aucScore: 0.898,
           },
-          shapContributions: [
+          shapContributions: realShapContributions.length > 0 ? realShapContributions : [
             {
               feature: "Word Rate (-/s)",
               impact: wordRate < 2.5 ? "positive" : "negative",
@@ -1532,7 +1559,9 @@ export default function App() {
                 <div className="flex-1">
                   <DynamicWaveformBars active={false} bars={16} />
                 </div>
-                <span className="text-xs font-bold text-slate-500">0:24</span>
+                <span className="text-xs font-bold text-slate-500">
+                  {String(Math.floor(recordingSecs / 60)).padStart(2, "0")}:{String(recordingSecs % 60).padStart(2, "0")}
+                </span>
               </div>
 
               <div className="w-full space-y-3 pt-4">
@@ -1822,13 +1851,66 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Real ASR Transcript */}
+              {screeningApiResult?.transcript && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <span>Voice Transcript</span>
+                    <span>{screeningApiResult.word_count} words ({screeningApiResult.audio?.duration_seconds.toFixed(1)}s)</span>
+                  </div>
+                  <p className="text-xs italic text-slate-700 leading-relaxed">
+                    "{screeningApiResult.transcript}"
+                  </p>
+                </div>
+              )}
+
+              {/* Real SHAP Factors Card */}
+              {screeningApiResult?.explanation && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Model Explainability (SHAP)
+                    </span>
+                    <span className="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                      Tree SHAP
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Model factors contributing most to this screening signal:
+                  </p>
+                  <div className="space-y-1.5 pt-1">
+                    {screeningApiResult.explanation.top_positive_contributions?.slice(0, 2).map((item) => (
+                      <div key={item.feature} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
+                        <div className="flex items-center gap-1.5 truncate mr-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                          <span className="text-slate-700 font-medium truncate">{item.feature}</span>
+                        </div>
+                        <span className="font-bold text-amber-700 flex-shrink-0">+{item.shap_value.toFixed(3)}</span>
+                      </div>
+                    ))}
+                    {screeningApiResult.explanation.top_negative_contributions?.slice(0, 2).map((item) => (
+                      <div key={item.feature} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
+                        <div className="flex items-center gap-1.5 truncate mr-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                          <span className="text-slate-700 font-medium truncate">{item.feature}</span>
+                        </div>
+                        <span className="font-bold text-emerald-700 flex-shrink-0">{item.shap_value.toFixed(3)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100">
+                    {screeningApiResult.explanation.disclaimer}
+                  </p>
+                </div>
+              )}
+
               <div className="p-3 rounded-2xl bg-slate-100 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
               <div className="w-full space-y-3 pt-2">
                 <Btn label={t(lang, "done")} onClick={() => navigate("home")} />
-                <Btn label={t(lang, "viewHistory")} onClick={() => navigate("history")} variant="ghost" />
+                <Btn label={t(lang, "viewDetails")} onClick={() => navigate("screeningDetails")} variant="ghost" />
               </div>
             </div>
             <HomeIndicator />
@@ -1871,6 +1953,59 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Real ASR Transcript */}
+              {screeningApiResult?.transcript && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <span>Voice Transcript</span>
+                    <span>{screeningApiResult.word_count} words ({screeningApiResult.audio?.duration_seconds.toFixed(1)}s)</span>
+                  </div>
+                  <p className="text-xs italic text-slate-700 leading-relaxed">
+                    "{screeningApiResult.transcript}"
+                  </p>
+                </div>
+              )}
+
+              {/* Real SHAP Factors Card */}
+              {screeningApiResult?.explanation && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Model Explainability (SHAP)
+                    </span>
+                    <span className="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                      Tree SHAP
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Model factors contributing most to this screening signal:
+                  </p>
+                  <div className="space-y-1.5 pt-1">
+                    {screeningApiResult.explanation.top_positive_contributions?.slice(0, 3).map((item) => (
+                      <div key={item.feature} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
+                        <div className="flex items-center gap-1.5 truncate mr-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                          <span className="text-slate-700 font-medium truncate">{item.feature}</span>
+                        </div>
+                        <span className="font-bold text-amber-700 flex-shrink-0">+{item.shap_value.toFixed(3)}</span>
+                      </div>
+                    ))}
+                    {screeningApiResult.explanation.top_negative_contributions?.slice(0, 3).map((item) => (
+                      <div key={item.feature} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
+                        <div className="flex items-center gap-1.5 truncate mr-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                          <span className="text-slate-700 font-medium truncate">{item.feature}</span>
+                        </div>
+                        <span className="font-bold text-emerald-700 flex-shrink-0">{item.shap_value.toFixed(3)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100">
+                    {screeningApiResult.explanation.disclaimer}
+                  </p>
+                </div>
+              )}
+
               <div className="p-3 rounded-2xl bg-slate-100 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
@@ -1884,6 +2019,7 @@ export default function App() {
             <HomeIndicator />
           </div>
         );
+
 
       case "screeningDetails": {
         const activeScreening = screeningsList[0];
@@ -1971,6 +2107,89 @@ export default function App() {
                   </div>
                 ))}
               </div>
+
+              {/* Real ASR Transcription */}
+              {screeningApiResult?.transcript && (
+                <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-2 shadow-xs">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <span>Voice Transcript (Whisper ASR)</span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {screeningApiResult.word_count} words · {screeningApiResult.detected_language?.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs italic text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    "{screeningApiResult.transcript}"
+                  </p>
+                </div>
+              )}
+
+              {/* Real Model Explainability (Tree SHAP) Section */}
+              {screeningApiResult?.explanation && (
+                <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Model Explainability (SHAP)
+                    </span>
+                    <span className="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                      Additive Tree Attribution
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Model factors contributing most to this screening signal:
+                  </p>
+
+                  <div className="space-y-2 pt-1">
+                    {screeningApiResult.explanation.top_positive_contributions?.length > 0 && (
+                      <>
+                        <div className="text-[11px] font-bold text-amber-800">
+                          Factors associated with higher screening signal:
+                        </div>
+                        {screeningApiResult.explanation.top_positive_contributions.map((item) => (
+                          <div key={item.feature} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-700 font-medium truncate mr-2">{item.feature}</span>
+                              <span className="font-bold text-amber-700 flex-shrink-0">+{item.shap_value.toFixed(4)}</span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className="h-full bg-amber-500 rounded-full"
+                                style={{ width: `${Math.min(100, Math.max(5, Math.abs(item.shap_value) * 90))}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {screeningApiResult.explanation.top_negative_contributions?.length > 0 && (
+                      <>
+                        <div className="text-[11px] font-bold text-emerald-800 pt-2">
+                          Factors associated with lower screening signal:
+                        </div>
+                        {screeningApiResult.explanation.top_negative_contributions.map((item) => (
+                          <div key={item.feature} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-700 font-medium truncate mr-2">{item.feature}</span>
+                              <span className="font-bold text-emerald-700 flex-shrink-0">{item.shap_value.toFixed(4)}</span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full"
+                                style={{ width: `${Math.min(100, Math.max(5, Math.abs(item.shap_value) * 90))}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-400 italic leading-relaxed">
+                    {screeningApiResult.explanation.disclaimer}
+                  </div>
+                </div>
+              )}
 
               <div className="p-3 rounded-2xl bg-slate-100 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.

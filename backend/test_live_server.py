@@ -64,7 +64,20 @@ print(f"  Predicted Class:       {pred_1} ({status_1})")
 print(f"  Probability:           {prob_1:.6f} ({prob_pct_1}%)")
 print(f"  Technical Confidence:  {conf_pct_1}%")
 print(f"  Interpretation:        \"{interp_1}\"")
-print("  [PASS] Live POST /api/analyze-audio Pass 1 verified.")
+
+# SHAP Explainability Assertions
+assert "explanation" in data_1, "Missing explanation in response"
+expl = data_1["explanation"]
+assert "top_positive_contributions" in expl, "Missing top_positive_contributions"
+assert "top_negative_contributions" in expl, "Missing top_negative_contributions"
+assert "disclaimer" in expl, "Missing disclaimer"
+print("\n  [SHAP Explainability Factors]:")
+for p in expl.get("top_positive_contributions", [])[:3]:
+    print(f"    (+) {p['feature']}: +{p['shap_value']:.4f}")
+for n in expl.get("top_negative_contributions", [])[:3]:
+    print(f"    (-) {n['feature']}: {n['shap_value']:.4f}")
+print(f"  Disclaimer: \"{expl['disclaimer']}\"")
+print("  [PASS] Live POST /api/analyze-audio Pass 1 & SHAP verified.")
 
 # 3. Live Screening POST Pass 2 (Determinism Verification)
 print("\n[3/3] Sending real HTTP POST to /api/analyze-audio (Pass 2 - Determinism Check)...")

@@ -10,3 +10,5 @@ joblib>=1.4.0
 faster-whisper>=1.0.0
 spacy>=3.8.0
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+shap>=0.45.0
+matplotlib>=3.8.0

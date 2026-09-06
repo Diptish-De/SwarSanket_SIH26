@@ -1,22 +1,33 @@
 {
-  "benchmark_timestamp": "2026-09-06T04:07:00Z",
+  "benchmark_timestamp": "2026-09-06T18:35:00Z",
   "evaluation_dataset": "SwarSanket Curated Multilingual Held-Out Test Set",
-  "test_samples_total": 144,
-  "test_samples_class_0_control": 72,
-  "test_samples_class_1_ad": 72,
-  "train_samples_total": 324,
-  "train_samples_class_0_control": 162,
-  "train_samples_class_1_ad": 162,
-  "production_feature_count": 20,
+  "dataset_metadata": {
+    "test_samples_total": 144,
+    "test_samples_class_0_control": 72,
+    "test_samples_class_1_target": 72,
+    "train_samples_total": 324,
+    "train_samples_class_0_control": 162,
+    "train_samples_class_1_target": 162,
+    "production_feature_count": 20
+  },
   "models": {
     "xgboost_frozen_production": {
       "model_name": "Frozen Production XGBoost Classifier",
-      "architecture": "Gradient Boosted Decision Trees (200 estimators, max_depth=3)",
-      "artifact_file": "swarsanket_xgboost_final.pkl",
-      "artifact_size_kb": 219.24,
-      "tree_count": 200,
-      "total_nodes": 2426,
-      "metrics": {
+      "model_status": "verified_from_artifact",
+      "architecture": "Gradient Boosted Decision Trees (XGBClassifier)",
+      "artifact_file": "backend/models/swarsanket_xgboost_final.pkl",
+      "artifact_size_bytes": 219239,
+      "parameters": {
+        "n_estimators": 200,
+        "max_depth": 3,
+        "learning_rate": 0.05,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "eval_metric": "logloss",
+        "tree_count": 200,
+        "total_nodes": 2426
+      },
+      "held_out_metrics": {
         "accuracy": 0.847222,
         "accuracy_percent": 84.72,
         "sensitivity_recall": 0.819444,
@@ -37,27 +48,56 @@
         "true_positives": 59,
         "total": 144
       },
-      "asr_subsplit_accuracy": {
+      "asr_subsplits": {
         "aliyun_asr_48": {
+          "samples": 48,
           "accuracy": 0.8958,
           "sensitivity": 0.9167,
           "specificity": 0.875,
-          "roc_auc": 0.9167
+          "roc_auc": 0.9167,
+          "confusion_matrix": {
+            "tn": 21,
+            "fp": 3,
+            "fn": 2,
+            "tp": 22
+          }
         },
         "tencent_asr_48": {
+          "samples": 48,
           "accuracy": 0.8542,
           "sensitivity": 0.8333,
           "specificity": 0.875,
-          "roc_auc": 0.8872
+          "roc_auc": 0.8872,
+          "confusion_matrix": {
+            "tn": 21,
+            "fp": 3,
+            "fn": 4,
+            "tp": 20
+          }
         },
         "xunfei_asr_48": {
+          "samples": 48,
           "accuracy": 0.7917,
           "sensitivity": 0.7083,
           "specificity": 0.875,
-          "roc_auc": 0.8976
+          "roc_auc": 0.8976,
+          "confusion_matrix": {
+            "tn": 21,
+            "fp": 3,
+            "fn": 7,
+            "tp": 17
+          }
         }
       },
+      "generalization": {
+        "train_accuracy": 1.0,
+        "test_accuracy": 0.847222,
+        "generalization_gap": 0.152778,
+        "train_roc_auc": 1.0,
+        "test_roc_auc": 0.898148
+      },
       "computational_benchmarks": {
+        "measurement_type": "measured_cpu_benchmark",
         "train_time_ms": 118.49,
         "batch_inference_144_ms": 2.216,
         "inference_per_sample_us": 15.4,
@@ -65,20 +105,23 @@
         "single_sample_latency_p50_ms": 1.879,
         "single_sample_latency_p95_ms": 2.6,
         "single_sample_latency_p99_ms": 3.939
-      },
-      "generalization": {
-        "train_accuracy": 1.0,
-        "test_accuracy": 0.8472,
-        "generalization_delta": 0.1528
       }
     },
-    "hybrid_qml_pennylane": {
-      "model_name": "Hybrid Quantum-Classical Neural Network (QNN)",
-      "architecture": "PennyLane Variational Quantum Circuit (VQC) + Classical Linear Layers",
-      "framework": "PennyLane + PyTorch",
-      "qubit_count": 4,
-      "quantum_layers": "AngleEmbedding + StronglyEntanglingLayers / BasicEntangler",
-      "metrics": {
+    "hybrid_qml_experimental": {
+      "model_name": "Hybrid Quantum-Classical Model (Reported Baseline)",
+      "model_status": "unverified_artifact_missing",
+      "architecture": "unverified (no serialized model file found on local system)",
+      "framework": "unverified",
+      "qubit_count": "unverified",
+      "quantum_layers": "unverified",
+      "classical_layers": "unverified",
+      "trainable_parameters": "unverified",
+      "input_feature_dimensions": "unverified",
+      "training_epochs": "unverified",
+      "optimizer": "unverified",
+      "learning_rate": "unverified",
+      "library_versions": "unverified",
+      "reported_metrics": {
         "accuracy": 0.770833,
         "accuracy_percent": 77.08,
         "sensitivity_recall": 0.694444,
@@ -92,24 +135,28 @@
         "roc_auc": 0.811,
         "roc_auc_percent": 81.1
       },
-      "confusion_matrix": {
+      "confusion_matrix_derived": {
         "true_negatives": 61,
         "false_positives": 11,
         "false_negatives": 22,
         "true_positives": 50,
         "total": 144
       },
-      "computational_benchmarks": {
-        "train_time_estimated_min": 20.0,
-        "batch_inference_144_estimated_ms": 2500.0,
-        "inference_per_sample_estimated_ms": 17.36,
-        "quantum_advantage_observed": false,
-        "quantum_advantage_note": "Current NISQ/simulated state vector does not outperform classical tree-ensembles on tabular speech vectors; serves as quantum feasibility prototype."
-      },
       "generalization": {
-        "train_accuracy": 0.825,
-        "test_accuracy": 0.7708,
-        "generalization_delta": 0.0542
+        "train_accuracy": "unverified",
+        "test_accuracy": 0.770833,
+        "generalization_gap": "unverified"
+      },
+      "computational_benchmarks": {
+        "measurement_type": "unmeasured",
+        "train_time_ms": "unverified",
+        "batch_inference_ms": "unverified",
+        "single_sample_latency_ms": "unverified",
+        "note": "Timing measurements were not experimentally captured from a local artifact; previous values were unverified estimates and have been removed."
+      },
+      "quantum_advantage_status": {
+        "quantum_advantage_observed": false,
+        "comparison_summary": "XGBoost outperforms the experimental QML model across accuracy (84.72% vs 77.08%), sensitivity (81.94% vs 69.44%), specificity (87.50% vs 84.72%), and ROC-AUC (89.81% vs 81.10%)."
       }
     }
   }

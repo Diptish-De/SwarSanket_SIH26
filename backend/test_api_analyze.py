@@ -129,6 +129,35 @@ assert upload_data.get("size_bytes") > 0, "Upload size_bytes is 0"
 print(f"  Upload saved to: {upload_data.get('saved_path')}")
 print("  [PASS] POST /api/upload-audio verified functional.")
 
+# ─── TEST F: SHAP Explainability in API Response ──────────────────────────────
+print("\n[Test F] Testing SHAP Explainability structure and non-causal framing...")
+assert "explanation" in data_1, "Response missing 'explanation' field"
+expl = data_1["explanation"]
+assert "base_value" in expl, "Explanation missing 'base_value'"
+assert "top_positive_contributions" in expl, "Explanation missing 'top_positive_contributions'"
+assert "top_negative_contributions" in expl, "Explanation missing 'top_negative_contributions'"
+assert "shap_contributions" in expl, "Explanation missing 'shap_contributions'"
+assert len(expl["shap_contributions"]) == 20, f"Expected 20 feature contributions, got {len(expl['shap_contributions'])}"
+assert "disclaimer" in expl, "Explanation missing 'disclaimer'"
+assert "human_readable_explanation" in expl, "Explanation missing 'human_readable_explanation'"
+
+# Verify safe framing
+human_text = expl["human_readable_explanation"].lower()
+assert "caused alzheimer" not in human_text
+assert "proves alzheimer" not in human_text
+assert "not establish clinical causality" in expl["disclaimer"].lower()
+
+# Verify additivity
+recon_prob = expl.get("reconstructed_probability")
+assert recon_prob is not None
+prob_err = abs(prob_1 - recon_prob)
+print(f"  Base Value (Margin):   {expl['base_value']:.6f}")
+print(f"  Reconstructed Prob:    {recon_prob:.6f}")
+print(f"  Reconstruction Delta:  {prob_err:.8f}")
+assert prob_err < 1e-5, f"Reconstruction error too large: {prob_err}"
+print("  [PASS] SHAP Explainability verified with exact additivity and safe framing.")
+
 print("\n" + "=" * 80)
-print("ALL STEP 96G-E FASTAPI INTEGRATION TESTS PASSED SUCCESSFULLY.")
+print("ALL FASTAPI & SHAP EXPLAINABILITY INTEGRATION TESTS PASSED SUCCESSFULLY.")
 print("=" * 80)
+

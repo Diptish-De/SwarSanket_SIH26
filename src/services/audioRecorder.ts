@@ -211,6 +211,27 @@ export interface BackendUploadResponse {
   saved_path: string;
 }
 
+export interface ShapFactorContribution {
+  feature: string;
+  shap_value: number;
+  feature_value: number;
+  abs_shap?: number;
+  direction: "positive_signal" | "negative_signal" | string;
+  description?: string;
+}
+
+export interface ExplainabilityData {
+  base_value: number;
+  shap_margin_sum: number;
+  reconstructed_probability: number;
+  reconstruction_error: number;
+  top_positive_contributions: ShapFactorContribution[];
+  top_negative_contributions: ShapFactorContribution[];
+  shap_contributions: Record<string, number>;
+  human_readable_explanation: string;
+  disclaimer: string;
+}
+
 export interface ScreeningApiResponse {
   success: boolean;
   filename: string;
@@ -239,6 +260,7 @@ export interface ScreeningApiResponse {
     raw_value: number | null;
     imputed_value: number;
     is_live_extracted: boolean;
+    shap_contribution?: number;
   }>;
   imputation: {
     live_feature_count: number;
@@ -254,6 +276,7 @@ export interface ScreeningApiResponse {
     status: string;
     interpretation: string;
   };
+  explanation?: ExplainabilityData;
 }
 
 export async function uploadAudioToBackend(

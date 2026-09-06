@@ -1,0 +1,283 @@
+{
+  "dataset_name": "Held-Out Test Set (N=144)",
+  "sample_count": 144,
+  "feature_count": 20,
+  "base_value": -0.049573,
+  "shap_version": "0.51.0",
+  "model_architecture": "Gradient Boosted Decision Trees (XGBClassifier)",
+  "disclaimer": "SHAP values explain the behavior of the trained machine-learning model. They do not establish clinical causality, diagnosis, or medical significance.",
+  "top_10_features": [
+    {
+      "rank": 1,
+      "feature": "CTP_Energy Mean(Pa^2\u00b7s)",
+      "mean_abs_shap": 0.709769,
+      "mean_shap": 0.099274,
+      "std_shap": 0.911357,
+      "min_shap": -2.387125,
+      "max_shap": 1.052848
+    },
+    {
+      "rank": 2,
+      "feature": "CTP_RST(-/s)",
+      "mean_abs_shap": 0.69276,
+      "mean_shap": 0.060687,
+      "std_shap": 0.752412,
+      "min_shap": -1.300512,
+      "max_shap": 1.280857
+    },
+    {
+      "rank": 3,
+      "feature": "CTP_Noun No Phrase Rate",
+      "mean_abs_shap": 0.623308,
+      "mean_shap": -0.115275,
+      "std_shap": 0.652363,
+      "min_shap": -0.931181,
+      "max_shap": 1.235831
+    },
+    {
+      "rank": 4,
+      "feature": "CTP_Word Rate(-/s)",
+      "mean_abs_shap": 0.570516,
+      "mean_shap": 0.12578,
+      "std_shap": 0.669054,
+      "min_shap": -0.940736,
+      "max_shap": 1.483809
+    },
+    {
+      "rank": 5,
+      "feature": "CTP_EST",
+      "mean_abs_shap": 0.454292,
+      "mean_shap": 0.143498,
+      "std_shap": 0.519042,
+      "min_shap": -1.465024,
+      "max_shap": 0.61662
+    },
+    {
+      "rank": 6,
+      "feature": "CTP_Pronouns_ratio",
+      "mean_abs_shap": 0.434238,
+      "mean_shap": 0.002018,
+      "std_shap": 0.50418,
+      "min_shap": -0.774757,
+      "max_shap": 1.194037
+    },
+    {
+      "rank": 7,
+      "feature": "CTP_num_unique_IU",
+      "mean_abs_shap": 0.342958,
+      "mean_shap": -0.118716,
+      "std_shap": 0.457785,
+      "min_shap": -1.116202,
+      "max_shap": 0.264807
+    },
+    {
+      "rank": 8,
+      "feature": "CTP_verb_ratio",
+      "mean_abs_shap": 0.334501,
+      "mean_shap": 0.060292,
+      "std_shap": 0.421586,
+      "min_shap": -1.012576,
+      "max_shap": 0.687969
+    },
+    {
+      "rank": 9,
+      "feature": "CTP_unique_IU_efficiency",
+      "mean_abs_shap": 0.328654,
+      "mean_shap": -0.055794,
+      "std_shap": 0.383549,
+      "min_shap": -0.735365,
+      "max_shap": 0.564407
+    },
+    {
+      "rank": 10,
+      "feature": "CTP_DPI(ms)",
+      "mean_abs_shap": 0.271488,
+      "mean_shap": -0.020574,
+      "std_shap": 0.31066,
+      "min_shap": -0.749453,
+      "max_shap": 0.359955
+    }
+  ],
+  "ranked_feature_importance": [
+    {
+      "rank": 1,
+      "feature": "CTP_Energy Mean(Pa^2\u00b7s)",
+      "mean_abs_shap": 0.709769,
+      "mean_shap": 0.099274,
+      "std_shap": 0.911357,
+      "min_shap": -2.387125,
+      "max_shap": 1.052848
+    },
+    {
+      "rank": 2,
+      "feature": "CTP_RST(-/s)",
+      "mean_abs_shap": 0.69276,
+      "mean_shap": 0.060687,
+      "std_shap": 0.752412,
+      "min_shap": -1.300512,
+      "max_shap": 1.280857
+    },
+    {
+      "rank": 3,
+      "feature": "CTP_Noun No Phrase Rate",
+      "mean_abs_shap": 0.623308,
+      "mean_shap": -0.115275,
+      "std_shap": 0.652363,
+      "min_shap": -0.931181,
+      "max_shap": 1.235831
+    },
+    {
+      "rank": 4,
+      "feature": "CTP_Word Rate(-/s)",
+      "mean_abs_shap": 0.570516,
+      "mean_shap": 0.12578,
+      "std_shap": 0.669054,
+      "min_shap": -0.940736,
+      "max_shap": 1.483809
+    },
+    {
+      "rank": 5,
+      "feature": "CTP_EST",
+      "mean_abs_shap": 0.454292,
+      "mean_shap": 0.143498,
+      "std_shap": 0.519042,
+      "min_shap": -1.465024,
+      "max_shap": 0.61662
+    },
+    {
+      "rank": 6,
+      "feature": "CTP_Pronouns_ratio",
+      "mean_abs_shap": 0.434238,
+      "mean_shap": 0.002018,
+      "std_shap": 0.50418,
+      "min_shap": -0.774757,
+      "max_shap": 1.194037
+    },
+    {
+      "rank": 7,
+      "feature": "CTP_num_unique_IU",
+      "mean_abs_shap": 0.342958,
+      "mean_shap": -0.118716,
+      "std_shap": 0.457785,
+      "min_shap": -1.116202,
+      "max_shap": 0.264807
+    },
+    {
+      "rank": 8,
+      "feature": "CTP_verb_ratio",
+      "mean_abs_shap": 0.334501,
+      "mean_shap": 0.060292,
+      "std_shap": 0.421586,
+      "min_shap": -1.012576,
+      "max_shap": 0.687969
+    },
+    {
+      "rank": 9,
+      "feature": "CTP_unique_IU_efficiency",
+      "mean_abs_shap": 0.328654,
+      "mean_shap": -0.055794,
+      "std_shap": 0.383549,
+      "min_shap": -0.735365,
+      "max_shap": 0.564407
+    },
+    {
+      "rank": 10,
+      "feature": "CTP_DPI(ms)",
+      "mean_abs_shap": 0.271488,
+      "mean_shap": -0.020574,
+      "std_shap": 0.31066,
+      "min_shap": -0.749453,
+      "max_shap": 0.359955
+    },
+    {
+      "rank": 11,
+      "feature": "CTP_Prep phrase type proportion",
+      "mean_abs_shap": 0.20048,
+      "mean_shap": -0.036077,
+      "std_shap": 0.219066,
+      "min_shap": -0.322256,
+      "max_shap": 0.484133
+    },
+    {
+      "rank": 12,
+      "feature": "CTP_Verb phrase type proportion",
+      "mean_abs_shap": 0.193077,
+      "mean_shap": -0.048392,
+      "std_shap": 0.216966,
+      "min_shap": -0.516157,
+      "max_shap": 0.263969
+    },
+    {
+      "rank": 13,
+      "feature": "CTP_noun to verb",
+      "mean_abs_shap": 0.184504,
+      "mean_shap": 0.008477,
+      "std_shap": 0.216383,
+      "min_shap": -0.265168,
+      "max_shap": 0.434255
+    },
+    {
+      "rank": 14,
+      "feature": "CTP_adv_ratio",
+      "mean_abs_shap": 0.1797,
+      "mean_shap": -0.026393,
+      "std_shap": 0.222681,
+      "min_shap": -0.302171,
+      "max_shap": 0.62456
+    },
+    {
+      "rank": 15,
+      "feature": "CTP_noun_ratio",
+      "mean_abs_shap": 0.167786,
+      "mean_shap": 0.001632,
+      "std_shap": 0.19895,
+      "min_shap": -0.354068,
+      "max_shap": 0.605317
+    },
+    {
+      "rank": 16,
+      "feature": "CTP_Lexical Content Density",
+      "mean_abs_shap": 0.15593,
+      "mean_shap": 0.042123,
+      "std_shap": 0.16419,
+      "min_shap": -0.352159,
+      "max_shap": 0.259463
+    },
+    {
+      "rank": 17,
+      "feature": "CTP_Adv No Phrase Rate",
+      "mean_abs_shap": 0.154889,
+      "mean_shap": -0.045265,
+      "std_shap": 0.21929,
+      "min_shap": -0.201068,
+      "max_shap": 1.117106
+    },
+    {
+      "rank": 18,
+      "feature": "CTP_ keyword_TTR",
+      "mean_abs_shap": 0.106878,
+      "mean_shap": -0.034807,
+      "std_shap": 0.137556,
+      "min_shap": -0.168437,
+      "max_shap": 0.638929
+    },
+    {
+      "rank": 19,
+      "feature": "CTP_Hesitation Ratio",
+      "mean_abs_shap": 0.093359,
+      "mean_shap": 0.05097,
+      "std_shap": 0.100502,
+      "min_shap": -0.180034,
+      "max_shap": 0.243802
+    },
+    {
+      "rank": 20,
+      "feature": "CTP_Disfluency ratio",
+      "mean_abs_shap": 0.05104,
+      "mean_shap": 0.01197,
+      "std_shap": 0.063197,
+      "min_shap": -0.170905,
+      "max_shap": 0.074868
+    }
+  ]
+}
