@@ -584,7 +584,7 @@ function NVLogo({ size = 40, className = "" }: { size?: number; className?: stri
     <img
       src="/logo.jpeg"
       alt="SwarSanket Logo"
-      className={`rounded-2xl shadow-sm object-contain flex-shrink-0 transition-transform hover:scale-105 ${className}`}
+      className={`rounded-none shadow-sm object-contain flex-shrink-0 transition-transform hover:scale-105 ${className}`}
       style={{ width: size, height: size }}
     />
   );
@@ -784,6 +784,7 @@ export default function App() {
   const [lang, setLang] = useState<LanguageCode>("en");
   const [userName, setUserName] = useState<string>("Rama Devi");
   const [userAge, setUserAge] = useState<number>(72);
+  const [ageInput, setAgeInput] = useState<string>("72");
   const [assistedMode, setAssistedMode] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [recordingContext, setRecordingContext] = useState<RecordingContext>("freeSpeech");
@@ -1390,8 +1391,12 @@ export default function App() {
                   </label>
                   <input
                     type="number"
-                    value={userAge}
-                    onChange={(e) => setUserAge(Number(e.target.value))}
+                    value={ageInput}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setAgeInput(value);
+                      setUserAge(value === "" ? 0 : Number(value));
+                    }}
                     placeholder={t(lang, "age")}
                     className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-[#d7eaef] focus:border-[#02738a] outline-hidden font-medium text-[#0c1e27] text-base"
                   />
@@ -1529,23 +1534,6 @@ export default function App() {
                 })}
               </div>
 
-              {/* APK Download Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#03222a] to-[#04333f] text-white flex items-center justify-between shadow-md border border-[#09414e]">
-                <div className="flex items-center gap-3">
-                  <img src="/logo.jpeg" alt="SwarSanket APK" className="w-10 h-10 rounded-xl object-contain border border-[#0f5968]" />
-                  <div className="space-y-0.5">
-                    <div className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider">{t(lang, "apkTitle")}</div>
-                    <div className="text-xs sm:text-sm font-bold">{t(lang, "installApk")}</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowApkModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-[#02738a] hover:bg-[#02849f] text-white font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  {t(lang, "getApk")}
-                </button>
-              </div>
             </div>
 
             <BottomNav active="home" navigate={navigate} lang={lang} />
@@ -3023,13 +3011,12 @@ export default function App() {
                   { icon: Users, label: "Caregiver Hub", value: "Manage", to: "caregiver" as Screen },
                   { icon: Stethoscope, label: "Health Worker Mode", value: "Access", to: "healthWorker" as Screen },
                   { icon: Activity, label: "Doctor Dashboard", value: "Open", to: "doctorDash" as Screen },
-                  { icon: Download, label: "Download Android APK", value: "Direct Link", action: () => setShowApkModal(true) },
                 ].map((s) => {
                   const Icon = s.icon;
                   return (
                     <button
                       key={s.label}
-                      onClick={() => (s.action ? s.action() : s.to ? navigate(s.to) : null)}
+                      onClick={() => navigate(s.to)}
                       className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
                     >
                       <div className="flex items-center gap-3">
@@ -3040,129 +3027,6 @@ export default function App() {
                     </button>
                   );
                 })}
-              </div>
-
-              {/* Backend Server & Android Connectivity Section */}
-              <div className="rounded-2xl bg-white border border-[#d7eaef] p-4 space-y-3 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center">
-                      <Server className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>
-                        Backend Server &amp; Connectivity
-                      </div>
-                      <div className="text-[11px] text-slate-400">
-                        {isCapacitorAndroid() ? "Android App Mode" : "Web Client Mode"}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleTestApi()}
-                    disabled={isTestingApi}
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors flex items-center gap-1 ${
-                      apiHealth?.ok
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-rose-50 text-rose-700 border border-rose-200"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${apiHealth?.ok ? "bg-emerald-500" : "bg-rose-500"}`} />
-                    <span>{isTestingApi ? "Testing…" : apiHealth?.ok ? `Connected (${apiHealth.latencyMs || 25}ms)` : "Offline"}</span>
-                  </button>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-[#f8fbfd] border border-slate-200 space-y-2 text-xs">
-                  <div className="flex items-center justify-between text-slate-500">
-                    <span>Active API Target:</span>
-                    <span className="font-mono font-bold text-slate-800 truncate max-w-[200px]">{currentApiUrl}</span>
-                  </div>
-                  {apiHealth?.pipeline && (
-                    <div className="text-[10px] text-slate-500 border-t border-slate-200/60 pt-1 flex items-center justify-between">
-                      <span>Pipeline:</span>
-                      <span className="font-medium text-slate-700">{apiHealth.pipeline}</span>
-                    </div>
-                  )}
-                  {apiHealth && !apiHealth.ok && (
-                    <div className="text-[10px] text-rose-600 border-t border-rose-100 pt-1">
-                      {apiHealth.message}
-                    </div>
-                  )}
-                </div>
-
-                {/* Toggle configuration panel */}
-                <div className="pt-1">
-                  <button
-                    onClick={() => setShowApiSettings(!showApiSettings)}
-                    className="text-xs font-semibold text-[#02738a] hover:text-[#015364] flex items-center gap-1"
-                  >
-                    <span>{showApiSettings ? "Hide Server Settings ▲" : "Configure Target Server URL ▼"}</span>
-                  </button>
-                </div>
-
-                {showApiSettings && (
-                  <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Custom Backend Server URL</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={customApiUrlInput}
-                          onChange={(e) => setCustomApiUrlInput(e.target.value)}
-                          placeholder="http://192.168.1.100:8001"
-                          className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 focus:border-[#02738a] outline-hidden"
-                        />
-                        <button
-                          onClick={() => handleApplyApiUrl(customApiUrlInput)}
-                          className="px-3 py-2 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white font-bold text-xs active:scale-95 transition-all shadow-xs"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Presets */}
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-500 block mb-1.5">Environment Presets:</span>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {API_PRESETS.map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => handleApplyApiUrl(p.url)}
-                            className={`p-2 rounded-xl text-left border transition-all ${
-                              currentApiUrl === p.url
-                                ? "bg-[#e4f4f7] border-[#02738a] text-[#015364]"
-                                : "bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700"
-                            }`}
-                          >
-                            <div className="font-bold text-[11px]">{p.name}</div>
-                            <div className="font-mono text-[9px] text-slate-500 truncate">{p.url}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-1 text-[11px]">
-                      <button
-                        onClick={handleResetApi}
-                        className="text-slate-400 hover:text-slate-600 underline"
-                      >
-                        Reset to Platform Default
-                      </button>
-                      <button
-                        onClick={() => handleTestApi(customApiUrlInput)}
-                        disabled={isTestingApi}
-                        className="text-[#02738a] font-bold hover:underline"
-                      >
-                        {isTestingApi ? "Probing…" : "Test This URL"}
-                      </button>
-                    </div>
-
-                    <p className="text-[10px] text-slate-400 italic leading-relaxed">
-                      Tip: On an Android phone or emulator, localhost (127.0.0.1) refers to the phone itself. Point to your computer's LAN IP (e.g. 10.54.93.168:8001) or a cloud HTTPS endpoint.
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Multilingual Scope Disclosure */}
