@@ -67,7 +67,7 @@ const C = {
 
 const F = {
   display: "'Outfit', system-ui, sans-serif",
-  body: "'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Bengali', system-ui, sans-serif",
+  body: "'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Gujarati', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Tamil', 'Noto Sans Telugu', system-ui, sans-serif",
 };
 
 // ─── Languages & Translations ─────────────────────────────────────────────────
@@ -395,8 +395,90 @@ const TX: Record<string, Record<string, string>> = {
   },
 };
 
+const INDIC_TX: Record<string, Record<string, string>> = {
+  hi: {
+    voiceCheckCard: "आवाज़ की जांच", voiceCheckDesc: "3–5 मिनट की छोटी जांच करें। सहज रूप से बोलें—यहां सही या गलत उत्तर नहीं हैं।",
+    welcomeSub: "आइए, आवाज़ की एक छोटी जांच करते हैं।", startVoiceCheck: "आवाज़ की जांच शुरू करें", letsBegin: "आइए शुरू करें", voiceIntroSub: "यह एक छोटी आवाज़ जांच है। इसमें लगभग 3–5 मिनट लगेंगे।",
+    step1: "सुनें", step2: "बोलें", step3: "पूरा करें", beginVoiceCheck: "आवाज़ की जांच शुरू करें", listenToQuestion: "प्रश्न सुनें", playAgain: "दोबारा सुनें", startSpeaking: "बोलना शुरू करें", tapToSpeak: "बोलने के लिए टैप करें", speakNaturally: "स्वाभाविक रूप से बोलें…", finishRecording: "रिकॉर्डिंग पूरी करें", recordingReady: "आपकी रिकॉर्डिंग तैयार है", listenBefore: "आगे बढ़ने से पहले सुनें", recordAgain: "दोबारा रिकॉर्ड करें", continue: "आगे बढ़ें", whatDoYouSee: "आपको क्या दिखाई दे रहा है?", pictureDescSub: "चित्र में जो दिखाई दे रहा है, उसके बारे में बताइए।", listenCarefully: "ध्यान से सुनें", memorySub: "हम कुछ शब्द पढ़ेंगे। उन्हें याद रखने की कोशिश करें।", iHeardWords: "मैंने शब्द सुन लिए हैं—आगे बढ़ें", oneMore: "एक और सवाल", conversationSub: "यहां कोई सही या गलत उत्तर नहीं है।", youreDone: "आपने पूरा कर लिया!", completionSub: "धन्यवाद। अब हम आपकी आवाज़ की जांच कर रहे हैं।",
+    home: "होम", history: "पिछली जांचें", help: "मदद", caregiver: "देखभालकर्ता", profile: "प्रोफ़ाइल",
+  },
+  bn: {
+    greeting: "নমস্কার", howFeeling: "আজ আপনি কেমন আছেন?", voiceCheckCard: "ভয়েস পরীক্ষা", voiceCheckDesc: "৩–৫ মিনিটের একটি ছোট পরীক্ষা করুন। স্বাভাবিকভাবে কথা বলুন—এখানে ঠিক বা ভুল উত্তর নেই।",
+    welcomeSub: "চলুন একটি ছোট ভয়েস পরীক্ষা করি।", welcomeTime: "এতে প্রায় ৩–৫ মিনিট সময় লাগবে।", startVoiceCheck: "ভয়েস পরীক্ষা শুরু করুন", someoneHelping: "কেউ আমাকে সাহায্য করছেন", letsBegin: "চলুন শুরু করি", voiceIntroSub: "এটি একটি ছোট ভয়েস পরীক্ষা। এতে প্রায় ৩–৫ মিনিট সময় লাগবে।",
+    step1: "শুনুন", step2: "বলুন", step3: "শেষ করুন", beginVoiceCheck: "ভয়েস পরীক্ষা শুরু করুন", listenToQuestion: "প্রশ্নটি শুনুন", playAgain: "আবার শুনুন", startSpeaking: "কথা বলা শুরু করুন", tapToSpeak: "কথা বলতে ট্যাপ করুন", speakNaturally: "স্বাভাবিকভাবে কথা বলুন…", finishRecording: "রেকর্ডিং শেষ করুন", recordingReady: "আপনার রেকর্ডিং প্রস্তুত", listenBefore: "এগিয়ে যাওয়ার আগে শুনুন", recordAgain: "আবার রেকর্ড করুন", continue: "এগিয়ে যান", whatDoYouSee: "আপনি কী দেখতে পাচ্ছেন?", pictureDescSub: "ছবিতে যা দেখতে পাচ্ছেন, সে সম্পর্কে বলুন।", listenCarefully: "মন দিয়ে শুনুন", memorySub: "আমরা কয়েকটি শব্দ পড়ব। সেগুলো মনে রাখার চেষ্টা করুন।", iHeardWords: "শব্দগুলো শুনেছি—এগিয়ে যান", oneMore: "আরও একটি প্রশ্ন", conversationSub: "এখানে ঠিক বা ভুল উত্তর নেই।", youreDone: "আপনার কাজ শেষ!", completionSub: "ধন্যবাদ। এখন আমরা আপনার কণ্ঠস্বর পরীক্ষা করছি।",
+    home: "হোম", history: "আগের পরীক্ষাগুলি", help: "সহায়তা", caregiver: "পরিচর্যাকারী", profile: "প্রোফাইল",
+  },
+  mr: {
+    greeting: "नमस्कार", howFeeling: "आज तुम्हाला कसे वाटत आहे?", voiceCheckCard: "आवाजाची तपासणी", voiceCheckDesc: "3–5 मिनिटांची छोटी तपासणी करा. सहजपणे बोला—यात बरोबर किंवा चूक उत्तर नाही.", welcomeSub: "चला, आवाजाची एक छोटी तपासणी करूया.", welcomeTime: "यासाठी सुमारे 3–5 मिनिटे लागतील.", startVoiceCheck: "आवाजाची तपासणी सुरू करा", someoneHelping: "कोणी तरी मला मदत करत आहे", letsBegin: "चला सुरू करूया", voiceIntroSub: "ही आवाजाची एक छोटी तपासणी आहे. यासाठी सुमारे 3–5 मिनिटे लागतील.", step1: "ऐका", step2: "बोला", step3: "पूर्ण करा", beginVoiceCheck: "आवाजाची तपासणी सुरू करा", listenToQuestion: "प्रश्न ऐका", playAgain: "पुन्हा ऐका", startSpeaking: "बोलायला सुरुवात करा", tapToSpeak: "बोलण्यासाठी टॅप करा", speakNaturally: "सहजपणे बोला…", finishRecording: "रेकॉर्डिंग पूर्ण करा", recordingReady: "तुमचे रेकॉर्डिंग तयार आहे", listenBefore: "पुढे जाण्यापूर्वी ऐका", recordAgain: "पुन्हा रेकॉर्ड करा", continue: "पुढे चला", whatDoYouSee: "तुम्हाला काय दिसत आहे?", pictureDescSub: "चित्रात तुम्हाला जे दिसते त्याबद्दल सांगा.", listenCarefully: "लक्षपूर्वक ऐका", memorySub: "आम्ही काही शब्द वाचू. ते लक्षात ठेवण्याचा प्रयत्न करा.", iHeardWords: "मी शब्द ऐकले आहेत—पुढे चला", oneMore: "आणखी एक प्रश्न", conversationSub: "यात बरोबर किंवा चूक उत्तर नाही.", youreDone: "तुम्ही पूर्ण केले!", completionSub: "धन्यवाद. आता आम्ही तुमच्या आवाजाची तपासणी करत आहोत.", home: "मुख्यपृष्ठ", history: "मागील तपासण्या", help: "मदत", caregiver: "काळजीवाहक", profile: "प्रोफाइल",
+  },
+  ta: {
+    greeting: "வணக்கம்", howFeeling: "இன்று நீங்கள் எப்படி உணர்கிறீர்கள்?", voiceCheckCard: "குரல் பரிசோதனை", voiceCheckDesc: "3–5 நிமிட சிறிய பரிசோதனையை மேற்கொள்ளுங்கள். இயல்பாகப் பேசுங்கள்—சரி அல்லது தவறு என்ற பதில் எதுவும் இல்லை.", welcomeSub: "சிறிய குரல் பரிசோதனையைத் தொடங்கலாம்.", welcomeTime: "இதற்கு சுமார் 3–5 நிமிடங்கள் ஆகும்.", startVoiceCheck: "குரல் பரிசோதனையைத் தொடங்குங்கள்", someoneHelping: "யாரோ எனக்கு உதவுகிறார்கள்", letsBegin: "தொடங்கலாம்", voiceIntroSub: "இது ஒரு சிறிய குரல் பரிசோதனை. இதற்கு சுமார் 3–5 நிமிடங்கள் ஆகும்.", step1: "கேளுங்கள்", step2: "பேசுங்கள்", step3: "முடிக்கவும்", beginVoiceCheck: "குரல் பரிசோதனையைத் தொடங்குங்கள்", listenToQuestion: "கேள்வியைக் கேளுங்கள்", playAgain: "மீண்டும் கேளுங்கள்", startSpeaking: "பேசத் தொடங்குங்கள்", tapToSpeak: "பேசத் தட்டுங்கள்", speakNaturally: "இயல்பாகப் பேசுங்கள்…", finishRecording: "பதிவை முடிக்கவும்", recordingReady: "உங்கள் பதிவு தயாராக உள்ளது", listenBefore: "தொடர்வதற்கு முன் கேளுங்கள்", recordAgain: "மீண்டும் பதிவு செய்யுங்கள்", continue: "தொடரவும்", whatDoYouSee: "உங்களுக்கு என்ன தெரிகிறது?", pictureDescSub: "படத்தில் நீங்கள் காண்பதைப் பற்றி சொல்லுங்கள்.", listenCarefully: "கவனமாகக் கேளுங்கள்", memorySub: "சில சொற்களை நாங்கள் வாசிப்போம். அவற்றை நினைவில் வைத்துக்கொள்ள முயற்சி செய்யுங்கள்.", iHeardWords: "சொற்களைக் கேட்டுவிட்டேன்—தொடரவும்", oneMore: "இன்னொரு கேள்வி", conversationSub: "சரியான அல்லது தவறான பதில் என்று எதுவும் இல்லை.", youreDone: "முடித்துவிட்டீர்கள்!", completionSub: "நன்றி. இப்போது உங்கள் குரலைப் பரிசோதிக்கிறோம்.", home: "முகப்பு", history: "முந்தைய பரிசோதனைகள்", help: "உதவி", caregiver: "பராமரிப்பாளர்", profile: "சுயவிவரம்",
+  },
+  te: {
+    greeting: "నమస్కారం", howFeeling: "ఈ రోజు మీకు ఎలా అనిపిస్తోంది?", voiceCheckCard: "వాయిస్ పరీక్ష", voiceCheckDesc: "3–5 నిమిషాల చిన్న పరీక్ష చేయండి. సహజంగా మాట్లాడండి—సరైన లేదా తప్పు సమాధానాలు ఉండవు.", welcomeSub: "చిన్న వాయిస్ పరీక్షను ప్రారంభిద్దాం.", welcomeTime: "దీనికి సుమారు 3–5 నిమిషాలు పడుతుంది.", startVoiceCheck: "వాయిస్ పరీక్షను ప్రారంభించండి", someoneHelping: "ఎవరో నాకు సహాయం చేస్తున్నారు", letsBegin: "ప్రారంభిద్దాం", voiceIntroSub: "ఇది చిన్న వాయిస్ పరీక్ష. దీనికి సుమారు 3–5 నిమిషాలు పడుతుంది.", step1: "వినండి", step2: "మాట్లాడండి", step3: "ముగించండి", beginVoiceCheck: "వాయిస్ పరీక్షను ప్రారంభించండి", listenToQuestion: "ప్రశ్నను వినండి", playAgain: "మళ్లీ వినండి", startSpeaking: "మాట్లాడటం ప్రారంభించండి", tapToSpeak: "మాట్లాడేందుకు ట్యాప్ చేయండి", speakNaturally: "సహజంగా మాట్లాడండి…", finishRecording: "రికార్డింగ్‌ను ముగించండి", recordingReady: "మీ రికార్డింగ్ సిద్ధంగా ఉంది", listenBefore: "కొనసాగించే ముందు వినండి", recordAgain: "మళ్లీ రికార్డ్ చేయండి", continue: "కొనసాగించండి", whatDoYouSee: "మీకు ఏమి కనిపిస్తోంది?", pictureDescSub: "చిత్రంలో మీకు కనిపిస్తున్నదాన్ని చెప్పండి.", listenCarefully: "శ్రద్ధగా వినండి", memorySub: "మేము కొన్ని పదాలను చదువుతాము. వాటిని గుర్తుంచుకోవడానికి ప్రయత్నించండి.", iHeardWords: "పదాలను విన్నాను—కొనసాగించండి", oneMore: "మరో ప్రశ్న", conversationSub: "సరైన లేదా తప్పు సమాధానం ఏదీ లేదు.", youreDone: "మీరు పూర్తి చేశారు!", completionSub: "ధన్యవాదాలు. ఇప్పుడు మీ వాయిస్‌ను పరీక్షిస్తున్నాము.", home: "హోమ్", history: "మునుపటి పరీక్షలు", help: "సహాయం", caregiver: "సంరక్షకుడు", profile: "ప్రొఫైల్",
+  },
+  gu: {
+    greeting: "નમસ્તે", howFeeling: "આજે તમને કેવું લાગે છે?", voiceCheckCard: "અવાજની તપાસ", voiceCheckDesc: "3–5 મિનિટની ટૂંકી તપાસ કરો. સ્વાભાવિક રીતે બોલો—અહીં સાચો કે ખોટો જવાબ નથી.", welcomeSub: "ચાલો, અવાજની એક ટૂંકી તપાસ કરીએ.", welcomeTime: "આમાં લગભગ 3–5 મિનિટ લાગશે.", startVoiceCheck: "અવાજની તપાસ શરૂ કરો", someoneHelping: "કોઈ મને મદદ કરી રહ્યું છે", letsBegin: "ચાલો શરૂ કરીએ", voiceIntroSub: "આ અવાજની એક ટૂંકી તપાસ છે. આમાં લગભગ 3–5 મિનિટ લાગશે.", step1: "સાંભળો", step2: "બોલો", step3: "પૂર્ણ કરો", beginVoiceCheck: "અવાજની તપાસ શરૂ કરો", listenToQuestion: "પ્રશ્ન સાંભળો", playAgain: "ફરી સાંભળો", startSpeaking: "બોલવાનું શરૂ કરો", tapToSpeak: "બોલવા માટે ટૅપ કરો", speakNaturally: "સ્વાભાવિક રીતે બોલો…", finishRecording: "રેકોર્ડિંગ પૂર્ણ કરો", recordingReady: "તમારું રેકોર્ડિંગ તૈયાર છે", listenBefore: "આગળ વધતા પહેલાં સાંભળો", recordAgain: "ફરી રેકોર્ડ કરો", continue: "આગળ વધો", whatDoYouSee: "તમને શું દેખાય છે?", pictureDescSub: "ચિત્રમાં તમને જે દેખાય છે તે જણાવો.", listenCarefully: "ધ્યાનથી સાંભળો", memorySub: "અમે કેટલાક શબ્દો વાંચીશું. તેમને યાદ રાખવાનો પ્રયાસ કરો.", iHeardWords: "મેં શબ્દો સાંભળ્યા છે—આગળ વધો", oneMore: "વધુ એક પ્રશ્ન", conversationSub: "અહીં સાચો કે ખોટો જવાબ નથી.", youreDone: "તમે પૂર્ણ કર્યું!", completionSub: "આભાર. હવે અમે તમારા અવાજની તપાસ કરી રહ્યા છીએ.", home: "હોમ", history: "અગાઉની તપાસો", help: "મદદ", caregiver: "સંભાળ રાખનાર", profile: "પ્રોફાઇલ",
+  },
+  kn: {
+    greeting: "ನಮಸ್ಕಾರ", howFeeling: "ಇಂದು ನಿಮಗೆ ಹೇಗನಿಸುತ್ತಿದೆ?", voiceCheckCard: "ಧ್ವನಿ ಪರೀಕ್ಷೆ", voiceCheckDesc: "3–5 ನಿಮಿಷಗಳ ಸಣ್ಣ ಪರೀಕ್ಷೆ ಮಾಡಿ. ಸಹಜವಾಗಿ ಮಾತನಾಡಿ—ಸರಿಯಾದ ಅಥವಾ ತಪ್ಪಾದ ಉತ್ತರಗಳಿಲ್ಲ.", welcomeSub: "ಸಣ್ಣ ಧ್ವನಿ ಪರೀಕ್ಷೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ.", welcomeTime: "ಇದಕ್ಕೆ ಸುಮಾರು 3–5 ನಿಮಿಷಗಳು ಬೇಕಾಗುತ್ತವೆ.", startVoiceCheck: "ಧ್ವನಿ ಪರೀಕ್ಷೆ ಪ್ರಾರಂಭಿಸಿ", someoneHelping: "ಯಾರೋ ನನಗೆ ಸಹಾಯ ಮಾಡುತ್ತಿದ್ದಾರೆ", letsBegin: "ಪ್ರಾರಂಭಿಸೋಣ", voiceIntroSub: "ಇದು ಒಂದು ಸಣ್ಣ ಧ್ವನಿ ಪರೀಕ್ಷೆ. ಇದಕ್ಕೆ ಸುಮಾರು 3–5 ನಿಮಿಷಗಳು ಬೇಕಾಗುತ್ತವೆ.", step1: "ಆಲಿಸಿ", step2: "ಮಾತನಾಡಿ", step3: "ಮುಗಿಸಿ", beginVoiceCheck: "ಧ್ವನಿ ಪರೀಕ್ಷೆ ಪ್ರಾರಂಭಿಸಿ", listenToQuestion: "ಪ್ರಶ್ನೆಯನ್ನು ಆಲಿಸಿ", playAgain: "ಮತ್ತೆ ಆಲಿಸಿ", startSpeaking: "ಮಾತನಾಡಲು ಪ್ರಾರಂಭಿಸಿ", tapToSpeak: "ಮಾತನಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ", speakNaturally: "ಸಹಜವಾಗಿ ಮಾತನಾಡಿ…", finishRecording: "ರೆಕಾರ್ಡಿಂಗ್ ಮುಗಿಸಿ", recordingReady: "ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್ ಸಿದ್ಧವಾಗಿದೆ", listenBefore: "ಮುಂದುವರಿಯುವ ಮೊದಲು ಆಲಿಸಿ", recordAgain: "ಮತ್ತೆ ರೆಕಾರ್ಡ್ ಮಾಡಿ", continue: "ಮುಂದುವರಿಸಿ", whatDoYouSee: "ನಿಮಗೆ ಏನು ಕಾಣುತ್ತಿದೆ?", pictureDescSub: "ಚಿತ್ರದಲ್ಲಿ ನಿಮಗೆ ಕಾಣುತ್ತಿರುವುದನ್ನು ತಿಳಿಸಿ.", listenCarefully: "ಗಮನವಿಟ್ಟು ಆಲಿಸಿ", memorySub: "ನಾವು ಕೆಲವು ಪದಗಳನ್ನು ಓದುತ್ತೇವೆ. ಅವುಗಳನ್ನು ನೆನಪಿಟ್ಟುಕೊಳ್ಳಲು ಪ್ರಯತ್ನಿಸಿ.", iHeardWords: "ಪದಗಳನ್ನು ಆಲಿಸಿದ್ದೇನೆ—ಮುಂದುವರಿಸಿ", oneMore: "ಇನ್ನೊಂದು ಪ್ರಶ್ನೆ", conversationSub: "ಸರಿಯಾದ ಅಥವಾ ತಪ್ಪಾದ ಉತ್ತರ ಎಂಬುದಿಲ್ಲ.", youreDone: "ನೀವು ಮುಗಿಸಿದ್ದೀರಿ!", completionSub: "ಧನ್ಯವಾದಗಳು. ಈಗ ನಿಮ್ಮ ಧ್ವನಿಯನ್ನು ಪರೀಕ್ಷಿಸುತ್ತಿದ್ದೇವೆ.", home: "ಮುಖಪುಟ", history: "ಹಿಂದಿನ ಪರೀಕ್ಷೆಗಳು", help: "ಸಹಾಯ", caregiver: "ಆರೈಕೆದಾರರು", profile: "ಪ್ರೊಫೈಲ್",
+  },
+  ml: {
+    greeting: "നമസ്കാരം", howFeeling: "ഇന്ന് നിങ്ങൾക്ക് എങ്ങനെയുണ്ട്?", voiceCheckCard: "ശബ്ദ പരിശോധന", voiceCheckDesc: "3–5 മിനിറ്റ് ദൈർഘ്യമുള്ള ഒരു ചെറിയ പരിശോധന നടത്തൂ. സ്വാഭാവികമായി സംസാരിക്കൂ—ശരിയോ തെറ്റോ ആയ ഉത്തരങ്ങളില്ല.", welcomeSub: "ഒരു ചെറിയ ശബ്ദ പരിശോധന നടത്താം.", welcomeTime: "ഇതിന് ഏകദേശം 3–5 മിനിറ്റ് എടുക്കും.", startVoiceCheck: "ശബ്ദ പരിശോധന ആരംഭിക്കുക", someoneHelping: "ആരെങ്കിലും എന്നെ സഹായിക്കുന്നു", letsBegin: "തുടങ്ങാം", voiceIntroSub: "ഇതൊരു ചെറിയ ശബ്ദ പരിശോധനയാണ്. ഇതിന് ഏകദേശം 3–5 മിനിറ്റ് എടുക്കും.", step1: "കേൾക്കുക", step2: "സംസാരിക്കുക", step3: "പൂർത്തിയാക്കുക", beginVoiceCheck: "ശബ്ദ പരിശോധന ആരംഭിക്കുക", listenToQuestion: "ചോദ്യം കേൾക്കുക", playAgain: "വീണ്ടും കേൾക്കുക", startSpeaking: "സംസാരിക്കാൻ തുടങ്ങുക", tapToSpeak: "സംസാരിക്കാൻ ടാപ്പ് ചെയ്യുക", speakNaturally: "സ്വാഭാവികമായി സംസാരിക്കൂ…", finishRecording: "റെക്കോർഡിംഗ് പൂർത്തിയാക്കുക", recordingReady: "നിങ്ങളുടെ റെക്കോർഡിംഗ് തയ്യാറാണ്", listenBefore: "തുടരുന്നതിന് മുമ്പ് കേൾക്കുക", recordAgain: "വീണ്ടും റെക്കോർഡ് ചെയ്യുക", continue: "തുടരുക", whatDoYouSee: "നിങ്ങൾ എന്താണ് കാണുന്നത്?", pictureDescSub: "ചിത്രത്തിൽ നിങ്ങൾ കാണുന്നത് വിവരിക്കൂ.", listenCarefully: "ശ്രദ്ധയോടെ കേൾക്കുക", memorySub: "ഞങ്ങൾ കുറച്ച് വാക്കുകൾ വായിക്കും. അവ ഓർമ്മിക്കാൻ ശ്രമിക്കൂ.", iHeardWords: "വാക്കുകൾ കേട്ടു—തുടരുക", oneMore: "ഒരു ചോദ്യം കൂടി", conversationSub: "ശരിയോ തെറ്റോ ആയ ഉത്തരങ്ങളില്ല.", youreDone: "നിങ്ങൾ പൂർത്തിയാക്കി!", completionSub: "നന്ദി. ഇപ്പോൾ നിങ്ങളുടെ ശബ്ദം പരിശോധിക്കുകയാണ്.", home: "ഹോം", history: "മുൻ പരിശോധനകൾ", help: "സഹായം", caregiver: "പരിചരിക്കുന്നയാൾ", profile: "പ്രൊഫൈൽ",
+  },
+};
+
+const STATIC_INDIC_TX: Record<string, Record<string, string>> = {
+  hi: { chooseLanguage: "अपनी भाषा चुनें", changeLanguageLater: "आप इसे बाद में भी बदल सकते हैं।", listenEnglish: "अंग्रेज़ी में सुनें", continueBtn: "आगे बढ़ें", screeningTitle: "आवाज़ की स्वास्थ्य जांच", screeningSubtitle: "आवाज़ के आधार पर शुरुआती संज्ञानात्मक जांच", beforeBegin: "शुरू करने से पहले", privacyNote: "आपकी गोपनीयता और सुरक्षा के बारे में एक ज़रूरी बात", voiceRecording: "आवाज़ की रिकॉर्डिंग", privacyEncryption: "गोपनीयता और सुरक्षा", screeningInstrument: "जांच की जानकारी", understandContinue: "समझ गया/गई, आगे बढ़ें", tellAboutYou: "अपने बारे में बताइए", calibrationNote: "सटीक परिणाम के लिए हम केवल ज़रूरी जानकारी पूछते हैं।", yourName: "आपका नाम", enterName: "अपना नाम लिखें", age: "उम्र", caregiverMode: "देखभालकर्ता की सहायता वाला तरीका", readyWhen: "जब आप तैयार हों", viewDetailsLabel: "विवरण देखें", apkTitle: "SwarSanket Android ऐप", installApk: "SwarSanket ऐप इंस्टॉल करें", getApk: "ऐप लें" },
+  bn: { chooseLanguage: "আপনার ভাষা বেছে নিন", changeLanguageLater: "আপনি পরে ভাষা পরিবর্তন করতে পারবেন।", listenEnglish: "ইংরেজিতে শুনুন", continueBtn: "এগিয়ে যান", screeningTitle: "ভয়েসের মাধ্যমে স্বাস্থ্য পরীক্ষা", screeningSubtitle: "কণ্ঠস্বরের সাহায্যে প্রাথমিক স্মৃতি ও চিন্তাশক্তির পরীক্ষা", beforeBegin: "শুরু করার আগে", privacyNote: "আপনার গোপনীয়তা ও নিরাপত্তা সম্পর্কে একটি গুরুত্বপূর্ণ কথা", voiceRecording: "কণ্ঠস্বর রেকর্ড করা", privacyEncryption: "গোপনীয়তা ও নিরাপত্তা", screeningInstrument: "পরীক্ষা সম্পর্কে তথ্য", understandContinue: "বুঝেছি, এগিয়ে যান", tellAboutYou: "আপনার সম্পর্কে বলুন", calibrationNote: "সঠিক ফলাফলের জন্য আমরা শুধু প্রয়োজনীয় তথ্যই চাই।", yourName: "আপনার নাম", enterName: "আপনার নাম লিখুন", age: "বয়স", caregiverMode: "পরিচর্যাকারীর সহায়তায় পরীক্ষা", readyWhen: "আপনি প্রস্তুত হলেই শুরু করুন", viewDetailsLabel: "বিস্তারিত দেখুন", apkTitle: "SwarSanket অ্যান্ড্রয়েড অ্যাপ", installApk: "SwarSanket অ্যাপ ইনস্টল করুন", getApk: "অ্যাপ নিন" },
+  mr: { chooseLanguage: "तुमची भाषा निवडा", changeLanguageLater: "तुम्ही हे नंतरही बदलू शकता.", listenEnglish: "इंग्रजीत ऐका", continueBtn: "पुढे चला", screeningTitle: "आवाजाची आरोग्य तपासणी", screeningSubtitle: "आवाजाच्या आधारे सुरुवातीची स्मरणशक्ती व विचारशक्ती तपासणी", beforeBegin: "सुरुवात करण्यापूर्वी", privacyNote: "तुमच्या गोपनीयतेबद्दल आणि सुरक्षिततेबद्दल महत्त्वाची माहिती", voiceRecording: "आवाजाचे रेकॉर्डिंग", privacyEncryption: "गोपनीयता आणि सुरक्षितता", screeningInstrument: "तपासणीची माहिती", understandContinue: "समजले, पुढे चला", tellAboutYou: "तुमच्याबद्दल सांगा", calibrationNote: "अचूक परिणामांसाठी आम्ही फक्त आवश्यक माहिती विचारतो.", yourName: "तुमचे नाव", enterName: "तुमचे नाव लिहा", age: "वय", caregiverMode: "काळजीवाहकाच्या मदतीने तपासणी", readyWhen: "तुम्ही तयार असाल तेव्हा सुरू करा", viewDetailsLabel: "तपशील पहा", apkTitle: "SwarSanket Android अॅप", installApk: "SwarSanket अॅप इंस्टॉल करा", getApk: "अॅप मिळवा" },
+  ta: { chooseLanguage: "உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்", changeLanguageLater: "இதைப் பின்னரும் மாற்றலாம்.", listenEnglish: "ஆங்கிலத்தில் கேளுங்கள்", continueBtn: "தொடரவும்", screeningTitle: "குரல் மூலம் உடல்நலப் பரிசோதனை", screeningSubtitle: "குரலின் அடிப்படையிலான ஆரம்பநிலை நினைவாற்றல் பரிசோதனை", beforeBegin: "தொடங்குவதற்கு முன்", privacyNote: "உங்கள் தனியுரிமை மற்றும் பாதுகாப்பு பற்றிய முக்கிய குறிப்பு", voiceRecording: "குரல் பதிவு", privacyEncryption: "தனியுரிமை மற்றும் பாதுகாப்பு", screeningInstrument: "பரிசோதனை பற்றிய தகவல்", understandContinue: "புரிந்துகொண்டேன், தொடரவும்", tellAboutYou: "உங்களைப் பற்றி சொல்லுங்கள்", calibrationNote: "துல்லியமான முடிவுகளுக்குத் தேவையான தகவல்களை மட்டுமே கேட்கிறோம்.", yourName: "உங்கள் பெயர்", enterName: "உங்கள் பெயரை உள்ளிடுங்கள்", age: "வயது", caregiverMode: "பராமரிப்பாளர் உதவியுடன் பரிசோதனை", readyWhen: "நீங்கள் தயாரானதும் தொடங்குங்கள்", viewDetailsLabel: "விவரங்களைப் பார்க்கவும்", apkTitle: "SwarSanket Android செயலி", installApk: "SwarSanket செயலியை நிறுவுங்கள்", getApk: "செயலியைப் பெறுங்கள்" },
+  te: { chooseLanguage: "మీ భాషను ఎంచుకోండి", changeLanguageLater: "దీన్ని తర్వాత కూడా మార్చవచ్చు.", listenEnglish: "ఆంగ్లంలో వినండి", continueBtn: "కొనసాగించండి", screeningTitle: "వాయిస్ ఆరోగ్య పరీక్ష", screeningSubtitle: "వాయిస్ ఆధారంగా చేసే ప్రారంభ జ్ఞాపకశక్తి పరీక్ష", beforeBegin: "ప్రారంభించే ముందు", privacyNote: "మీ గోప్యత మరియు భద్రత గురించి ముఖ్యమైన సమాచారం", voiceRecording: "వాయిస్ రికార్డింగ్", privacyEncryption: "గోప్యత మరియు భద్రత", screeningInstrument: "పరీక్ష సమాచారం", understandContinue: "అర్థమైంది, కొనసాగించండి", tellAboutYou: "మీ గురించి చెప్పండి", calibrationNote: "ఖచ్చితమైన ఫలితాల కోసం అవసరమైన సమాచారాన్ని మాత్రమే అడుగుతాము.", yourName: "మీ పేరు", enterName: "మీ పేరు నమోదు చేయండి", age: "వయసు", caregiverMode: "సంరక్షకుడి సహాయంతో పరీక్ష", readyWhen: "మీరు సిద్ధమైనప్పుడు ప్రారంభించండి", viewDetailsLabel: "వివరాలను చూడండి", apkTitle: "SwarSanket Android యాప్", installApk: "SwarSanket యాప్‌ను ఇన్‌స్టాల్ చేయండి", getApk: "యాప్ పొందండి" },
+  gu: { chooseLanguage: "તમારી ભાષા પસંદ કરો", changeLanguageLater: "તમે આ ભાષા પછી પણ બદલી શકો છો.", listenEnglish: "અંગ્રેજીમાં સાંભળો", continueBtn: "આગળ વધો", screeningTitle: "અવાજની આરોગ્ય તપાસ", screeningSubtitle: "અવાજના આધારે પ્રારંભિક સ્મરણશક્તિની તપાસ", beforeBegin: "શરૂ કરતાં પહેલાં", privacyNote: "તમારી ગોપનીયતા અને સુરક્ષા વિશે મહત્વની માહિતી", voiceRecording: "અવાજનું રેકોર્ડિંગ", privacyEncryption: "ગોપનીયતા અને સુરક્ષા", screeningInstrument: "તપાસ વિશે માહિતી", understandContinue: "સમજાયું, આગળ વધો", tellAboutYou: "તમારા વિશે જણાવો", calibrationNote: "ચોક્કસ પરિણામો માટે અમે ફક્ત જરૂરી માહિતી જ પૂછીએ છીએ.", yourName: "તમારું નામ", enterName: "તમારું નામ લખો", age: "ઉંમર", caregiverMode: "સંભાળ રાખનારની મદદથી તપાસ", readyWhen: "તમે તૈયાર હો ત્યારે શરૂ કરો", viewDetailsLabel: "વિગતો જુઓ", apkTitle: "SwarSanket Android ઍપ", installApk: "SwarSanket ઍપ ઇન્સ્ટોલ કરો", getApk: "ઍપ મેળવો" },
+  kn: { chooseLanguage: "ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ", changeLanguageLater: "ಇದನ್ನು ನಂತರವೂ ಬದಲಾಯಿಸಬಹುದು.", listenEnglish: "ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಆಲಿಸಿ", continueBtn: "ಮುಂದುವರಿಸಿ", screeningTitle: "ಧ್ವನಿ ಆರೋಗ್ಯ ಪರೀಕ್ಷೆ", screeningSubtitle: "ಧ್ವನಿಯ ಆಧಾರದ ಮೇಲಿನ ಆರಂಭಿಕ ಜ್ಞಾಪಕಶಕ್ತಿ ಪರೀಕ್ಷೆ", beforeBegin: "ಪ್ರಾರಂಭಿಸುವ ಮೊದಲು", privacyNote: "ನಿಮ್ಮ ಗೌಪ್ಯತೆ ಮತ್ತು ಸುರಕ್ಷತೆಯ ಕುರಿತು ಮುಖ್ಯ ಮಾಹಿತಿ", voiceRecording: "ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್", privacyEncryption: "ಗೌಪ್ಯತೆ ಮತ್ತು ಸುರಕ್ಷತೆ", screeningInstrument: "ಪರೀಕ್ಷೆಯ ಮಾಹಿತಿ", understandContinue: "ಅರ್ಥವಾಯಿತು, ಮುಂದುವರಿಸಿ", tellAboutYou: "ನಿಮ್ಮ ಬಗ್ಗೆ ತಿಳಿಸಿ", calibrationNote: "ನಿಖರ ಫಲಿತಾಂಶಕ್ಕಾಗಿ ಅಗತ್ಯವಿರುವ ಮಾಹಿತಿಯನ್ನು ಮಾತ್ರ ಕೇಳುತ್ತೇವೆ.", yourName: "ನಿಮ್ಮ ಹೆಸರು", enterName: "ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ", age: "ವಯಸ್ಸು", caregiverMode: "ಆರೈಕೆದಾರರ ಸಹಾಯದೊಂದಿಗೆ ಪರೀಕ್ಷೆ", readyWhen: "ನೀವು ಸಿದ್ಧರಾದಾಗ ಪ್ರಾರಂಭಿಸಿ", viewDetailsLabel: "ವಿವರಗಳನ್ನು ನೋಡಿ", apkTitle: "SwarSanket Android ಆ್ಯಪ್", installApk: "SwarSanket ಆ್ಯಪ್ ಸ್ಥಾಪಿಸಿ", getApk: "ಆ್ಯಪ್ ಪಡೆಯಿರಿ" },
+  ml: { chooseLanguage: "നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക", changeLanguageLater: "ഇത് പിന്നീട് മാറ്റാനും കഴിയും.", listenEnglish: "ഇംഗ്ലീഷിൽ കേൾക്കുക", continueBtn: "തുടരുക", screeningTitle: "ശബ്ദ ആരോഗ്യ പരിശോധന", screeningSubtitle: "ശബ്ദത്തെ അടിസ്ഥാനമാക്കിയുള്ള പ്രാഥമിക ഓർമ്മശക്തി പരിശോധന", beforeBegin: "തുടങ്ങുന്നതിന് മുമ്പ്", privacyNote: "നിങ്ങളുടെ സ്വകാര്യതയും സുരക്ഷയും സംബന്ധിച്ച പ്രധാന വിവരം", voiceRecording: "ശബ്ദ റെക്കോർഡിംഗ്", privacyEncryption: "സ്വകാര്യതയും സുരക്ഷയും", screeningInstrument: "പരിശോധനയെക്കുറിച്ചുള്ള വിവരം", understandContinue: "മനസ്സിലായി, തുടരുക", tellAboutYou: "നിങ്ങളെക്കുറിച്ച് പറയൂ", calibrationNote: "കൃത്യമായ ഫലങ്ങൾക്കായി ആവശ്യമായ വിവരങ്ങൾ മാത്രമേ ഞങ്ങൾ ചോദിക്കൂ.", yourName: "നിങ്ങളുടെ പേര്", enterName: "നിങ്ങളുടെ പേര് നൽകുക", age: "പ്രായം", caregiverMode: "പരിചരിക്കുന്നയാളുടെ സഹായത്തോടെയുള്ള പരിശോധന", readyWhen: "തയ്യാറാകുമ്പോൾ ആരംഭിക്കൂ", viewDetailsLabel: "വിശദാംശങ്ങൾ കാണുക", apkTitle: "SwarSanket Android ആപ്പ്", installApk: "SwarSanket ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്യുക", getApk: "ആപ്പ് നേടുക" },
+};
+
+const FLOW_INDIC_TX: Record<string, Record<string, string>> = {
+  hi: { listenSpeakScreen: "सुनें। बोलें। समय रहते जांच कराएं।", getStarted: "शुरू करें", pipelineTitle: "बहुभाषी जांच", pipelineDescription: "अंग्रेज़ी में आवाज़ की जांच के लिए प्रमाणित प्रणाली का उपयोग होता है। भारतीय भाषाओं में आवाज़ की पहचान और आवाज़ से जुड़े संकेतों की जांच की जाती है।" },
+  bn: { listenSpeakScreen: "শুনুন। বলুন। সময় থাকতে পরীক্ষা করুন।", getStarted: "শুরু করুন", pipelineTitle: "বহুভাষিক পরীক্ষা", pipelineDescription: "ইংরেজি ভয়েস পরীক্ষায় যাচাই করা পদ্ধতি ব্যবহার করা হয়। ভারতীয় ভাষায় কণ্ঠস্বর শনাক্ত করে কণ্ঠস্বরের বৈশিষ্ট্য পরীক্ষা করা হয়।" },
+  mr: { listenSpeakScreen: "ऐका. बोला. वेळेत तपासणी करा.", getStarted: "सुरू करा", pipelineTitle: "बहुभाषिक तपासणी", pipelineDescription: "इंग्रजी आवाजाच्या तपासणीसाठी प्रमाणित प्रणाली वापरली जाते. भारतीय भाषांमध्ये आवाज ओळखून आवाजाशी संबंधित संकेत तपासले जातात." },
+  ta: { listenSpeakScreen: "கேளுங்கள். பேசுங்கள். முன்கூட்டியே பரிசோதியுங்கள்.", getStarted: "தொடங்குங்கள்", pipelineTitle: "பலமொழிப் பரிசோதனை", pipelineDescription: "ஆங்கிலக் குரல் பரிசோதனைக்கு சரிபார்க்கப்பட்ட முறை பயன்படுத்தப்படுகிறது. இந்திய மொழிகளில் குரல் அடையாளம் காணப்பட்டு, குரல் சார்ந்த அறிகுறிகள் பரிசோதிக்கப்படுகின்றன." },
+  te: { listenSpeakScreen: "వినండి. మాట్లాడండి. ముందుగానే పరీక్షించుకోండి.", getStarted: "ప్రారంభించండి", pipelineTitle: "బహుభాషా పరీక్ష", pipelineDescription: "ఆంగ్ల వాయిస్ పరీక్షకు ధృవీకరించిన విధానం ఉపయోగించబడుతుంది. భారతీయ భాషల్లో వాయిస్‌ను గుర్తించి, వాయిస్‌కు సంబంధించిన సంకేతాలను పరీక్షిస్తాము." },
+  gu: { listenSpeakScreen: "સાંભળો. બોલો. સમયસર તપાસ કરાવો.", getStarted: "શરૂ કરો", pipelineTitle: "બહુભાષી તપાસ", pipelineDescription: "અંગ્રેજી અવાજની તપાસ માટે પ્રમાણિત પદ્ધતિનો ઉપયોગ થાય છે. ભારતીય ભાષાઓમાં અવાજ ઓળખીને અવાજ સાથે જોડાયેલા સંકેતોની તપાસ થાય છે." },
+  kn: { listenSpeakScreen: "ಆಲಿಸಿ. ಮಾತನಾಡಿ. ಮುಂಚಿತವಾಗಿ ಪರೀಕ್ಷಿಸಿಕೊಳ್ಳಿ.", getStarted: "ಪ್ರಾರಂಭಿಸಿ", pipelineTitle: "ಬಹುಭಾಷಾ ಪರೀಕ್ಷೆ", pipelineDescription: "ಇಂಗ್ಲಿಷ್ ಧ್ವನಿ ಪರೀಕ್ಷೆಗೆ ಪರಿಶೀಲಿತ ವಿಧಾನವನ್ನು ಬಳಸಲಾಗುತ್ತದೆ. ಭಾರತೀಯ ಭಾಷೆಗಳಲ್ಲಿ ಧ್ವನಿಯನ್ನು ಗುರುತಿಸಿ, ಧ್ವನಿಗೆ ಸಂಬಂಧಿಸಿದ ಸೂಚಕಗಳನ್ನು ಪರೀಕ್ಷಿಸಲಾಗುತ್ತದೆ." },
+  ml: { listenSpeakScreen: "കേൾക്കൂ. സംസാരിക്കൂ. നേരത്തെ പരിശോധന നടത്തൂ.", getStarted: "തുടങ്ങുക", pipelineTitle: "ബഹുഭാഷാ പരിശോധന", pipelineDescription: "ഇംഗ്ലീഷ് ശബ്ദ പരിശോധനയ്ക്ക് അംഗീകരിച്ച രീതിയാണ് ഉപയോഗിക്കുന്നത്. ഇന്ത്യൻ ഭാഷകളിൽ ശബ്ദം തിരിച്ചറിഞ്ഞ് ശബ്ദവുമായി ബന്ധപ്പെട്ട സൂചനകൾ പരിശോധിക്കുന്നു." },
+};
+
+const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
+  hi: { voiceRecordingDesc: "शुरुआती संज्ञानात्मक जांच के लिए आवाज़ के छोटे नमूने रिकॉर्ड किए जाते हैं।", privacyEncryptionDesc: "जानकारी आपके फोन में सुरक्षित रखी जाती है और आपकी अनुमति के बिना साझा नहीं की जाती।", screeningInstrumentDesc: "यह परिणाम स्वास्थ्य संबंधी अगले कदम सुझाता है; यह चिकित्सकीय निदान का विकल्प नहीं है।" },
+  bn: { voiceRecordingDesc: "প্রাথমিক স্মৃতি ও চিন্তাশক্তির পরীক্ষার জন্য কণ্ঠস্বরের ছোট নমুনা রেকর্ড করা হয়।", privacyEncryptionDesc: "তথ্য আপনার ফোনে নিরাপদে রাখা হয় এবং আপনার অনুমতি ছাড়া কারও সঙ্গে শেয়ার করা হয় না।", screeningInstrumentDesc: "এই ফলাফল স্বাস্থ্য সম্পর্কে পরবর্তী পদক্ষেপের পরামর্শ দেয়; এটি চিকিৎসকের রোগ নির্ণয়ের বিকল্প নয়।" },
+  mr: { voiceRecordingDesc: "सुरुवातीच्या संज्ञानात्मक तपासणीसाठी आवाजाचे छोटे नमुने रेकॉर्ड केले जातात.", privacyEncryptionDesc: "माहिती तुमच्या फोनमध्ये सुरक्षित ठेवली जाते आणि तुमच्या परवानगीशिवाय शेअर केली जात नाही.", screeningInstrumentDesc: "हा निकाल आरोग्यविषयक पुढील पावले सुचवतो; तो वैद्यकीय निदानाचा पर्याय नाही." },
+  ta: { voiceRecordingDesc: "ஆரம்பநிலை நினைவாற்றல் பரிசோதனைக்காக குரலின் சிறிய மாதிரிகள் பதிவு செய்யப்படும்.", privacyEncryptionDesc: "தகவல்கள் உங்கள் தொலைபேசியில் பாதுகாப்பாக வைக்கப்படும்; உங்கள் அனுமதியின்றி பகிரப்படாது.", screeningInstrumentDesc: "இந்த முடிவு அடுத்தகட்ட உடல்நல நடவடிக்கைகளைப் பரிந்துரைக்கும்; இது மருத்துவ நோயறிதலுக்கு மாற்றாகாது." },
+  te: { voiceRecordingDesc: "ప్రారంభ జ్ఞాపకశక్తి పరీక్ష కోసం వాయిస్ యొక్క చిన్న నమూనాలను రికార్డ్ చేస్తాము.", privacyEncryptionDesc: "సమాచారం మీ ఫోన్‌లో సురక్షితంగా ఉంచబడుతుంది; మీ అనుమతి లేకుండా పంచబడదు.", screeningInstrumentDesc: "ఈ ఫలితం ఆరోగ్యానికి సంబంధించిన తదుపరి చర్యలను సూచిస్తుంది; ఇది వైద్య నిర్ధారణకు ప్రత్యామ్నాయం కాదు." },
+  gu: { voiceRecordingDesc: "પ્રારંભિક સ્મરણશક્તિની તપાસ માટે અવાજના નાના નમૂના રેકોર્ડ કરવામાં આવે છે.", privacyEncryptionDesc: "માહિતી તમારા ફોનમાં સુરક્ષિત રાખવામાં આવે છે અને તમારી પરવાનગી વિના શેર કરવામાં આવતી નથી.", screeningInstrumentDesc: "આ પરિણામ આરોગ્ય માટેના આગળના પગલાં સૂચવે છે; તે તબીબી નિદાનનો વિકલ્પ નથી." },
+  kn: { voiceRecordingDesc: "ಆರಂಭಿಕ ಜ್ಞಾಪಕಶಕ್ತಿ ಪರೀಕ್ಷೆಗಾಗಿ ಧ್ವನಿಯ ಸಣ್ಣ ಮಾದರಿಗಳನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತದೆ.", privacyEncryptionDesc: "ಮಾಹಿತಿಯನ್ನು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿ ಇರಿಸಲಾಗುತ್ತದೆ; ನಿಮ್ಮ ಅನುಮತಿಯಿಲ್ಲದೆ ಹಂಚಲಾಗುವುದಿಲ್ಲ.", screeningInstrumentDesc: "ಈ ಫಲಿತಾಂಶವು ಆರೋಗ್ಯದ ಮುಂದಿನ ಹಂತಗಳನ್ನು ಸೂಚಿಸುತ್ತದೆ; ಇದು ವೈದ್ಯಕೀಯ ರೋಗನಿರ್ಣಯಕ್ಕೆ ಪರ್ಯಾಯವಲ್ಲ." },
+  ml: { voiceRecordingDesc: "പ്രാഥമിക ഓർമ്മശക്തി പരിശോധനയ്ക്കായി ശബ്ദത്തിന്റെ ചെറിയ സാമ്പിളുകൾ റെക്കോർഡ് ചെയ്യും.", privacyEncryptionDesc: "വിവരങ്ങൾ നിങ്ങളുടെ ഫോണിൽ സുരക്ഷിതമായി സൂക്ഷിക്കും; നിങ്ങളുടെ അനുമതിയില്ലാതെ പങ്കിടില്ല.", screeningInstrumentDesc: "ഈ ഫലം ആരോഗ്യവുമായി ബന്ധപ്പെട്ട അടുത്ത നടപടികൾ നിർദ്ദേശിക്കുന്നു; ഇത് വൈദ്യപരമായ രോഗനിർണയത്തിന് പകരമല്ല." },
+};
+
+const RECORDING_INDIC_TX: Record<string, Record<string, string>> = {
+  hi: { tapMicrophone: "तैयार होने पर माइक्रोफ़ोन दबाएं", recordingVoice: "आवाज़ रिकॉर्ड हो रही है" },
+  bn: { tapMicrophone: "প্রস্তুত হলে মাইক্রোফোনে ট্যাপ করুন", recordingVoice: "কণ্ঠস্বর রেকর্ড করা হচ্ছে" },
+  mr: { tapMicrophone: "तयार झाल्यावर मायक्रोफोन दाबा", recordingVoice: "आवाज रेकॉर्ड होत आहे" },
+  ta: { tapMicrophone: "தயாரானதும் ஒலிவாங்கியைத் தட்டுங்கள்", recordingVoice: "குரல் பதிவு செய்யப்படுகிறது" },
+  te: { tapMicrophone: "సిద్ధమైనప్పుడు మైక్రోఫోన్‌ను ట్యాప్ చేయండి", recordingVoice: "వాయిస్ రికార్డ్ అవుతోంది" },
+  gu: { tapMicrophone: "તૈયાર હો ત્યારે માઇક્રોફોન દબાવો", recordingVoice: "અવાજ રેકોર્ડ થઈ રહ્યો છે" },
+  kn: { tapMicrophone: "ಸಿದ್ಧರಾದಾಗ ಮೈಕ್ರೋಫೋನ್ ಒತ್ತಿರಿ", recordingVoice: "ಧ್ವನಿ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ" },
+  ml: { tapMicrophone: "തയ്യാറാകുമ്പോൾ മൈക്രോഫോണിൽ ടാപ്പ് ചെയ്യൂ", recordingVoice: "ശബ്ദം റെക്കോർഡ് ചെയ്യുന്നു" },
+};
+
+const BASE_UI_TX: Record<string, string> = {
+  getStarted: "Get Started", listenSpeakScreen: "Listen. Speak. Screen Early.", chooseLanguage: "Choose your language", changeLanguageLater: "You can change this later.", listenEnglish: "Listen in English", continueBtn: "Continue", pipelineTitle: "Multilingual Pipeline Scope", pipelineDescription: "English voice screenings use the validated acoustic & linguistic feature pipeline. Indic languages currently feature live speech recognition with acoustic biomarker screening.", screeningTitle: "SwarSanket Voice Screening", screeningSubtitle: "AI-Powered Cognitive Biomarker Analysis",
+};
+
 function t(lang: string, key: string): string {
-  return (TX[lang] ?? TX.en)[key] ?? TX.en[key] ?? key;
+  const locale = { ...TX.en, ...BASE_UI_TX, ...(TX[lang] ?? {}), ...(INDIC_TX[lang] ?? {}), ...(STATIC_INDIC_TX[lang] ?? {}), ...(FLOW_INDIC_TX[lang] ?? {}), ...(CONSENT_INDIC_TX[lang] ?? {}), ...(RECORDING_INDIC_TX[lang] ?? {}) };
+  return (locale[key] ?? key).normalize("NFC");
 }
 
 const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
@@ -413,15 +495,51 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
     conversation: "हमें बताइए कि आपको क्या करना पसंद है।",
   },
   bn: {
-    freeSpeech: "আমাদের আপনার দিনের কথা বলুন।",
-    pictureDesc: "আপনি এই ছবিতে কী দেখছেন? বলুন।",
-    memoryRecall: "গাভী, নদী, বই, বাড়ি, ফুল",
-    conversation: "আপনি কী করতে পছন্দ করেন তা বলুন।",
+    freeSpeech: "আপনার আজকের দিনটি কেমন কেটেছে, সে সম্পর্কে বলুন।",
+    pictureDesc: "ছবিতে আপনি কী দেখতে পাচ্ছেন, তা বলুন।",
+    memoryRecall: "গরু, নদী, বই, বাড়ি, ফুল",
+    conversation: "আপনি যে কাজটি করতে ভালোবাসেন, সে সম্পর্কে বলুন।",
+  },
+  mr: {
+    freeSpeech: "तुमचा आजचा दिवस कसा गेला, याबद्दल आम्हाला सांगा.",
+    pictureDesc: "चित्रात तुम्हाला काय दिसत आहे ते सांगा.",
+    memoryRecall: "गाय, नदी, पुस्तक, घर, फूल",
+    conversation: "तुम्हाला आवडणाऱ्या एखाद्या गोष्टीबद्दल आम्हाला सांगा.",
+  },
+  ta: {
+    freeSpeech: "இன்று உங்கள் நாள் எப்படி சென்றது என்பதைப் பற்றி சொல்லுங்கள்.",
+    pictureDesc: "படத்தில் நீங்கள் என்ன பார்க்கிறீர்கள் என்று சொல்லுங்கள்.",
+    memoryRecall: "பசு, ஆறு, புத்தகம், வீடு, பூ",
+    conversation: "உங்களுக்கு பிடித்த ஒரு செயலைப் பற்றி சொல்லுங்கள்.",
+  },
+  te: {
+    freeSpeech: "ఈ రోజు మీ రోజు ఎలా గడిచిందో మాకు చెప్పండి.",
+    pictureDesc: "చిత్రంలో మీకు ఏమి కనిపిస్తుందో చెప్పండి.",
+    memoryRecall: "ఆవు, నది, పుస్తకం, ఇల్లు, పువ్వు",
+    conversation: "మీకు ఇష్టమైన ఒక పని గురించి మాకు చెప్పండి.",
+  },
+  gu: {
+    freeSpeech: "તમારો આજનો દિવસ કેવો રહ્યો તે અમને જણાવો.",
+    pictureDesc: "ચિત્રમાં તમને શું દેખાય છે તે જણાવો.",
+    memoryRecall: "ગાય, નદી, પુસ્તક, ઘર, ફૂલ",
+    conversation: "તમને ગમતી કોઈ એક પ્રવૃત્તિ વિશે અમને જણાવો.",
+  },
+  kn: {
+    freeSpeech: "ನಿಮ್ಮ ಇಂದಿನ ದಿನ ಹೇಗಿತ್ತು ಎಂಬುದನ್ನು ನಮಗೆ ತಿಳಿಸಿ.",
+    pictureDesc: "ಚಿತ್ರದಲ್ಲಿ ನಿಮಗೆ ಏನು ಕಾಣಿಸುತ್ತಿದೆ ಎಂದು ತಿಳಿಸಿ.",
+    memoryRecall: "ಹಸು, ನದಿ, ಪುಸ್ತಕ, ಮನೆ, ಹೂವು",
+    conversation: "ನಿಮಗೆ ಇಷ್ಟವಾದ ಒಂದು ಕೆಲಸದ ಬಗ್ಗೆ ನಮಗೆ ತಿಳಿಸಿ.",
+  },
+  ml: {
+    freeSpeech: "നിങ്ങളുടെ ഇന്നത്തെ ദിവസം എങ്ങനെയായിരുന്നു എന്ന് ഞങ്ങളോട് പറയൂ.",
+    pictureDesc: "ചിത്രത്തിൽ നിങ്ങൾ എന്താണ് കാണുന്നതെന്ന് പറയൂ.",
+    memoryRecall: "പശു, നദി, പുസ്തകം, വീട്, പൂവ്",
+    conversation: "നിങ്ങൾക്ക് ഇഷ്ടമുള്ള ഒരു കാര്യത്തെക്കുറിച്ച് ഞങ്ങളോട് പറയൂ.",
   },
 };
 
 function getTaskPrompt(lang: string, ctx: RecordingContext): string {
-  return (TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx];
+  return ((TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx]).normalize("NFC");
 }
 
 // ─── Reusable UI Components ───────────────────────────────────────────────────
@@ -663,7 +781,7 @@ function DynamicWaveformBars({ active, level = 0.3, bars = 24 }: { active: boole
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("splash");
-  const [lang, setLang] = useState<LanguageCode>("hi");
+  const [lang, setLang] = useState<LanguageCode>("en");
   const [userName, setUserName] = useState<string>("Rama Devi");
   const [userAge, setUserAge] = useState<number>(72);
   const [assistedMode, setAssistedMode] = useState<boolean>(false);
@@ -701,6 +819,10 @@ export default function App() {
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
   // Recording seconds interval
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (isRecording && !isPaused) {
@@ -1075,7 +1197,7 @@ export default function App() {
               SwarSanket
             </h1>
             <p className="text-cyan-100 text-base sm:text-lg mt-2 text-center" style={{ fontFamily: F.body }}>
-              Listen. Speak. Screen Early.
+              {t(lang, "listenSpeakScreen")}
             </p>
             <div className="flex items-center gap-1.5 mt-6">
               {[8, 18, 28, 14, 24, 10, 20, 28, 12, 22].map((h, i) => (
@@ -1088,7 +1210,7 @@ export default function App() {
                 className="w-full py-4 rounded-2xl bg-white text-[#01586a] font-bold text-lg shadow-xl shadow-black/20 hover:bg-[#f0f9fb] transition-all active:scale-95"
                 style={{ fontFamily: F.display }}
               >
-                Get Started →
+                {t(lang, "getStarted")} →
               </button>
             </div>
           </div>
@@ -1101,13 +1223,13 @@ export default function App() {
             <div className="px-6 pt-2 pb-2 space-y-1 shrink-0">
               <NVLogo size={36} />
               <h1 className="text-xl font-bold text-[#0c1e27] pt-1" style={{ fontFamily: F.display }}>
-                Choose your language
+                {t(lang, "chooseLanguage")}
               </h1>
               <p className="text-xs text-[#5e7380]" style={{ fontFamily: F.body }}>
-                आप इसे बाद में भी बदल सकते हैं।
+                {t(lang, "changeLanguageLater")}
               </p>
               <div className="pt-0.5">
-                <AudioBtn label="Listen in English" textToSpeak="Please select your preferred language" lang="en" />
+                <AudioBtn label={t(lang, "listenEnglish")} textToSpeak="Please select your preferred language" lang="en" />
               </div>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2">
@@ -1136,11 +1258,11 @@ export default function App() {
                 })}
               </div>
               <div className="p-3 rounded-2xl bg-[#eef8fa] border border-[#cbe6ec] text-[11px] text-[#01586a] leading-relaxed mb-3">
-                <span className="font-bold">Multilingual Pipeline Scope:</span> English voice screenings use the validated acoustic &amp; linguistic feature pipeline. Indic languages (Hindi, Bengali, etc.) currently feature live speech recognition with acoustic biomarker screening.
+                <span className="font-bold">{t(lang, "pipelineTitle")}</span> {t(lang, "pipelineDescription")}
               </div>
             </div>
             <div className="p-4 sm:p-5 bg-white border-t border-[#d7eaef] shrink-0 shadow-lg z-10">
-              <Btn label="Continue" onClick={() => navigate("welcome")} />
+              <Btn label={t(lang, "continueBtn")} onClick={() => navigate("welcome")} />
             </div>
             <HomeIndicator />
           </div>
@@ -1160,9 +1282,9 @@ export default function App() {
                     <img src="/logo.png" alt="SwarSanket Logo" className="w-14 h-14 object-contain rounded-xl" />
                   </div>
                   <div className="text-xs font-bold uppercase tracking-wider text-[#01586a]" style={{ fontFamily: F.display }}>
-                    SwarSanket Voice Screening
+                    {t(lang, "screeningTitle")}
                   </div>
-                  <div className="text-[11px] text-[#5e7380]">AI-Powered Cognitive Biomarker Analysis</div>
+                  <div className="text-[11px] text-[#5e7380]">{t(lang, "screeningSubtitle")}</div>
                 </div>
               </div>
 
@@ -1201,16 +1323,16 @@ export default function App() {
             <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-4 pb-4 animate-fade-in-up space-y-4">
               <div>
                 <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
-                  Before we begin
+                  {t(lang, "beforeBegin")}
                 </h1>
-                <p className="text-xs text-[#5e7380] mt-0.5">A quick note about your privacy & security.</p>
+                <p className="text-xs text-[#5e7380] mt-0.5">{t(lang, "privacyNote")}</p>
               </div>
 
               <div className="space-y-3">
                 {[
-                  { icon: <Mic className="w-5 h-5 text-[#02738a]" />, title: "Voice Recording", desc: "Short audio samples are recorded for early cognitive screening." },
-                  { icon: <ShieldCheck className="w-5 h-5 text-[#02738a]" />, title: "Privacy & Encryption", desc: "Stored locally on your phone and shared only with your doctor's permission." },
-                  { icon: <Activity className="w-5 h-5 text-[#02738a]" />, title: "Screening Instrument", desc: "Results recommend health steps and do not replace a medical diagnosis." },
+                  { icon: <Mic className="w-5 h-5 text-[#02738a]" />, title: t(lang, "voiceRecording"), desc: t(lang, "voiceRecordingDesc") },
+                  { icon: <ShieldCheck className="w-5 h-5 text-[#02738a]" />, title: t(lang, "privacyEncryption"), desc: t(lang, "privacyEncryptionDesc") },
+                  { icon: <Activity className="w-5 h-5 text-[#02738a]" />, title: t(lang, "screeningInstrument"), desc: t(lang, "screeningInstrumentDesc") },
                 ].map((item) => (
                   <div key={item.title} className="p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-start gap-3.5 shadow-xs">
                     <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] flex items-center justify-center flex-shrink-0">
@@ -1229,7 +1351,7 @@ export default function App() {
               <div className="flex-1" />
 
               <div className="space-y-2 pt-2">
-                <Btn label="I Understand & Continue" onClick={() => navigate("profile")} />
+                <Btn label={t(lang, "understandContinue")} onClick={() => navigate("profile")} />
               </div>
             </div>
             <HomeIndicator />
@@ -1243,34 +1365,34 @@ export default function App() {
             <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-4 pb-4 animate-fade-in-up space-y-5">
               <div>
                 <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
-                  Tell us about you
+                  {t(lang, "tellAboutYou")}
                 </h1>
-                <p className="text-xs text-[#5e7380] mt-0.5">We only ask what is needed for calibration.</p>
+                <p className="text-xs text-[#5e7380] mt-0.5">{t(lang, "calibrationNote")}</p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
-                    Your Name
+                    {t(lang, "yourName")}
                   </label>
                   <input
                     type="text"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Enter your name"
+                    placeholder={t(lang, "enterName")}
                     className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-[#d7eaef] focus:border-[#02738a] outline-hidden font-medium text-[#0c1e27] text-base"
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
-                    Age
+                    {t(lang, "age")}
                   </label>
                   <input
                     type="number"
                     value={userAge}
                     onChange={(e) => setUserAge(Number(e.target.value))}
-                    placeholder="Age"
+                    placeholder={t(lang, "age")}
                     className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-[#d7eaef] focus:border-[#02738a] outline-hidden font-medium text-[#0c1e27] text-base"
                   />
                 </div>
@@ -1283,7 +1405,7 @@ export default function App() {
                     <div className="font-bold text-sm text-[#0c1e27]" style={{ fontFamily: F.display }}>
                       {t(lang, "someoneHelping")}
                     </div>
-                    <div className="text-xs text-[#5e7380] mt-0.5">Caregiver-assisted mode</div>
+                    <div className="text-xs text-[#5e7380] mt-0.5">{t(lang, "caregiverMode")}</div>
                   </div>
                   <div className={`w-12 h-7 rounded-full transition-colors flex items-center p-1 ${assistedMode ? "bg-[#02738a]" : "bg-slate-300"}`}>
                     <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${assistedMode ? "translate-x-5" : "translate-x-0"}`} />
@@ -1328,7 +1450,7 @@ export default function App() {
                     <Mic className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-[11px] font-bold text-cyan-200 uppercase tracking-wider">Ready when you are</div>
+                    <div className="text-[11px] font-bold text-cyan-200 uppercase tracking-wider">{t(lang, "readyWhen")}</div>
                     <div className="text-xl font-bold text-white" style={{ fontFamily: F.display }}>
                       {t(lang, "voiceCheckCard")}
                     </div>
@@ -1359,7 +1481,7 @@ export default function App() {
               >
                 <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#5e7380]">
                   <span>{t(lang, "previousCheck")}</span>
-                  <span className="text-[#02738a] group-hover:underline text-[11px] font-semibold lowercase first-letter:uppercase">view details →</span>
+                  <span className="text-[#02738a] group-hover:underline text-[11px] font-semibold lowercase first-letter:uppercase">{t(lang, "viewDetailsLabel")} →</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
@@ -1412,8 +1534,8 @@ export default function App() {
                 <div className="flex items-center gap-3">
                   <img src="/logo.png" alt="SwarSanket APK" className="w-10 h-10 rounded-xl object-contain border border-[#0f5968]" />
                   <div className="space-y-0.5">
-                    <div className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider">SIH Android App</div>
-                    <div className="text-xs sm:text-sm font-bold">Install SwarSanket APK</div>
+                    <div className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider">{t(lang, "apkTitle")}</div>
+                    <div className="text-xs sm:text-sm font-bold">{t(lang, "installApk")}</div>
                   </div>
                 </div>
                 <button
@@ -1421,7 +1543,7 @@ export default function App() {
                   className="px-3.5 py-2 rounded-xl bg-[#02738a] hover:bg-[#02849f] text-white font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Get APK
+                  {t(lang, "getApk")}
                 </button>
               </div>
             </div>
@@ -1437,7 +1559,7 @@ export default function App() {
             <StatusBar />
             <div className="flex items-center justify-between px-6 pt-2 pb-2 shrink-0">
               <BackBtn onBack={() => navigate("home")} />
-              <span className="font-bold text-sm text-[#0c1e27]">Voice Check</span>
+              <span className="font-bold text-sm text-[#0c1e27]">{t(lang, "voiceCheckCard")}</span>
               <div className="w-10" />
             </div>
 
@@ -1555,13 +1677,13 @@ export default function App() {
                     <p className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                       {t(lang, "tapToSpeak")}
                     </p>
-                    <p className="text-xs text-[#5e7380]">Tap microphone when you are ready</p>
+                    <p className="text-xs text-[#5e7380]">{t(lang, "tapMicrophone")}</p>
                   </>
                 ) : (
                   <>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
                       <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                      <span>{isPaused ? "Paused" : "Recording Voice"}</span>
+                      <span>{isPaused ? t(lang, "pause") : t(lang, "recordingVoice")}</span>
                     </div>
                     <p className="text-4xl font-bold text-[#0c1e27] tracking-wider" style={{ fontFamily: F.display }}>
                       {String(Math.floor(recordingSecs / 60)).padStart(2, "0")}:{String(recordingSecs % 60).padStart(2, "0")}
@@ -1579,7 +1701,7 @@ export default function App() {
               {isRecording ? (
                 <Btn label={t(lang, "finishRecording")} onClick={() => handleFinishRecording("recordingReview")} />
               ) : (
-                <Btn label="Start Speaking" onClick={handleStartRecording} />
+                <Btn label={t(lang, "startSpeaking")} onClick={handleStartRecording} />
               )}
             </div>
             <HomeIndicator />
@@ -3108,7 +3230,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#031d25] via-[#02171e] to-[#010e13] p-0 sm:p-4 md:p-6" style={{ fontFamily: F.body }}>
       {/* Top / Floating Demo Navigation Bar on Desktop */}
-      <div className="fixed top-3 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex flex-wrap items-center justify-between gap-2 max-w-5xl mx-auto px-4 py-2 rounded-2xl bg-[#03222a]/90 border border-[#0d4f5e] backdrop-blur-md shadow-2xl">
+      <div className="nv-demo-nav fixed top-3 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex flex-wrap items-center justify-between gap-2 max-w-5xl mx-auto px-4 py-2 rounded-2xl bg-[#03222a]/90 border border-[#0d4f5e] backdrop-blur-md shadow-2xl">
         <div className="flex items-center gap-3">
           <img
             src="/logo.png"
@@ -3161,7 +3283,7 @@ export default function App() {
 
       {/* Main Container: Native 100% on actual mobile vs polished mockup on desktop */}
       <div
-        className={`relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all duration-300 ${
+        className={`nv-app-shell relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all duration-300 ${
           fullScreenMode
             ? "w-full max-w-2xl h-[92vh] rounded-3xl border border-[#0d4f5e] mt-14 sm:mt-16"
             : "w-full max-w-[390px] h-[844px] max-h-[calc(100vh-4.8rem)] rounded-none sm:rounded-[48px] border-0 sm:border-[8px] border-[#07252f] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(2,115,138,0.15)] ring-1 ring-[#0d4f5e]/30 mt-12 sm:mt-16"
@@ -3176,7 +3298,7 @@ export default function App() {
         )}
 
         {/* Render Active Screen */}
-        <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+        <div lang={lang} className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
           {renderScreen()}
         </div>
       </div>

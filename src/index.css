@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 
 html,
@@ -7,7 +6,17 @@ body,
   height: 100%;
   margin: 0;
   background-color: #031e26;
-  font-family: 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
+  font-family:
+    'Noto Sans',
+    'Noto Sans Devanagari',
+    'Noto Sans Bengali',
+    'Noto Sans Gujarati',
+    'Noto Sans Kannada',
+    'Noto Sans Malayalam',
+    'Noto Sans Tamil',
+    'Noto Sans Telugu',
+    system-ui,
+    sans-serif;
   color: #0c1c24;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -126,7 +135,32 @@ body,
   animation: spin 1s linear infinite;
 }
 
-* { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+input,
+textarea,
+select,
+[class*="flex"] {
+  min-width: 0;
+}
+
+button,
+p,
+h1,
+h2,
+h3,
+span,
+label {
+  overflow-wrap: break-word;
+}
 
 :root {
   /* Official Logo Palette Tokens */
@@ -146,5 +180,72 @@ body,
   --nv-amber: #b45309;
   --nv-error: #dc2626;
   --nv-font-display: 'Outfit', system-ui, sans-serif;
-  --nv-font-body: 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --nv-font-body:
+    'Noto Sans',
+    'Noto Sans Devanagari',
+    'Noto Sans Bengali',
+    'Noto Sans Gujarati',
+    'Noto Sans Kannada',
+    'Noto Sans Malayalam',
+    'Noto Sans Tamil',
+    'Noto Sans Telugu',
+    system-ui,
+    sans-serif;
+}
+
+/* Use one complete script family for each non-English selection so inline
+   display styles cannot make Indic headings and buttons fall back to Outfit. */
+.nv-app-shell > div[lang="hi"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select),
+.nv-app-shell > div[lang="mr"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select) {
+  font-family: 'Noto Sans Devanagari', 'Noto Sans', sans-serif !important;
+}
+
+.nv-app-shell > div[lang="bn"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select) {
+  font-family: 'Noto Sans Bengali', 'Noto Sans', sans-serif !important;
+}
+
+.nv-app-shell > div[lang="ta"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select) {
+  font-family: 'Noto Sans Tamil', 'Noto Sans', sans-serif !important;
+}
+
+.nv-app-shell > div[lang="te"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select) {
+  font-family: 'Noto Sans Telugu', 'Noto Sans', sans-serif !important;
+}
+
+.nv-app-shell > div[lang="gu"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select) {
+  font-family: 'Noto Sans Gujarati', 'Noto Sans', sans-serif !important;
+}
+
+.nv-app-shell > div[lang="kn"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select) {
+  font-family: 'Noto Sans Kannada', 'Noto Sans', sans-serif !important;
+}
+
+.nv-app-shell > div[lang="ml"] :where(button, h1, h2, h3, h4, p, span, label, input, textarea, select) {
+  font-family: 'Noto Sans Malayalam', 'Noto Sans', sans-serif !important;
+}
+
+@media (max-width: 480px) {
+  .nv-demo-nav {
+    position: absolute;
+    top: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .nv-demo-nav > div:last-child {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .nv-app-shell {
+    margin-top: 7.5rem !important;
+    max-height: calc(100vh - 8rem) !important;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 767px) {
+  .nv-app-shell {
+    max-width: min(390px, calc(100vw - 2rem));
+  }
 }
