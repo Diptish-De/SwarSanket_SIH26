@@ -582,7 +582,7 @@ function HomeIndicator() {
 function NVLogo({ size = 40, className = "" }: { size?: number; className?: string }) {
   return (
     <img
-      src="/logo.png"
+      src="/logo.jpeg"
       alt="SwarSanket Logo"
       className={`rounded-2xl shadow-sm object-contain flex-shrink-0 transition-transform hover:scale-105 ${className}`}
       style={{ width: size, height: size }}
@@ -1188,7 +1188,7 @@ export default function App() {
             <div className="relative mb-6 animate-splash">
               <div className="absolute inset-0 rounded-[32px] bg-[#02738a]/40 blur-2xl animate-pulse" />
               <img
-                src="/logo.png"
+                src="/logo.jpeg"
                 alt="SwarSanket Logo"
                 className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] shadow-2xl object-contain border border-white/40"
               />
@@ -1279,7 +1279,7 @@ export default function App() {
                 <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-[#02738a]/10 blur-xl" />
                 <div className="text-center space-y-2 relative z-10">
                   <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg border border-[#bce3eb] bg-white">
-                    <img src="/logo.png" alt="SwarSanket Logo" className="w-14 h-14 object-contain rounded-xl" />
+                    <img src="/logo.jpeg" alt="SwarSanket Logo" className="w-14 h-14 object-contain rounded-xl" />
                   </div>
                   <div className="text-xs font-bold uppercase tracking-wider text-[#01586a]" style={{ fontFamily: F.display }}>
                     {t(lang, "screeningTitle")}
@@ -1532,7 +1532,7 @@ export default function App() {
               {/* APK Download Banner */}
               <div className="p-4 rounded-2xl bg-gradient-to-r from-[#03222a] to-[#04333f] text-white flex items-center justify-between shadow-md border border-[#09414e]">
                 <div className="flex items-center gap-3">
-                  <img src="/logo.png" alt="SwarSanket APK" className="w-10 h-10 rounded-xl object-contain border border-[#0f5968]" />
+                  <img src="/logo.jpeg" alt="SwarSanket APK" className="w-10 h-10 rounded-xl object-contain border border-[#0f5968]" />
                   <div className="space-y-0.5">
                     <div className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider">{t(lang, "apkTitle")}</div>
                     <div className="text-xs sm:text-sm font-bold">{t(lang, "installApk")}</div>
@@ -1905,7 +1905,7 @@ export default function App() {
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden items-center justify-center px-6 bg-gradient-to-tr from-[#fbfdfd] via-[#f0f8fa] to-[#e4f4f7] animate-fade-in">
             <div className="relative mb-6">
               <div className="absolute inset-0 rounded-3xl bg-[#02738a]/20 blur-xl animate-pulse" />
-              <img src="/logo.png" alt="SwarSanket Logo" className="w-24 h-24 rounded-3xl object-contain border border-[#bce3eb] shadow-xl relative z-10" />
+              <img src="/logo.jpeg" alt="SwarSanket Logo" className="w-24 h-24 rounded-3xl object-contain border border-[#bce3eb] shadow-xl relative z-10" />
               <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md z-20">
                 <Check className="w-5 h-5" />
               </div>
@@ -2534,7 +2534,7 @@ export default function App() {
             <div className="px-6 pt-3 pb-3 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <img src="/logo.png" alt="SwarSanket Logo" className="w-8 h-8 rounded-xl object-contain border border-[#02738a]/40" />
+                  <img src="/logo.jpeg" alt="SwarSanket Logo" className="w-8 h-8 rounded-xl object-contain border border-[#02738a]/40" />
                   <div>
                     <h1 className="text-xl font-bold text-white" style={{ fontFamily: F.display }}>
                       Doctor Clinical Hub
@@ -3233,7 +3233,7 @@ export default function App() {
       <div className="nv-demo-nav fixed top-3 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex flex-wrap items-center justify-between gap-2 max-w-5xl mx-auto px-4 py-2 rounded-2xl bg-[#03222a]/90 border border-[#0d4f5e] backdrop-blur-md shadow-2xl">
         <div className="flex items-center gap-3">
           <img
-            src="/logo.png"
+            src="/logo.jpeg"
             alt="SwarSanket Logo"
             className="w-8 h-8 rounded-xl shadow-md object-contain border border-[#0e5666]"
           />
