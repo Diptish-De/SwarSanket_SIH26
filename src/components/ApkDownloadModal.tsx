@@ -30,7 +30,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#dceef2] bg-gradient-to-r from-[#fdfcf7] via-[#f0f8fa] to-[#e4f4f7]">
           <div className="flex items-center gap-3">
             <img
-              src="/logo.png"
+              src="/logo.jpeg"
               alt="SwarSanket"
               className="w-12 h-12 rounded-2xl shadow-md object-contain border border-[#bce3eb]"
             />
