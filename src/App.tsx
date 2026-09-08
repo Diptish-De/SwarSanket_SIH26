@@ -5,11 +5,10 @@ import {
   Home as HomeIcon, History as HistoryIcon, HelpCircle, Phone, ArrowLeft,
   ArrowRight, ChevronRight, Download, Share2, FileText, Wifi, WifiOff,
   RefreshCw, Sliders, Calendar, Activity, Sparkles, Plus, Trash2, X,
-  Maximize2, Minimize2, Smartphone, Stethoscope, Video, MessageSquare
+  Maximize2, Minimize2, Smartphone, Stethoscope, Video, MessageSquare, Server
 } from "lucide-react";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from "recharts";
 
 import {
@@ -28,27 +27,40 @@ import {
   analyzeAudioWithBackend,
   ScreeningApiResponse,
 } from "./services/audioRecorder";
+import {
+  getApiBaseUrl,
+  setApiBaseUrl,
+  resetApiBaseUrl,
+  checkBackendHealth,
+  API_PRESETS,
+  BackendHealthStatus,
+  isCapacitorAndroid,
+} from "./services/apiConfig";
 import { speakText, stopSpeech, isSpeaking } from "./services/tts";
 import { generateAndDownloadReport } from "./services/report";
 import { ApkDownloadModal, APK_DOWNLOAD_URL, GITHUB_RELEASES_URL } from "./components/ApkDownloadModal";
 
-// ─── Design Tokens & Theme ───────────────────────────────────────────────────
+// ─── Design Tokens & Theme (Aligned with Official Logo Palette) ───────────────
 
 const C = {
-  primary: "#0891b2",
-  primaryDark: "#0e7490",
-  primaryLight: "#e0f7fa",
-  bg: "#f0f9ff",
+  primary: "#02738a",
+  primaryDark: "#015364",
+  primaryDeep: "#013a46",
+  primaryLight: "#e4f4f7",
+  warmGlow: "#fdfaf2",
+  skyGlow: "#e8f5f8",
+  bg: "#f3f9fb",
   surface: "#ffffff",
-  text: "#0f172a",
-  textSub: "#334155",
-  muted: "#64748b",
-  border: "#e2e8f0",
-  success: "#16a34a",
+  text: "#0c1e27",
+  textSub: "#30434f",
+  muted: "#5e7380",
+  border: "#d7eaef",
+  borderHover: "#bce3eb",
+  success: "#15803d",
   successBg: "#dcfce7",
   warning: "#c2410c",
   warningBg: "#fff7ed",
-  amber: "#a16207",
+  amber: "#b45309",
   amberBg: "#fefce8",
   danger: "#dc2626",
 };
@@ -415,10 +427,10 @@ function getTaskPrompt(lang: string, ctx: RecordingContext): string {
 // ─── Reusable UI Components ───────────────────────────────────────────────────
 
 function StatusBar({ light = false }: { light?: boolean }) {
-  const col = light ? "rgba(255,255,255,0.88)" : C.text;
+  const col = light ? "rgba(255,255,255,0.88)" : "#0c1e27";
   return (
-    <div className="flex items-center justify-between px-6 pt-3 pb-1" style={{ fontFamily: F.body }}>
-      <span className="text-xs font-semibold" style={{ color: col }}>9:41</span>
+    <div className="h-11 px-6 flex items-center justify-between flex-shrink-0 select-none" style={{ fontFamily: F.body }}>
+      <span className="text-xs font-bold tracking-tight" style={{ color: col }}>9:41</span>
       <div className="flex items-center gap-1.5">
         <svg width="17" height="11" viewBox="0 0 17 11" fill={col}>
           <rect x="0" y="6" width="3" height="5" rx="0.5" opacity="0.4"/>
@@ -443,26 +455,20 @@ function StatusBar({ light = false }: { light?: boolean }) {
 
 function HomeIndicator() {
   return (
-    <div className="flex justify-center pb-2 pt-1">
+    <div className="flex justify-center pb-2 pt-1 flex-shrink-0">
       <div className="w-32 h-1 rounded-full bg-slate-300" />
     </div>
   );
 }
 
-function NVLogo({ size = 40 }: { size?: number }) {
+function NVLogo({ size = 40, className = "" }: { size?: number; className?: string }) {
   return (
-    <div
-      className="flex items-center justify-center rounded-2xl shadow-md transition-transform hover:scale-105"
-      style={{
-        width: size, height: size,
-        background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
-      }}
-    >
-      <svg width={size * 0.58} height={size * 0.58} viewBox="0 0 24 24" fill="none">
-        <path d="M3 12C5 7 7 17 9 12C11 7 13 17 15 12C17 7 19 17 21 12"
-          stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </div>
+    <img
+      src="/logo.png"
+      alt="SwarSanket Logo"
+      className={`rounded-2xl shadow-sm object-contain flex-shrink-0 transition-transform hover:scale-105 ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
 
@@ -474,10 +480,10 @@ function Btn({
   size?: "lg" | "sm"; disabled?: boolean; icon?: React.ReactNode;
 }) {
   const styles: Record<string, string> = {
-    primary: "bg-gradient-to-r from-cyan-600 to-cyan-700 text-white shadow-lg shadow-cyan-600/30 hover:from-cyan-700 hover:to-cyan-800",
-    secondary: "bg-cyan-50 text-cyan-800 border border-cyan-200 hover:bg-cyan-100",
-    ghost: "bg-transparent text-cyan-700 border-2 border-cyan-600 hover:bg-cyan-50",
-    danger: "bg-transparent text-red-600 border-2 border-red-200 hover:bg-red-50",
+    primary: "bg-gradient-to-r from-[#02738a] via-[#027d95] to-[#01586a] hover:from-[#02849f] hover:to-[#01687d] text-white shadow-lg shadow-[#02738a]/25",
+    secondary: "bg-[#e4f4f7] text-[#01586a] border border-[#c2e7ef] hover:bg-[#d5eff5]",
+    ghost: "bg-white/80 text-[#02738a] border-2 border-[#02738a] hover:bg-[#e4f4f7]",
+    danger: "bg-rose-50 text-rose-700 border-2 border-rose-200 hover:bg-rose-100",
   };
 
   return (
@@ -514,10 +520,10 @@ function AudioBtn({ label, textToSpeak, lang }: { label?: string; textToSpeak?: 
   return (
     <button
       onClick={handleSpeak}
-      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 transition-all active:scale-95 shadow-sm"
+      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-gradient-to-r from-[#f0f9fb] to-[#e4f4f7] border border-[#cbe6ec] hover:border-[#02738a] hover:bg-[#dcf1f6] text-[#01586a] transition-all active:scale-95 shadow-xs"
       style={{ fontFamily: F.body }}
     >
-      <Volume2 className={`w-4 h-4 text-cyan-700 ${speaking ? "animate-pulse" : ""}`} />
+      <Volume2 className={`w-4 h-4 text-[#02738a] ${speaking ? "animate-pulse" : ""}`} />
       <span>{speaking ? "Speaking…" : lbl}</span>
     </button>
   );
@@ -527,7 +533,7 @@ function BackBtn({ onBack }: { onBack: () => void }) {
   return (
     <button
       onClick={onBack}
-      className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all active:scale-90 shadow-sm"
+      className="w-10 h-10 rounded-2xl bg-white border border-[#d7eaef] flex items-center justify-center text-[#30434f] hover:text-[#0c1e27] hover:bg-slate-50 hover:border-[#02738a] transition-all active:scale-90 shadow-xs"
     >
       <ArrowLeft className="w-5 h-5" />
     </button>
@@ -552,7 +558,7 @@ function BottomNav({ active, navigate, lang }: { active: Screen; navigate: (s: S
     { id: "settings" as Screen, labelKey: "profile", icon: User },
   ];
   return (
-    <div className="flex border-t border-slate-200 bg-white/95 backdrop-blur px-2 py-1.5">
+    <div className="flex border-t border-[#d7eaef] bg-white/95 backdrop-blur px-2 py-1.5 flex-shrink-0">
       {tabs.map((tab) => {
         const on = tab.id === active || (tab.id === "history" && isHistory);
         const Icon = tab.icon;
@@ -561,10 +567,10 @@ function BottomNav({ active, navigate, lang }: { active: Screen; navigate: (s: S
             key={tab.id}
             onClick={() => navigate(tab.id)}
             className={`flex-1 flex flex-col items-center gap-1 py-1.5 transition-all rounded-xl ${
-              on ? "text-cyan-700 font-bold bg-cyan-50/60" : "text-slate-400 hover:text-slate-600"
+              on ? "text-[#02738a] font-bold bg-[#e4f4f7] shadow-xs" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <Icon className={`w-5 h-5 ${on ? "text-cyan-600" : "text-slate-400"}`} />
+            <Icon className={`w-5 h-5 ${on ? "text-[#02738a]" : "text-slate-400"}`} />
             <span className="text-[11px]" style={{ fontFamily: F.body }}>
               {t(lang, tab.labelKey)}
             </span>
@@ -599,7 +605,7 @@ function CheckHeader({
   onBack: () => void; onExit: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between px-5 pt-3 pb-3 border-b border-slate-200 bg-white">
+    <div className="flex items-center justify-between px-5 py-2.5 border-b border-[#d7eaef] bg-white/95 backdrop-blur flex-shrink-0">
       <button onClick={onBack} className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200">
         <ArrowLeft className="w-4 h-4" />
       </button>
@@ -614,7 +620,7 @@ function CheckHeader({
 function ExitModal({ lang, onContinue, onExit }: { lang: string; onContinue: () => void; onExit: () => void }) {
   return (
     <div className="absolute inset-0 z-50 flex items-end bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-      <div className="w-full p-6 rounded-t-3xl bg-white space-y-4 shadow-2xl border-t border-slate-200">
+      <div className="w-full p-6 rounded-t-3xl bg-white space-y-4 shadow-2xl border-t border-[#d7eaef]">
         <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto" />
         <h2 className="text-xl font-bold text-center text-slate-900" style={{ fontFamily: F.display }}>
           {t(lang, "leaveTitle")}
@@ -641,7 +647,7 @@ function DynamicWaveformBars({ active, level = 0.3, bars = 24 }: { active: boole
         return (
           <div
             key={i}
-            className="w-1.5 rounded-full bg-cyan-600 transition-all duration-75"
+            className="w-1.5 rounded-full bg-[#02738a] transition-all duration-75"
             style={{
               height: barHeight,
               opacity: active ? 0.7 + 0.3 * Math.sin(i) : 0.3,
@@ -680,6 +686,13 @@ export default function App() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisStep, setAnalysisStep] = useState<"idle" | "uploading" | "analyzing" | "complete">("idle");
 
+  // Backend API URL & Health state (Android & Web dynamic configuration)
+  const [currentApiUrl, setCurrentApiUrl] = useState<string>(getApiBaseUrl());
+  const [customApiUrlInput, setCustomApiUrlInput] = useState<string>(getApiBaseUrl());
+  const [apiHealth, setApiHealth] = useState<BackendHealthStatus | null>(null);
+  const [isTestingApi, setIsTestingApi] = useState<boolean>(false);
+  const [showApiSettings, setShowApiSettings] = useState<boolean>(false);
+
   // Recorder state
   const recorderRef = useRef<VoiceRecorder>(new VoiceRecorder());
   const [micLevel, setMicLevel] = useState<number>(0.2);
@@ -700,7 +713,7 @@ export default function App() {
     };
   }, [isRecording, isPaused]);
 
-  // Load IndexedDB on start
+  // Load IndexedDB and probe Backend Health on start
   useEffect(() => {
     async function init() {
       await seedInitialDemoData();
@@ -708,9 +721,40 @@ export default function App() {
       setScreeningsList(screenings);
       const queue = await getOfflineQueue();
       setSyncQueue(queue);
+
+      // Probe backend connectivity in background
+      try {
+        const health = await checkBackendHealth();
+        setApiHealth(health);
+      } catch {
+        // quiet fail on init
+      }
     }
     init();
   }, []);
+
+  const handleTestApi = async (target?: string) => {
+    setIsTestingApi(true);
+    const toTest = target || customApiUrlInput;
+    const res = await checkBackendHealth(toTest);
+    setApiHealth(res);
+    setIsTestingApi(false);
+  };
+
+  const handleApplyApiUrl = (newUrl: string) => {
+    const saved = setApiBaseUrl(newUrl);
+    setCurrentApiUrl(saved);
+    setCustomApiUrlInput(saved);
+    handleTestApi(saved);
+  };
+
+  const handleResetApi = () => {
+    resetApiBaseUrl();
+    const def = getApiBaseUrl();
+    setCurrentApiUrl(def);
+    setCustomApiUrlInput(def);
+    handleTestApi(def);
+  };
 
   const navigate = (s: Screen) => {
     stopSpeech();
@@ -948,7 +992,9 @@ export default function App() {
       setAnalysisStep("idle");
       console.error("[SwarSanket] Real screening analysis failed:", err);
       const userMessage =
-        "We couldn't analyze your recording right now. Please check your connection and try again.";
+        err instanceof Error && err.message
+          ? err.message
+          : "We couldn't analyze your recording right now. Please check your connection and try again.";
       setAnalysisError(userMessage);
     }
   }, [audioBlobRef, currentAudioBlob, isOffline, lang, userName, userAge, assistedMode, vqState, recordingContext]);
@@ -1016,12 +1062,14 @@ export default function App() {
     switch (screen) {
       case "splash":
         return (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-cyan-600 via-cyan-700 to-cyan-900 text-white animate-fade-in">
-            <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur flex items-center justify-center shadow-2xl mb-6 animate-splash">
-              <svg width="56" height="36" viewBox="0 0 66 42" fill="none">
-                <path d="M3 21C8 8 13 34 18 21C23 8 28 34 33 21C38 8 43 34 48 21C53 8 58 34 63 21"
-                  stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+          <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-[#02738a] via-[#01586a] to-[#013540] text-white animate-fade-in select-none">
+            <div className="relative mb-6 animate-splash">
+              <div className="absolute inset-0 rounded-[32px] bg-[#02738a]/40 blur-2xl animate-pulse" />
+              <img
+                src="/logo.png"
+                alt="SwarSanket Logo"
+                className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] shadow-2xl object-contain border border-white/40"
+              />
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-center" style={{ fontFamily: F.display }}>
               SwarSanket
@@ -1031,13 +1079,13 @@ export default function App() {
             </p>
             <div className="flex items-center gap-1.5 mt-6">
               {[8, 18, 28, 14, 24, 10, 20, 28, 12, 22].map((h, i) => (
-                <div key={i} className="w-1 bg-white/50 rounded-full animate-pulse" style={{ height: h, animationDelay: `${i * 120}ms` }} />
+                <div key={i} className="w-1 bg-white/60 rounded-full animate-pulse" style={{ height: h, animationDelay: `${i * 120}ms` }} />
               ))}
             </div>
             <div className="mt-12 w-full max-w-xs">
               <button
                 onClick={() => navigate("language")}
-                className="w-full py-4 rounded-2xl bg-white text-cyan-800 font-bold text-lg shadow-xl hover:bg-cyan-50 transition-all active:scale-95"
+                className="w-full py-4 rounded-2xl bg-white text-[#01586a] font-bold text-lg shadow-xl shadow-black/20 hover:bg-[#f0f9fb] transition-all active:scale-95"
                 style={{ fontFamily: F.display }}
               >
                 Get Started →
@@ -1048,47 +1096,50 @@ export default function App() {
 
       case "language":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
-            <div className="px-6 pt-3 pb-3 space-y-1">
+            <div className="px-6 pt-2 pb-2 space-y-1 shrink-0">
               <NVLogo size={36} />
-              <h1 className="text-2xl font-bold text-slate-900 pt-2" style={{ fontFamily: F.display }}>
+              <h1 className="text-xl font-bold text-[#0c1e27] pt-1" style={{ fontFamily: F.display }}>
                 Choose your language
               </h1>
-              <p className="text-xs text-slate-500" style={{ fontFamily: F.body }}>
+              <p className="text-xs text-[#5e7380]" style={{ fontFamily: F.body }}>
                 आप इसे बाद में भी बदल सकते हैं।
               </p>
-              <div className="pt-1">
+              <div className="pt-0.5">
                 <AudioBtn label="Listen in English" textToSpeak="Please select your preferred language" lang="en" />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-6 py-2">
-              <div className="grid grid-cols-2 gap-3 pb-4">
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2">
+              <div className="grid grid-cols-2 gap-2.5 pb-3">
                 {LANGUAGES.map((l) => {
                   const on = lang === l.code;
                   return (
                     <button
                       key={l.code}
                       onClick={() => setLang(l.code)}
-                      className={`relative p-4 rounded-2xl text-left border-2 transition-all active:scale-95 ${
-                        on ? "bg-cyan-50/90 border-cyan-600 shadow-md shadow-cyan-600/10" : "bg-white border-slate-200 hover:border-slate-300"
+                      className={`relative p-3.5 rounded-2xl text-left border-2 transition-all active:scale-95 ${
+                        on ? "bg-[#e4f4f7] border-[#02738a] shadow-md shadow-[#02738a]/15 text-[#01586a]" : "bg-white border-[#d7eaef] hover:border-[#bce3eb]"
                       }`}
                     >
                       {on && (
-                        <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-cyan-600 text-white flex items-center justify-center">
+                        <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[#02738a] text-white flex items-center justify-center shadow-xs">
                           <Check className="w-3.5 h-3.5" />
                         </div>
                       )}
-                      <div className="text-xl font-bold text-slate-900" style={{ fontFamily: F.body }}>
+                      <div className="text-lg font-bold text-[#0c1e27]" style={{ fontFamily: F.body }}>
                         {l.native}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">{l.name}</div>
+                      <div className="text-xs text-[#5e7380] mt-0.5">{l.name}</div>
                     </button>
                   );
                 })}
               </div>
+              <div className="p-3 rounded-2xl bg-[#eef8fa] border border-[#cbe6ec] text-[11px] text-[#01586a] leading-relaxed mb-3">
+                <span className="font-bold">Multilingual Pipeline Scope:</span> English voice screenings use the validated acoustic &amp; linguistic feature pipeline. Indic languages (Hindi, Bengali, etc.) currently feature live speech recognition with acoustic biomarker screening.
+              </div>
             </div>
-            <div className="p-6 bg-white border-t border-slate-200">
+            <div className="p-4 sm:p-5 bg-white border-t border-[#d7eaef] shrink-0 shadow-lg z-10">
               <Btn label="Continue" onClick={() => navigate("welcome")} />
             </div>
             <HomeIndicator />
@@ -1097,30 +1148,32 @@ export default function App() {
 
       case "welcome":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
-            <div className="px-6 pt-3"><NVLogo size={32} /></div>
-            <div className="flex-1 flex flex-col px-6 pt-4 pb-4 gap-4 animate-fade-in-up">
-              {/* Healthcare banner */}
-              <div className="w-full h-44 rounded-3xl bg-gradient-to-tr from-cyan-100 via-sky-100 to-teal-50 border border-cyan-200/60 flex items-center justify-center p-4">
-                <div className="text-center space-y-2">
-                  <div className="w-14 h-14 rounded-2xl bg-cyan-600 text-white flex items-center justify-center mx-auto shadow-md shadow-cyan-600/30">
-                    <Mic className="w-7 h-7" />
+            <div className="px-6 pt-2"><NVLogo size={36} /></div>
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-3 pb-4 flex flex-col gap-4 animate-fade-in-up">
+              {/* Healthcare banner with official logo */}
+              <div className="w-full h-44 rounded-3xl bg-gradient-to-tr from-[#fdfcf7] via-[#f0f8fa] to-[#e4f4f7] border border-[#cbe6ec] flex items-center justify-center p-4 shadow-sm relative overflow-hidden">
+                <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-[#02738a]/10 blur-xl" />
+                <div className="text-center space-y-2 relative z-10">
+                  <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg border border-[#bce3eb] bg-white">
+                    <img src="/logo.png" alt="SwarSanket Logo" className="w-14 h-14 object-contain rounded-xl" />
                   </div>
-                  <div className="text-xs font-bold uppercase tracking-wider text-cyan-800" style={{ fontFamily: F.display }}>
+                  <div className="text-xs font-bold uppercase tracking-wider text-[#01586a]" style={{ fontFamily: F.display }}>
                     SwarSanket Voice Screening
                   </div>
+                  <div className="text-[11px] text-[#5e7380]">AI-Powered Cognitive Biomarker Analysis</div>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-3xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   {t(lang, "greeting")} 👋
                 </h1>
-                <p className="text-lg text-slate-700 leading-relaxed font-medium" style={{ fontFamily: F.body }}>
+                <p className="text-lg text-[#30434f] leading-relaxed font-medium" style={{ fontFamily: F.body }}>
                   {t(lang, "welcomeSub")}
                 </p>
-                <p className="text-xs text-slate-500" style={{ fontFamily: F.body }}>
+                <p className="text-xs text-[#5e7380]" style={{ fontFamily: F.body }}>
                   {t(lang, "welcomeTime")}
                 </p>
                 <AudioBtn textToSpeak={`${t(lang, "greeting")}. ${t(lang, "welcomeSub")}`} lang={lang} />
@@ -1143,29 +1196,29 @@ export default function App() {
 
       case "consent":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
-            <div className="flex-1 flex flex-col px-6 pt-4 pb-4 animate-fade-in-up space-y-4">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-4 pb-4 animate-fade-in-up space-y-4">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   Before we begin
                 </h1>
-                <p className="text-xs text-slate-500 mt-0.5">A quick note about your privacy & security.</p>
+                <p className="text-xs text-[#5e7380] mt-0.5">A quick note about your privacy & security.</p>
               </div>
 
               <div className="space-y-3">
                 {[
-                  { icon: <Mic className="w-5 h-5 text-cyan-700" />, title: "Voice Recording", desc: "Short audio samples are recorded for early cognitive screening." },
-                  { icon: <ShieldCheck className="w-5 h-5 text-cyan-700" />, title: "Privacy & Encryption", desc: "Stored locally on your phone and shared only with your doctor's permission." },
-                  { icon: <Activity className="w-5 h-5 text-cyan-700" />, title: "Screening Instrument", desc: "Results recommend health steps and do not replace a medical diagnosis." },
+                  { icon: <Mic className="w-5 h-5 text-[#02738a]" />, title: "Voice Recording", desc: "Short audio samples are recorded for early cognitive screening." },
+                  { icon: <ShieldCheck className="w-5 h-5 text-[#02738a]" />, title: "Privacy & Encryption", desc: "Stored locally on your phone and shared only with your doctor's permission." },
+                  { icon: <Activity className="w-5 h-5 text-[#02738a]" />, title: "Screening Instrument", desc: "Results recommend health steps and do not replace a medical diagnosis." },
                 ].map((item) => (
-                  <div key={item.title} className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start gap-3.5 shadow-xs">
-                    <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center flex-shrink-0">
+                  <div key={item.title} className="p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-start gap-3.5 shadow-xs">
+                    <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] flex items-center justify-center flex-shrink-0">
                       {item.icon}
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>{item.title}</div>
-                      <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">{item.desc}</div>
+                      <div className="font-bold text-sm text-[#0c1e27]" style={{ fontFamily: F.display }}>{item.title}</div>
+                      <div className="text-xs text-[#5e7380] mt-0.5 leading-relaxed">{item.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -1185,19 +1238,19 @@ export default function App() {
 
       case "profile":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
-            <div className="flex-1 overflow-y-auto px-6 pt-4 pb-4 animate-fade-in-up space-y-5">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-4 pb-4 animate-fade-in-up space-y-5">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   Tell us about you
                 </h1>
-                <p className="text-xs text-slate-500 mt-0.5">We only ask what is needed for calibration.</p>
+                <p className="text-xs text-[#5e7380] mt-0.5">We only ask what is needed for calibration.</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                  <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
                     Your Name
                   </label>
                   <input
@@ -1205,12 +1258,12 @@ export default function App() {
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-slate-200 focus:border-cyan-600 outline-hidden font-medium text-slate-900 text-base"
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-[#d7eaef] focus:border-[#02738a] outline-hidden font-medium text-[#0c1e27] text-base"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                  <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
                     Age
                   </label>
                   <input
@@ -1218,21 +1271,21 @@ export default function App() {
                     value={userAge}
                     onChange={(e) => setUserAge(Number(e.target.value))}
                     placeholder="Age"
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-slate-200 focus:border-cyan-600 outline-hidden font-medium text-slate-900 text-base"
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-[#d7eaef] focus:border-[#02738a] outline-hidden font-medium text-[#0c1e27] text-base"
                   />
                 </div>
 
                 <div
                   onClick={() => setAssistedMode(!assistedMode)}
-                  className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
                 >
                   <div>
-                    <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>
+                    <div className="font-bold text-sm text-[#0c1e27]" style={{ fontFamily: F.display }}>
                       {t(lang, "someoneHelping")}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">Caregiver-assisted mode</div>
+                    <div className="text-xs text-[#5e7380] mt-0.5">Caregiver-assisted mode</div>
                   </div>
-                  <div className={`w-12 h-7 rounded-full transition-colors flex items-center p-1 ${assistedMode ? "bg-cyan-600" : "bg-slate-300"}`}>
+                  <div className={`w-12 h-7 rounded-full transition-colors flex items-center p-1 ${assistedMode ? "bg-[#02738a]" : "bg-slate-300"}`}>
                     <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${assistedMode ? "translate-x-5" : "translate-x-0"}`} />
                   </div>
                 </div>
@@ -1248,16 +1301,16 @@ export default function App() {
 
       case "home":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
-            <div className="flex-1 overflow-y-auto px-6 pt-2 pb-3 space-y-4">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-2 pb-3 space-y-4">
               {/* Header */}
               <div className="flex items-center justify-between pt-1">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                  <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                     {t(lang, "greeting")}, {userName} 👋
                   </h1>
-                  <p className="text-xs text-slate-500" style={{ fontFamily: F.body }}>
+                  <p className="text-xs text-[#5e7380]" style={{ fontFamily: F.body }}>
                     {t(lang, "howFeeling")}
                   </p>
                 </div>
@@ -1268,20 +1321,21 @@ export default function App() {
               </div>
 
               {/* Main Hero Voice Check Card */}
-              <div className="p-6 rounded-3xl bg-gradient-to-br from-cyan-600 via-cyan-700 to-cyan-900 text-white shadow-xl shadow-cyan-900/20 space-y-4 relative overflow-hidden">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <div className="p-6 rounded-3xl bg-gradient-to-br from-[#02738a] via-[#02697e] to-[#014755] text-white shadow-xl shadow-[#02738a]/20 space-y-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="flex items-center gap-3.5 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/20 shadow-inner">
                     <Mic className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-cyan-200 uppercase tracking-wider">Ready when you are</div>
+                    <div className="text-[11px] font-bold text-cyan-200 uppercase tracking-wider">Ready when you are</div>
                     <div className="text-xl font-bold text-white" style={{ fontFamily: F.display }}>
                       {t(lang, "voiceCheckCard")}
                     </div>
                   </div>
                 </div>
 
-                <p className="text-xs sm:text-sm text-cyan-100 leading-relaxed">
+                <p className="text-xs sm:text-sm text-cyan-50/90 leading-relaxed relative z-10">
                   {t(lang, "voiceCheckDesc")}
                 </p>
 
@@ -1290,36 +1344,38 @@ export default function App() {
                     setRecordingContext("freeSpeech");
                     navigate("voiceIntro");
                   }}
-                  className="w-full py-4 rounded-2xl bg-white text-cyan-800 font-bold text-base sm:text-lg shadow-lg hover:bg-cyan-50 transition-all active:scale-95"
+                  className="w-full py-4 rounded-2xl bg-white text-[#01586a] font-bold text-base sm:text-lg shadow-lg hover:bg-cyan-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   style={{ fontFamily: F.display }}
                 >
-                  {t(lang, "start")}
+                  <Play className="w-4 h-4 fill-[#01586a]" />
+                  <span>{t(lang, "startVoiceCheck")}</span>
                 </button>
               </div>
 
               {/* Latest Screening Status Card */}
               <div
                 onClick={() => navigate("history")}
-                className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 shadow-xs cursor-pointer space-y-2 transition-all"
+                className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer space-y-2 transition-all group"
               >
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {t(lang, "previousCheck")}
+                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-[#5e7380]">
+                  <span>{t(lang, "previousCheck")}</span>
+                  <span className="text-[#02738a] group-hover:underline text-[11px] font-semibold lowercase first-letter:uppercase">view details →</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>
+                    <div className="font-bold text-sm text-[#0c1e27]" style={{ fontFamily: F.display }}>
                       Voice Screening #2026-08
                     </div>
-                    <div className="text-xs text-slate-500">28 Aug 2026 · Hindi</div>
+                    <div className="text-xs text-[#5e7380] mt-0.5">28 Aug 2026 · Hindi · 68 WPM</div>
                   </div>
                   {lastResult === "elevated" ? (
-                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold shadow-xs">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                       <span>Follow-up</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-xs">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       <span>Normal</span>
                     </div>
                   )}
@@ -1327,7 +1383,7 @@ export default function App() {
               </div>
 
               {/* Quick Actions Grid */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2.5">
                 {[
                   { icon: HistoryIcon, labelKey: "history", to: "history" as Screen },
                   { icon: HelpCircle, labelKey: "help", to: "help" as Screen },
@@ -1338,12 +1394,12 @@ export default function App() {
                     <button
                       key={a.labelKey}
                       onClick={() => navigate(a.to)}
-                      className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-cyan-300 flex flex-col items-center gap-2 shadow-xs transition-all active:scale-95"
+                      className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#bce3eb] hover:bg-[#f8fcfd] flex flex-col items-center gap-2 shadow-xs transition-all active:scale-95"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center">
                         <Icon className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold text-slate-700" style={{ fontFamily: F.body }}>
+                      <span className="text-xs font-bold text-[#30434f]" style={{ fontFamily: F.body }}>
                         {t(lang, a.labelKey)}
                       </span>
                     </button>
@@ -1352,14 +1408,17 @@ export default function App() {
               </div>
 
               {/* APK Download Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-900 to-slate-900 text-white flex items-center justify-between shadow-md">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-bold text-cyan-300 uppercase tracking-wider">SIH Android App</div>
-                  <div className="text-sm font-bold">Download SwarSanket APK</div>
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#03222a] to-[#04333f] text-white flex items-center justify-between shadow-md border border-[#09414e]">
+                <div className="flex items-center gap-3">
+                  <img src="/logo.png" alt="SwarSanket APK" className="w-10 h-10 rounded-xl object-contain border border-[#0f5968]" />
+                  <div className="space-y-0.5">
+                    <div className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider">SIH Android App</div>
+                    <div className="text-xs sm:text-sm font-bold">Install SwarSanket APK</div>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowApkModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95"
+                  className="px-3.5 py-2 rounded-xl bg-[#02738a] hover:bg-[#02849f] text-white font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Get APK
@@ -1374,20 +1433,20 @@ export default function App() {
 
       case "voiceIntro":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
-            <div className="flex items-center justify-between px-6 pt-3 pb-2">
+            <div className="flex items-center justify-between px-6 pt-2 pb-2 shrink-0">
               <BackBtn onBack={() => navigate("home")} />
-              <span className="font-bold text-sm text-slate-600">Voice Check</span>
+              <span className="font-bold text-sm text-[#0c1e27]">Voice Check</span>
               <div className="w-10" />
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
               <div className="text-center space-y-2">
-                <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-3xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   {t(lang, "letsBegin")}
                 </h1>
-                <p className="text-sm text-slate-600 leading-relaxed" style={{ fontFamily: F.body }}>
+                <p className="text-sm text-[#5e7380] leading-relaxed" style={{ fontFamily: F.body }}>
                   {t(lang, "voiceIntroSub")}
                 </p>
               </div>
@@ -1398,11 +1457,11 @@ export default function App() {
                   { step: "02", key: "step2" },
                   { step: "03", key: "step3" },
                 ].map((s) => (
-                  <div key={s.step} className="p-4 rounded-2xl bg-white border border-slate-200 text-center space-y-1 shadow-xs">
-                    <div className="text-xl font-bold text-cyan-600" style={{ fontFamily: F.display }}>
+                  <div key={s.step} className="p-4 rounded-2xl bg-white border border-[#d7eaef] text-center space-y-1 shadow-xs">
+                    <div className="text-xl font-bold text-[#02738a]" style={{ fontFamily: F.display }}>
                       {s.step}
                     </div>
-                    <div className="text-xs font-bold text-slate-800">{t(lang, s.key)}</div>
+                    <div className="text-xs font-bold text-[#30434f]">{t(lang, s.key)}</div>
                   </div>
                 ))}
               </div>
@@ -1420,22 +1479,22 @@ export default function App() {
 
       case "instruction":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader step={0} total={3} onBack={() => navigate("voiceIntro")} onExit={() => navigate("home")} />
 
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-cyan-100 text-cyan-700 flex items-center justify-center shadow-inner">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
+              <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
                 <Volume2 className="w-10 h-10" />
               </div>
 
               <div className="text-center w-full space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#5e7380]">
                   {t(lang, "listenToQuestion")}
                 </p>
 
-                <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-md">
-                  <p className="text-xl font-medium text-slate-900 leading-relaxed" style={{ fontFamily: F.body }}>
+                <div className="p-6 rounded-3xl bg-white border border-[#d7eaef] shadow-md">
+                  <p className="text-xl font-medium text-[#0c1e27] leading-relaxed" style={{ fontFamily: F.body }}>
                     {getTaskPrompt(lang, recordingContext)}
                   </p>
                 </div>
@@ -1448,7 +1507,7 @@ export default function App() {
               />
             </div>
 
-            <div className="p-6 bg-white border-t border-slate-200">
+            <div className="p-5 bg-white border-t border-[#d7eaef] shrink-0">
               <Btn label={t(lang, "startSpeaking")} onClick={() => navigate("recording")} />
             </div>
             <HomeIndicator />
@@ -1457,11 +1516,11 @@ export default function App() {
 
       case "recording":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader step={0} total={3} onBack={() => navigate("instruction")} onExit={() => navigate("home")} />
 
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-8">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-8">
               {/* Interactive Big Mic Button */}
               <div className="relative flex items-center justify-center">
                 {isRecording && (
@@ -1478,7 +1537,7 @@ export default function App() {
                   className={`relative w-28 h-28 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform active:scale-90 ${
                     isRecording
                       ? "bg-gradient-to-tr from-red-600 to-rose-500 shadow-red-600/40"
-                      : "bg-gradient-to-tr from-cyan-600 to-cyan-800 shadow-cyan-600/40"
+                      : "bg-gradient-to-tr from-[#02738a] to-[#015364] shadow-[#02738a]/40"
                   }`}
                 >
                   {isRecording ? (
@@ -1493,10 +1552,10 @@ export default function App() {
               <div className="text-center space-y-2">
                 {!isRecording ? (
                   <>
-                    <p className="text-2xl font-bold text-slate-800" style={{ fontFamily: F.display }}>
+                    <p className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                       {t(lang, "tapToSpeak")}
                     </p>
-                    <p className="text-xs text-slate-500">Tap microphone when you are ready</p>
+                    <p className="text-xs text-[#5e7380]">Tap microphone when you are ready</p>
                   </>
                 ) : (
                   <>
@@ -1504,10 +1563,10 @@ export default function App() {
                       <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
                       <span>{isPaused ? "Paused" : "Recording Voice"}</span>
                     </div>
-                    <p className="text-4xl font-bold text-slate-900 tracking-wider" style={{ fontFamily: F.display }}>
+                    <p className="text-4xl font-bold text-[#0c1e27] tracking-wider" style={{ fontFamily: F.display }}>
                       {String(Math.floor(recordingSecs / 60)).padStart(2, "0")}:{String(recordingSecs % 60).padStart(2, "0")}
                     </p>
-                    <p className="text-xs text-slate-500">{t(lang, "speakNaturally")}</p>
+                    <p className="text-xs text-[#5e7380]">{t(lang, "speakNaturally")}</p>
                   </>
                 )}
               </div>
@@ -1516,7 +1575,7 @@ export default function App() {
               <DynamicWaveformBars active={isRecording && !isPaused} level={micLevel} />
             </div>
 
-            <div className="p-6 bg-white border-t border-slate-200 space-y-3">
+            <div className="p-5 bg-white border-t border-[#d7eaef] shrink-0 space-y-3">
               {isRecording ? (
                 <Btn label={t(lang, "finishRecording")} onClick={() => handleFinishRecording("recordingReview")} />
               ) : (
@@ -1529,22 +1588,22 @@ export default function App() {
 
       case "recordingReview":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
               <div className="w-20 h-20 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
 
               <div className="text-center space-y-1">
-                <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   {t(lang, "recordingReady")}
                 </h1>
-                <p className="text-xs text-slate-500">{t(lang, "listenBefore")}</p>
+                <p className="text-xs text-[#5e7380]">{t(lang, "listenBefore")}</p>
               </div>
 
               {/* Audio player card */}
-              <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center gap-4">
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-sm flex items-center gap-4">
                 <button
                   onClick={() => {
                     if (currentAudioUrl) {
@@ -1552,14 +1611,14 @@ export default function App() {
                       audio.play();
                     }
                   }}
-                  className="w-12 h-12 rounded-2xl bg-cyan-600 hover:bg-cyan-700 text-white flex items-center justify-center shadow-md active:scale-95 flex-shrink-0"
+                  className="w-12 h-12 rounded-2xl bg-[#02738a] hover:bg-[#02849f] text-white flex items-center justify-center shadow-md active:scale-95 flex-shrink-0"
                 >
                   <Play className="w-5 h-5" />
                 </button>
                 <div className="flex-1">
                   <DynamicWaveformBars active={false} bars={16} />
                 </div>
-                <span className="text-xs font-bold text-slate-500">
+                <span className="text-xs font-bold text-[#5e7380]">
                   {String(Math.floor(recordingSecs / 60)).padStart(2, "0")}:{String(recordingSecs % 60).padStart(2, "0")}
                 </span>
               </div>
@@ -1588,20 +1647,20 @@ export default function App() {
 
       case "pictureDesc":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader step={1} total={3} onBack={() => navigate("recordingReview")} onExit={() => navigate("home")} />
 
-            <div className="flex-1 flex flex-col px-6 pt-3 pb-4 gap-3 animate-fade-in-up">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col px-6 pt-3 pb-4 gap-3 animate-fade-in-up">
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   {t(lang, "whatDoYouSee")}
                 </h1>
-                <p className="text-xs text-slate-500">{t(lang, "pictureDescSub")}</p>
+                <p className="text-xs text-[#5e7380]">{t(lang, "pictureDescSub")}</p>
               </div>
 
               {/* Picture description task illustration */}
-              <div className="w-full h-48 rounded-3xl bg-gradient-to-tr from-sky-200 via-amber-100 to-emerald-100 border border-slate-200 flex items-center justify-center overflow-hidden relative shadow-inner">
+              <div className="w-full h-48 rounded-3xl bg-gradient-to-tr from-sky-200 via-amber-100 to-emerald-100 border border-[#d7eaef] flex items-center justify-center overflow-hidden relative shadow-inner">
                 <svg width="100%" height="100%" viewBox="0 0 360 200" fill="none" preserveAspectRatio="xMidYMid meet">
                   <rect width="360" height="200" fill="#e0f2fe"/>
                   <circle cx="300" cy="40" r="24" fill="#fde68a"/>
@@ -1640,24 +1699,24 @@ export default function App() {
 
       case "memory":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader step={2} total={3} onBack={() => navigate("pictureDesc")} onExit={() => navigate("home")} />
 
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
+              <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
                 <Sparkles className="w-10 h-10" />
               </div>
 
               <div className="text-center space-y-2">
-                <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   {t(lang, "listenCarefully")}
                 </h1>
-                <p className="text-xs text-slate-500">{t(lang, "memorySub")}</p>
+                <p className="text-xs text-[#5e7380]">{t(lang, "memorySub")}</p>
               </div>
 
-              <div className="w-full p-6 rounded-3xl bg-white border border-slate-200 text-center shadow-md space-y-1">
-                <p className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.body }}>
+              <div className="w-full p-6 rounded-3xl bg-white border border-[#d7eaef] text-center shadow-md space-y-1">
+                <p className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.body }}>
                   {getTaskPrompt(lang, "memoryRecall")}
                 </p>
                 <p className="text-xs text-slate-400">Remember these 5 words</p>
@@ -1681,26 +1740,26 @@ export default function App() {
 
       case "conversation":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader step={2} total={3} onBack={() => navigate("memory")} onExit={() => navigate("home")} />
 
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
+              <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
                 <MessageSquare className="w-10 h-10" />
               </div>
 
               <div className="text-center space-y-2">
-                <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+                <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                   {t(lang, "oneMore")}
                 </h1>
-                <p className="text-lg text-slate-800 font-medium leading-relaxed" style={{ fontFamily: F.body }}>
+                <p className="text-lg text-[#0c1e27] font-medium leading-relaxed" style={{ fontFamily: F.body }}>
                   {getTaskPrompt(lang, "conversation")}
                 </p>
               </div>
 
-              <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 text-center">
-                <p className="text-xs italic text-slate-500">"{t(lang, "conversationSub")}"</p>
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] text-center">
+                <p className="text-xs italic text-[#5e7380]">"{t(lang, "conversationSub")}"</p>
               </div>
 
               <AudioBtn textToSpeak={getTaskPrompt(lang, "conversation")} lang={lang} />
@@ -1721,14 +1780,18 @@ export default function App() {
 
       case "completion":
         return (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 bg-gradient-to-tr from-sky-50 to-cyan-100 animate-fade-in">
-            <div className="w-24 h-24 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30 mb-6">
-              <Check className="w-12 h-12" />
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden items-center justify-center px-6 bg-gradient-to-tr from-[#fbfdfd] via-[#f0f8fa] to-[#e4f4f7] animate-fade-in">
+            <div className="relative mb-6">
+              <div className="absolute inset-0 rounded-3xl bg-[#02738a]/20 blur-xl animate-pulse" />
+              <img src="/logo.png" alt="SwarSanket Logo" className="w-24 h-24 rounded-3xl object-contain border border-[#bce3eb] shadow-xl relative z-10" />
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md z-20">
+                <Check className="w-5 h-5" />
+              </div>
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 text-center" style={{ fontFamily: F.display }}>
+            <h1 className="text-3xl font-bold text-[#0c1e27] text-center" style={{ fontFamily: F.display }}>
               {t(lang, "youreDone")}
             </h1>
-            <p className="text-sm text-slate-600 text-center mt-2 max-w-xs" style={{ fontFamily: F.body }}>
+            <p className="text-sm text-[#5e7380] text-center mt-2 max-w-xs" style={{ fontFamily: F.body }}>
               {t(lang, "completionSub")}
             </p>
 
@@ -1740,16 +1803,16 @@ export default function App() {
 
       case "processing":
         return (
-          <div className="flex-1 flex flex-col items-center justify-center px-8 bg-sky-50/60 animate-fade-in space-y-6">
-            <div className="w-24 h-24 rounded-3xl bg-cyan-100 text-cyan-700 flex items-center justify-center shadow-inner">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden items-center justify-center px-8 bg-[#f3f9fb] animate-fade-in space-y-6">
+            <div className="w-24 h-24 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
               <Activity className="w-12 h-12 animate-pulse" />
             </div>
 
             <div className="text-center space-y-1">
-              <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
+              <h1 className="text-2xl font-bold text-[#0c1e27]" style={{ fontFamily: F.display }}>
                 {t(lang, "analyzingVoice")}
               </h1>
-              <p className="text-xs text-slate-500">{t(lang, "thisMayTake")}</p>
+              <p className="text-xs text-[#5e7380]">{t(lang, "thisMayTake")}</p>
             </div>
 
             {analysisError ? (
@@ -1772,22 +1835,43 @@ export default function App() {
                     }}
                   />
                   <Btn
-                    label="Record Voice Again"
+                    label="Save Offline & Sync Later"
                     onClick={() => {
                       setAnalysisError(null);
-                      navigate("recording");
+                      handleSaveCompletedSession("uncertain");
+                      navigate("offlineSaved");
                     }}
                     variant="secondary"
                   />
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        setAnalysisError(null);
+                        navigate("recording");
+                      }}
+                      className="flex-1 py-2 text-xs font-semibold text-[#30434f] hover:text-[#0c1e27] border border-[#d7eaef] rounded-xl bg-white"
+                    >
+                      Record Again
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAnalysisError(null);
+                        navigate("settings");
+                      }}
+                      className="flex-1 py-2 text-xs font-semibold text-[#02738a] hover:text-[#01586a] border border-[#bce3eb] rounded-xl bg-[#e4f4f7]"
+                    >
+                      Server Settings
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
               <>
                 <div className="w-full space-y-2">
                   <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-600 to-cyan-800 animate-pulse w-4/5" />
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#02738a] to-[#015364] animate-pulse w-4/5" />
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500 font-medium">
+                  <div className="flex justify-between text-[11px] text-[#5e7380] font-medium">
                     <span>
                       {analysisStep === "uploading"
                         ? "Uploading voice recording…"
@@ -1799,7 +1883,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 space-y-2 text-xs text-slate-600">
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] space-y-2 text-xs text-[#30434f]">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>Whisper ASR word-level transcription</span>
@@ -1820,23 +1904,25 @@ export default function App() {
 
       case "resultLow":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5 animate-fade-in">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-md">
-                <CheckCircle2 className="w-10 h-10" />
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+              <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-xs">
+                  <CheckCircle2 className="w-9 h-9" />
+                </div>
+
+                <div className="space-y-1">
+                  <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                    {screeningApiResult?.screening.status || t(lang, "noConcern")}
+                  </span>
+                  <h1 className="text-2xl font-bold text-slate-900 pt-0.5" style={{ fontFamily: F.display }}>
+                    {t(lang, "voiceCheckComplete")}
+                  </h1>
+                </div>
               </div>
 
-              <div className="text-center space-y-1">
-                <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-                  {screeningApiResult?.screening.status || t(lang, "noConcern")}
-                </span>
-                <h1 className="text-2xl font-bold text-slate-900 pt-1" style={{ fontFamily: F.display }}>
-                  {t(lang, "voiceCheckComplete")}
-                </h1>
-              </div>
-
-              <div className="w-full p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
                 <p className="text-xs text-slate-600 leading-relaxed text-center">
                   {screeningApiResult?.screening.interpretation || t(lang, "noConcernSub")}
                 </p>
@@ -1853,12 +1939,12 @@ export default function App() {
 
               {/* Real ASR Transcript */}
               {screeningApiResult?.transcript && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-1.5">
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     <span>Voice Transcript</span>
                     <span>{screeningApiResult.word_count} words ({screeningApiResult.audio?.duration_seconds.toFixed(1)}s)</span>
                   </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed">
+                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
                     "{screeningApiResult.transcript}"
                   </p>
                 </div>
@@ -1866,12 +1952,12 @@ export default function App() {
 
               {/* Real SHAP Factors Card */}
               {screeningApiResult?.explanation && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-2">
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Model Explainability (SHAP)
                     </span>
-                    <span className="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
                       Tree SHAP
                     </span>
                   </div>
@@ -1904,11 +1990,11 @@ export default function App() {
                 </div>
               )}
 
-              <div className="p-3 rounded-2xl bg-slate-100 text-[11px] text-slate-500 text-center leading-relaxed">
+              <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
-              <div className="w-full space-y-3 pt-2">
+              <div className="w-full space-y-2.5 pt-1 pb-4">
                 <Btn label={t(lang, "done")} onClick={() => navigate("home")} />
                 <Btn label={t(lang, "viewDetails")} onClick={() => navigate("screeningDetails")} variant="ghost" />
               </div>
@@ -1919,23 +2005,25 @@ export default function App() {
 
       case "resultElevated":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-4 animate-fade-in">
-              <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center shadow-md">
-                <AlertTriangle className="w-10 h-10" />
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+              <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
+                  <AlertTriangle className="w-9 h-9" />
+                </div>
+
+                <div className="space-y-1">
+                  <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+                    {screeningApiResult?.screening.status || t(lang, "furtherEval")}
+                  </span>
+                  <h1 className="text-2xl font-bold text-slate-900 pt-0.5" style={{ fontFamily: F.display }}>
+                    Evaluation Recommended
+                  </h1>
+                </div>
               </div>
 
-              <div className="text-center space-y-1">
-                <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
-                  {screeningApiResult?.screening.status || t(lang, "furtherEval")}
-                </span>
-                <h1 className="text-2xl font-bold text-slate-900 pt-1" style={{ fontFamily: F.display }}>
-                  Evaluation Recommended
-                </h1>
-              </div>
-
-              <div className="w-full p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
                 <p className="text-xs text-slate-600 leading-relaxed text-center">
                   {screeningApiResult?.screening.interpretation || t(lang, "furtherEvalSub")}
                 </p>
@@ -1955,12 +2043,12 @@ export default function App() {
 
               {/* Real ASR Transcript */}
               {screeningApiResult?.transcript && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-1.5">
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     <span>Voice Transcript</span>
                     <span>{screeningApiResult.word_count} words ({screeningApiResult.audio?.duration_seconds.toFixed(1)}s)</span>
                   </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed">
+                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
                     "{screeningApiResult.transcript}"
                   </p>
                 </div>
@@ -1968,12 +2056,12 @@ export default function App() {
 
               {/* Real SHAP Factors Card */}
               {screeningApiResult?.explanation && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-xs text-left space-y-2">
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Model Explainability (SHAP)
                     </span>
-                    <span className="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
                       Tree SHAP
                     </span>
                   </div>
@@ -2006,11 +2094,11 @@ export default function App() {
                 </div>
               )}
 
-              <div className="p-3 rounded-2xl bg-slate-100 text-[11px] text-slate-500 text-center leading-relaxed">
+              <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
-              <div className="w-full space-y-2.5 pt-2">
+              <div className="w-full space-y-2.5 pt-1 pb-4">
                 <Btn label={t(lang, "talkToPro")} onClick={() => navigate("referral")} />
                 <Btn label={t(lang, "viewDetails")} onClick={() => navigate("screeningDetails")} variant="ghost" />
                 <Btn label="Notify Caregiver" onClick={() => navigate("caregiverAlert")} variant="secondary" size="sm" />
@@ -2019,7 +2107,6 @@ export default function App() {
             <HomeIndicator />
           </div>
         );
-
 
       case "screeningDetails": {
         const activeScreening = screeningsList[0];
@@ -2043,7 +2130,7 @@ export default function App() {
           : "0.933";
 
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center gap-3">
               <BackBtn onBack={() => navigate("home")} />
@@ -2052,8 +2139,8 @@ export default function App() {
               </h1>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
+              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500">Overall Screening Signal</span>
                   <span
@@ -2088,7 +2175,7 @@ export default function App() {
               </div>
 
               {/* Biomarkers list */}
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Speech & Language Indicators
                 </div>
@@ -2103,21 +2190,21 @@ export default function App() {
                       <div className="text-xs font-bold text-slate-800">{b.label}</div>
                       <div className="text-[11px] text-slate-400">{b.sub}</div>
                     </div>
-                    <div className="text-xs font-bold text-cyan-800">{b.val}</div>
+                    <div className="text-xs font-bold text-[#02738a]">{b.val}</div>
                   </div>
                 ))}
               </div>
 
               {/* Real ASR Transcription */}
               {screeningApiResult?.transcript && (
-                <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-2 shadow-xs">
+                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-2 shadow-xs">
                   <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
                     <span>Voice Transcript (Whisper ASR)</span>
                     <span className="text-[10px] text-slate-400 font-medium">
                       {screeningApiResult.word_count} words · {screeningApiResult.detected_language?.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
                     "{screeningApiResult.transcript}"
                   </p>
                 </div>
@@ -2125,12 +2212,12 @@ export default function App() {
 
               {/* Real Model Explainability (Tree SHAP) Section */}
               {screeningApiResult?.explanation && (
-                <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Model Explainability (SHAP)
                     </span>
-                    <span className="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
                       Additive Tree Attribution
                     </span>
                   </div>
@@ -2191,11 +2278,11 @@ export default function App() {
                 </div>
               )}
 
-              <div className="p-3 rounded-2xl bg-slate-100 text-[11px] text-slate-500 text-center leading-relaxed">
+              <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
-              <div className="space-y-2 pt-2">
+              <div className="space-y-2 pt-1 pb-4">
                 <Btn
                   label="Download Clinical Summary (PDF)"
                   onClick={() => {
@@ -2213,7 +2300,7 @@ export default function App() {
 
       case "referral":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center gap-3">
               <BackBtn onBack={() => navigate("home")} />
@@ -2222,17 +2309,17 @@ export default function App() {
               </h1>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-3">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-3 pb-4">
               {[
                 { name: "Dr. Priya Sharma", role: t(lang, "neurologist"), spec: "Cognitive & Memory Health", wait: "Today", rating: "4.9" },
                 { name: "Dr. Rajesh Varma", role: t(lang, "generalPhysician"), spec: "Primary Healthcare", wait: "Today", rating: "4.8" },
                 { name: "Sunita Kumari", role: t(lang, "healthWorkerRole"), spec: "Community Health Center", wait: "Available Now", rating: "4.9" },
               ].map((doc) => (
-                <div key={doc.name} className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <div key={doc.name} className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="font-bold text-base text-slate-900" style={{ fontFamily: F.display }}>{doc.name}</div>
-                      <div className="text-xs text-cyan-700 font-semibold">{doc.role} · {doc.spec}</div>
+                      <div className="text-xs text-[#02738a] font-semibold">{doc.role} · {doc.spec}</div>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
                       {doc.wait}
@@ -2242,7 +2329,7 @@ export default function App() {
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={() => navigate("teleconsult")}
-                      className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs"
                     >
                       <Video className="w-3.5 h-3.5" />
                       {t(lang, "startConsultation")}
@@ -2251,7 +2338,7 @@ export default function App() {
                       onClick={() => {
                         if (screeningsList.length > 0) generateAndDownloadReport(screeningsList[0]);
                       }}
-                      className="px-3 py-2.5 rounded-xl bg-cyan-50 text-cyan-800 font-bold text-xs border border-cyan-200"
+                      className="px-3 py-2.5 rounded-xl bg-[#e4f4f7] text-[#015364] font-bold text-xs border border-[#cbe6ed] hover:bg-[#d7eef3] transition-colors"
                     >
                       <Share2 className="w-3.5 h-3.5" />
                     </button>
@@ -2265,24 +2352,24 @@ export default function App() {
 
       case "teleconsult":
         return (
-          <div className="flex-1 flex flex-col bg-slate-950 text-white">
+          <div className="h-full flex flex-col bg-[#021820] text-white min-h-0 overflow-hidden">
             <StatusBar light />
             <div className="px-6 pt-3 pb-2 flex items-center justify-between">
               <BackBtn onBack={() => navigate("referral")} />
-              <span className="text-xs font-bold text-cyan-400">Teleconsultation · Live</span>
+              <span className="text-xs font-bold text-[#38bdf8]">Teleconsultation · Live</span>
               <div className="w-10" />
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-800 to-slate-800 border-2 border-cyan-500/30 flex items-center justify-center shadow-2xl">
-                <Stethoscope className="w-16 h-16 text-cyan-300" />
+            <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 min-h-0">
+              <div className="w-32 h-32 rounded-3xl bg-gradient-to-tr from-[#02738a] to-[#013540] border-2 border-[#02738a]/40 flex items-center justify-center shadow-2xl">
+                <Stethoscope className="w-16 h-16 text-[#e4f4f7]" />
               </div>
 
               <div className="text-center space-y-1">
                 <h2 className="text-2xl font-bold text-white" style={{ fontFamily: F.display }}>
                   Dr. Priya Sharma
                 </h2>
-                <p className="text-xs text-cyan-200">Consultant Neurologist · AI Voice Review</p>
+                <p className="text-xs text-slate-300">Consultant Neurologist · AI Voice Review</p>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-semibold mt-2">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Connected · 01:24</span>
@@ -2320,19 +2407,22 @@ export default function App() {
 
       case "doctorDash":
         return (
-          <div className="flex-1 flex flex-col bg-slate-950 text-white">
+          <div className="h-full flex flex-col bg-[#021820] text-white min-h-0 overflow-hidden">
             <StatusBar light />
             <div className="px-6 pt-3 pb-3 space-y-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-white" style={{ fontFamily: F.display }}>
-                    Doctor Clinical Dashboard
-                  </h1>
-                  <p className="text-xs text-cyan-300">SwarSanket AI & Quantum ML Diagnostics</p>
+                <div className="flex items-center gap-2.5">
+                  <img src="/logo.png" alt="SwarSanket Logo" className="w-8 h-8 rounded-xl object-contain border border-[#02738a]/40" />
+                  <div>
+                    <h1 className="text-xl font-bold text-white" style={{ fontFamily: F.display }}>
+                      Doctor Clinical Hub
+                    </h1>
+                    <p className="text-[11px] text-[#38bdf8]">SwarSanket AI Diagnostics</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => navigate("home")}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                  className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] text-xs font-semibold text-slate-200 hover:bg-[#073c4b] transition-colors"
                 >
                   Exit
                 </button>
@@ -2342,9 +2432,9 @@ export default function App() {
                 {[
                   { l: "Patients", v: "4" },
                   { l: "Elevated", v: "2", c: "text-amber-400" },
-                  { l: "Accuracy", v: "93%", c: "text-cyan-400" },
+                  { l: "Accuracy", v: "93%", c: "text-[#38bdf8]" },
                 ].map((s) => (
-                  <div key={s.l} className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-center">
+                  <div key={s.l} className="p-3 rounded-2xl bg-[#03232c] border border-[#094250] text-center">
                     <div className={`text-xl font-bold ${s.c || "text-white"}`} style={{ fontFamily: F.display }}>{s.v}</div>
                     <div className="text-[10px] text-slate-400 mt-0.5">{s.l}</div>
                   </div>
@@ -2352,14 +2442,14 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex-1 rounded-t-3xl bg-sky-50/80 text-slate-900 flex flex-col overflow-hidden">
+            <div className="flex-1 rounded-t-3xl bg-[#f3f9fb] text-slate-900 flex flex-col min-h-0 overflow-hidden">
               <div className="px-6 pt-4 pb-2 flex items-center justify-between">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600" style={{ fontFamily: F.display }}>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600" style={{ fontFamily: F.display }}>
                   Recent Patient Screenings
                 </h2>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
+              <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-4 space-y-3">
                 {[
                   { name: "Rama Devi", age: 72, risk: "elevated", date: "28 Aug 2026", lang: "Hindi", wpm: 68 },
                   { name: "Suresh Kumar", age: 68, risk: "low", date: "15 Aug 2026", lang: "Hindi", wpm: 92 },
@@ -2372,7 +2462,7 @@ export default function App() {
                       setSelectedPatient(p.name);
                       navigate("doctorPatient");
                     }}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-cyan-400 shadow-xs cursor-pointer flex items-center justify-between transition-all"
+                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all"
                   >
                     <div>
                       <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>
@@ -2398,7 +2488,7 @@ export default function App() {
 
       case "doctorPatient":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -2414,13 +2504,13 @@ export default function App() {
                 onClick={() => {
                   if (screeningsList.length > 0) generateAndDownloadReport(screeningsList[0]);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-cyan-600 text-white text-xs font-bold shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
               >
                 Print Report
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
               {/* Risk Banner */}
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -2431,7 +2521,7 @@ export default function App() {
               </div>
 
               {/* Recharts Longitudinal Trend */}
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
+              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Longitudinal Risk Score Trend (%)
                 </div>
@@ -2443,32 +2533,38 @@ export default function App() {
                       { month: "Aug", risk: 38 },
                       { month: "Sep", risk: 88 },
                     ]}>
+                      <defs>
+                        <linearGradient id="patientRiskGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#02738a" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#02738a" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
                       <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
                       <Tooltip />
-                      <Area type="monotone" dataKey="risk" stroke="#0891b2" fill="#e0f7fa" strokeWidth={2.5} />
+                      <Area type="monotone" dataKey="risk" stroke="#02738a" fill="url(#patientRiskGrad)" strokeWidth={2.5} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Dual-Engine ML Model Scores */}
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Dual-Engine ML Analysis</div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between font-medium">
                     <span>Classical (Xception + XGBoost):</span>
-                    <span className="font-bold text-cyan-800">84% Risk (AUC 0.91)</span>
+                    <span className="font-bold text-[#02738a]">84% Risk (AUC 0.91)</span>
                   </div>
                   <div className="flex justify-between font-medium">
                     <span>Quantum-Hybrid (PennyLane QNN):</span>
-                    <span className="font-bold text-cyan-800">89% Risk (AUC 0.93)</span>
+                    <span className="font-bold text-[#02738a]">89% Risk (AUC 0.93)</span>
                   </div>
                 </div>
               </div>
 
               {/* SHAP Feature Attribution */}
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2.5">
+              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">SHAP Explainability Factors</div>
                 {[
                   { factor: "Speech Pause Duration (>1.2s)", weight: 38 },
@@ -2479,16 +2575,16 @@ export default function App() {
                   <div key={s.factor} className="space-y-1">
                     <div className="flex justify-between text-xs">
                       <span className="text-slate-700 font-medium">{s.factor}</span>
-                      <span className="font-bold text-cyan-700">+{s.weight}%</span>
+                      <span className="font-bold text-[#02738a]">+{s.weight}%</span>
                     </div>
                     <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full bg-cyan-600 rounded-full" style={{ width: `${s.weight * 2}%` }} />
+                      <div className="h-full bg-gradient-to-r from-[#02738a] to-[#015364] rounded-full" style={{ width: `${s.weight * 2}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 pb-4">
                 <Btn
                   label="Download Printable Medical Report"
                   onClick={() => {
@@ -2503,21 +2599,21 @@ export default function App() {
 
       case "history":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
                 {t(lang, "history")}
               </h1>
-              <button onClick={() => navigate("trend")} className="text-xs font-bold text-cyan-700 hover:underline">
+              <button onClick={() => navigate("trend")} className="text-xs font-bold text-[#02738a] hover:underline">
                 View Trends →
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-3">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-3 pb-4">
               {screeningsList.length === 0 ? (
                 <div className="text-center py-12 space-y-3">
-                  <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mx-auto text-slate-400">
+                  <div className="w-16 h-16 rounded-full bg-slate-200/70 flex items-center justify-center mx-auto text-slate-400">
                     <HistoryIcon className="w-8 h-8" />
                   </div>
                   <p className="text-sm font-bold text-slate-700">{t(lang, "noScreeningsTitle")}</p>
@@ -2528,7 +2624,7 @@ export default function App() {
                   <div
                     key={s.id}
                     onClick={() => navigate("screeningDetails")}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-cyan-300 shadow-xs cursor-pointer flex items-center justify-between transition-all"
+                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all"
                   >
                     <div>
                       <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>
@@ -2560,17 +2656,17 @@ export default function App() {
 
       case "trend":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center gap-3">
               <BackBtn onBack={() => navigate("history")} />
               <h1 className="text-xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
-                Your Progress & Trend
+                Your Progress &amp; Trend
               </h1>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4 pb-4">
+              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Screening Confidence Over Time
                 </div>
@@ -2582,16 +2678,22 @@ export default function App() {
                       { month: "Aug", score: 38 },
                       { month: "Sep", score: 88 },
                     ]}>
+                      <defs>
+                        <linearGradient id="trendScoreGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#02738a" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#02738a" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
                       <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip />
-                      <Area type="monotone" dataKey="score" stroke="#0891b2" fill="#e0f7fa" strokeWidth={3} />
+                      <Area type="monotone" dataKey="score" stroke="#02738a" fill="url(#trendScoreGrad)" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-cyan-50 text-xs text-cyan-900 leading-relaxed">
+              <div className="p-4 rounded-2xl bg-[#e4f4f7] border border-[#cbe6ed] text-xs text-[#015364] leading-relaxed">
                 Regular monthly voice check-ups allow early tracking of subtle linguistic, temporal, and acoustic variations.
               </div>
 
@@ -2610,7 +2712,7 @@ export default function App() {
 
       case "caregiver":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center gap-3">
               <BackBtn onBack={() => navigate("home")} />
@@ -2619,15 +2721,15 @@ export default function App() {
               </h1>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-              <div className="p-5 rounded-3xl bg-gradient-to-r from-cyan-600 to-cyan-800 text-white space-y-2 shadow-md">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4 pb-4">
+              <div className="p-5 rounded-3xl bg-gradient-to-r from-[#02738a] to-[#015364] text-white space-y-2 shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Users className="w-5 h-5" />
+                    <Users className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <div className="font-bold text-base">Assisted Screening</div>
-                    <div className="text-xs text-cyan-100">Help family members screen easily</div>
+                    <div className="text-xs text-[#e4f4f7]">Help family members screen easily</div>
                   </div>
                 </div>
               </div>
@@ -2638,14 +2740,14 @@ export default function App() {
                   { name: "Rama Devi", age: 72, relation: "Mother", status: "Follow-up Recommended" },
                   { name: "Suresh Kumar", age: 68, relation: "Father", status: "Normal" },
                 ].map((m) => (
-                  <div key={m.name} className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
+                  <div key={m.name} className="p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center justify-between shadow-xs">
                     <div>
                       <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>{m.name}, {m.age}</div>
                       <div className="text-xs text-slate-500">{m.relation} · {m.status}</div>
                     </div>
                     <button
                       onClick={() => navigate("voiceIntro")}
-                      className="px-3 py-1.5 rounded-xl bg-cyan-50 text-cyan-800 font-bold text-xs border border-cyan-200"
+                      className="px-3 py-1.5 rounded-xl bg-[#e4f4f7] text-[#015364] font-bold text-xs border border-[#cbe6ed] hover:bg-[#d7eef3] transition-colors"
                     >
                       Screen
                     </button>
@@ -2661,7 +2763,7 @@ export default function App() {
 
       case "healthWorker":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center gap-3">
               <BackBtn onBack={() => navigate("home")} />
@@ -2673,7 +2775,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4 pb-4">
               {/* Sync Status Banner */}
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2703,13 +2805,13 @@ export default function App() {
                   { name: "Suresh Kumar", age: 68, village: "Rampur", status: "completed" },
                   { name: "Lakshmi Bai", age: 75, village: "Kashipur", status: "pending" },
                 ].map((p) => (
-                  <div key={p.name} className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-between shadow-xs">
+                  <div key={p.name} className="p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center justify-between shadow-xs">
                     <div>
                       <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>{p.name}, {p.age}</div>
                       <div className="text-xs text-slate-500">{p.village} · Status: {p.status}</div>
                     </div>
                     {p.status === "pending" ? (
-                      <button onClick={() => navigate("voiceIntro")} className="px-3 py-1.5 rounded-xl bg-cyan-600 text-white text-xs font-bold">
+                      <button onClick={() => navigate("voiceIntro")} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold shadow-xs">
                         Start
                       </button>
                     ) : (
@@ -2729,7 +2831,7 @@ export default function App() {
 
       case "help":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2">
               <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
@@ -2737,7 +2839,7 @@ export default function App() {
               </h1>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-3">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-3 pb-4">
               {[
                 { icon: Volume2, key: "helpListen", descKey: "helpListenDesc" },
                 { icon: Users, key: "helpAssist", descKey: "helpAssistDesc" },
@@ -2751,9 +2853,9 @@ export default function App() {
                   <button
                     key={h.key}
                     onClick={() => (h.to ? navigate(h.to) : null)}
-                    className="w-full p-4 rounded-2xl bg-white border border-slate-200 flex items-center gap-3.5 text-left shadow-xs hover:border-cyan-300 active:scale-95 transition-all"
+                    className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center gap-3.5 text-left shadow-xs hover:border-[#02738a] active:scale-95 transition-all"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center flex-shrink-0">
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
@@ -2774,17 +2876,17 @@ export default function App() {
 
       case "settings":
         return (
-          <div className="flex-1 flex flex-col bg-sky-50/50">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2">
               <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: F.display }}>
-                Profile & Settings
+                Profile &amp; Settings
               </h1>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center gap-4 shadow-xs">
-                <div className="w-14 h-14 rounded-2xl bg-cyan-100 text-cyan-800 flex items-center justify-center font-bold text-xl">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4 pb-4">
+              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center gap-4 shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#02738a] to-[#0398b7] text-white flex items-center justify-center font-bold text-xl shadow-xs">
                   {userName.charAt(0)}
                 </div>
                 <div>
@@ -2793,7 +2895,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden divide-y divide-slate-100 shadow-xs">
+              <div className="rounded-2xl bg-white border border-[#d7eaef] overflow-hidden divide-y divide-slate-100 shadow-xs">
                 {[
                   { icon: Globe, label: "Language", value: LANGUAGES.find((l) => l.code === lang)?.native, to: "language" as Screen },
                   { icon: Users, label: "Caregiver Hub", value: "Manage", to: "caregiver" as Screen },
@@ -2812,10 +2914,141 @@ export default function App() {
                         <Icon className="w-5 h-5 text-slate-500" />
                         <span className="font-bold text-sm text-slate-800" style={{ fontFamily: F.display }}>{s.label}</span>
                       </div>
-                      <span className="text-xs text-cyan-700 font-semibold">{s.value} →</span>
+                      <span className="text-xs text-[#02738a] font-semibold">{s.value} →</span>
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Backend Server & Android Connectivity Section */}
+              <div className="rounded-2xl bg-white border border-[#d7eaef] p-4 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center">
+                      <Server className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-900" style={{ fontFamily: F.display }}>
+                        Backend Server &amp; Connectivity
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {isCapacitorAndroid() ? "Android App Mode" : "Web Client Mode"}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleTestApi()}
+                    disabled={isTestingApi}
+                    className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors flex items-center gap-1 ${
+                      apiHealth?.ok
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${apiHealth?.ok ? "bg-emerald-500" : "bg-rose-500"}`} />
+                    <span>{isTestingApi ? "Testing…" : apiHealth?.ok ? `Connected (${apiHealth.latencyMs || 25}ms)` : "Offline"}</span>
+                  </button>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#f8fbfd] border border-slate-200 space-y-2 text-xs">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Active API Target:</span>
+                    <span className="font-mono font-bold text-slate-800 truncate max-w-[200px]">{currentApiUrl}</span>
+                  </div>
+                  {apiHealth?.pipeline && (
+                    <div className="text-[10px] text-slate-500 border-t border-slate-200/60 pt-1 flex items-center justify-between">
+                      <span>Pipeline:</span>
+                      <span className="font-medium text-slate-700">{apiHealth.pipeline}</span>
+                    </div>
+                  )}
+                  {apiHealth && !apiHealth.ok && (
+                    <div className="text-[10px] text-rose-600 border-t border-rose-100 pt-1">
+                      {apiHealth.message}
+                    </div>
+                  )}
+                </div>
+
+                {/* Toggle configuration panel */}
+                <div className="pt-1">
+                  <button
+                    onClick={() => setShowApiSettings(!showApiSettings)}
+                    className="text-xs font-semibold text-[#02738a] hover:text-[#015364] flex items-center gap-1"
+                  >
+                    <span>{showApiSettings ? "Hide Server Settings ▲" : "Configure Target Server URL ▼"}</span>
+                  </button>
+                </div>
+
+                {showApiSettings && (
+                  <div className="space-y-3 pt-2 border-t border-slate-100 animate-fade-in">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Custom Backend Server URL</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={customApiUrlInput}
+                          onChange={(e) => setCustomApiUrlInput(e.target.value)}
+                          placeholder="http://192.168.1.100:8001"
+                          className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 focus:border-[#02738a] outline-hidden"
+                        />
+                        <button
+                          onClick={() => handleApplyApiUrl(customApiUrlInput)}
+                          className="px-3 py-2 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white font-bold text-xs active:scale-95 transition-all shadow-xs"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Presets */}
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1.5">Environment Presets:</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {API_PRESETS.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => handleApplyApiUrl(p.url)}
+                            className={`p-2 rounded-xl text-left border transition-all ${
+                              currentApiUrl === p.url
+                                ? "bg-[#e4f4f7] border-[#02738a] text-[#015364]"
+                                : "bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700"
+                            }`}
+                          >
+                            <div className="font-bold text-[11px]">{p.name}</div>
+                            <div className="font-mono text-[9px] text-slate-500 truncate">{p.url}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-1 text-[11px]">
+                      <button
+                        onClick={handleResetApi}
+                        className="text-slate-400 hover:text-slate-600 underline"
+                      >
+                        Reset to Platform Default
+                      </button>
+                      <button
+                        onClick={() => handleTestApi(customApiUrlInput)}
+                        disabled={isTestingApi}
+                        className="text-[#02738a] font-bold hover:underline"
+                      >
+                        {isTestingApi ? "Probing…" : "Test This URL"}
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 italic leading-relaxed">
+                      Tip: On an Android phone or emulator, localhost (127.0.0.1) refers to the phone itself. Point to your computer's LAN IP (e.g. 10.54.93.168:8001) or a cloud HTTPS endpoint.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Multilingual Scope Disclosure */}
+              <div className="p-3.5 rounded-2xl bg-slate-100/70 border border-slate-200/60 text-[11px] text-slate-500 space-y-1">
+                <div className="font-bold text-slate-700">Validated Model Scope</div>
+                <p className="leading-relaxed">
+                  English voice recordings utilize the validated 20-feature acoustic &amp; linguistic contract. Indic languages (Hindi, Bengali, etc.) currently demonstrate live speech recognition with acoustic biomarker screening.
+                </p>
               </div>
             </div>
 
@@ -2826,8 +3059,8 @@ export default function App() {
 
       case "offlineSaved":
         return (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 bg-sky-50/60 animate-fade-in space-y-6">
-            <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center shadow-md">
+          <div className="h-full flex flex-col items-center justify-center px-6 bg-[#f3f9fb] min-h-0 overflow-hidden animate-fade-in space-y-6">
+            <div className="w-20 h-20 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
               <WifiOff className="w-10 h-10" />
             </div>
             <div className="text-center space-y-1">
@@ -2847,8 +3080,8 @@ export default function App() {
 
       case "voiceQuality":
         return (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 bg-sky-50/60 animate-fade-in space-y-6">
-            <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center shadow-md">
+          <div className="h-full flex flex-col items-center justify-center px-6 bg-[#f3f9fb] min-h-0 overflow-hidden animate-fade-in space-y-6">
+            <div className="w-20 h-20 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
               <AlertTriangle className="w-10 h-10" />
             </div>
             <div className="text-center space-y-1">
@@ -2873,25 +3106,27 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center bg-slate-950 p-2 sm:p-6" style={{ fontFamily: F.body }}>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#031d25] via-[#02171e] to-[#010e13] p-0 sm:p-4 md:p-6" style={{ fontFamily: F.body }}>
       {/* Top / Floating Demo Navigation Bar on Desktop */}
-      <div className="fixed top-4 left-4 right-4 z-40 flex flex-wrap items-center justify-between gap-2 max-w-5xl mx-auto px-4 py-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur shadow-2xl">
+      <div className="fixed top-3 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex flex-wrap items-center justify-between gap-2 max-w-5xl mx-auto px-4 py-2 rounded-2xl bg-[#03222a]/90 border border-[#0d4f5e] backdrop-blur-md shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-cyan-600 flex items-center justify-center text-white font-bold text-sm">
-            S
-          </div>
+          <img
+            src="/logo.png"
+            alt="SwarSanket Logo"
+            className="w-8 h-8 rounded-xl shadow-md object-contain border border-[#0e5666]"
+          />
           <div>
             <div className="text-xs font-bold text-white tracking-wide" style={{ fontFamily: F.display }}>
               SwarSanket Mobile
             </div>
-            <div className="text-[10px] text-cyan-300">SIH 2026 AI Early Screening</div>
+            <div className="text-[10px] text-[#38bdf8] font-medium">SIH 2026 AI Early Screening</div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowApkModal(true)}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95"
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Download APK</span>
@@ -2900,7 +3135,7 @@ export default function App() {
           <button
             onClick={() => setIsOffline(!isOffline)}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors ${
-              isOffline ? "bg-amber-600 text-white" : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              isOffline ? "bg-amber-600 text-white" : "bg-[#042a35] border border-[#0d4f5e] text-slate-200 hover:bg-[#073c4b]"
             }`}
           >
             {isOffline ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
@@ -2909,39 +3144,39 @@ export default function App() {
 
           <button
             onClick={() => navigate("doctorDash")}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1"
+            className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200 text-xs font-bold flex items-center gap-1"
           >
-            <Stethoscope className="w-3.5 h-3.5 text-cyan-400" />
+            <Stethoscope className="w-3.5 h-3.5 text-[#38bdf8]" />
             <span>Doctor View</span>
           </button>
 
           <button
             onClick={() => setFullScreenMode(!fullScreenMode)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold hidden sm:flex items-center gap-1"
+            className="px-2.5 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-300 text-xs font-bold hidden sm:flex items-center gap-1"
           >
             {fullScreenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* Main Container: Mobile Frame on Desktop vs Full Screen on Mobile / Expanded Mode */}
+      {/* Main Container: Native 100% on actual mobile vs polished mockup on desktop */}
       <div
-        className={`relative flex flex-col overflow-hidden bg-sky-50 shadow-2xl transition-all duration-300 mt-14 sm:mt-16 ${
+        className={`relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all duration-300 ${
           fullScreenMode
-            ? "w-full max-w-2xl h-[92vh] rounded-3xl border border-slate-700"
-            : "w-full max-w-[390px] h-[844px] rounded-[48px] border-[6px] border-slate-800 shadow-[0_25px_70px_rgba(0,0,0,0.8)]"
+            ? "w-full max-w-2xl h-[92vh] rounded-3xl border border-[#0d4f5e] mt-14 sm:mt-16"
+            : "w-full max-w-[390px] h-[844px] max-h-[calc(100vh-4.8rem)] rounded-none sm:rounded-[48px] border-0 sm:border-[8px] border-[#07252f] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(2,115,138,0.15)] ring-1 ring-[#0d4f5e]/30 mt-12 sm:mt-16"
         }`}
       >
-        {/* Dynamic Island on Mockup */}
+        {/* Dynamic Island on Mockup (Hidden on fullScreenMode and mobile viewports) */}
         {!fullScreenMode && (
-          <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-50 w-28 h-7 rounded-full bg-slate-950 flex items-center justify-between px-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-slate-900" />
-            <div className="w-2 h-2 rounded-full bg-cyan-900/60" />
+          <div className="hidden sm:flex absolute top-2.5 left-1/2 -translate-x-1/2 z-50 w-28 h-7 rounded-full bg-[#02151c] border border-white/10 items-center justify-between px-3 pointer-events-none shadow-inner">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#04232c]" />
+            <div className="w-2 h-2 rounded-full bg-[#02738a]/40" />
           </div>
         )}
 
         {/* Render Active Screen */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
           {renderScreen()}
         </div>
       </div>

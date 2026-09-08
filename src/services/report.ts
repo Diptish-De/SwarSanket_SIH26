@@ -32,8 +32,8 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
     body { font-family: 'Noto Sans', sans-serif; color: #0f172a; margin: 0; padding: 32px; background: #f8fafc; }
     .page { max-width: 800px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px; }
-    .logo-title { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 700; color: #0891b2; letter-spacing: -0.02em; }
-    .tagline { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .logo-title { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 700; color: #02738a; letter-spacing: -0.02em; }
+    .tagline { font-size: 13px; color: #5e7380; margin-top: 2px; }
     .report-meta { text-align: right; font-size: 12px; color: #64748b; }
     .badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 13px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
@@ -45,16 +45,19 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
     .stat-val { font-weight: 600; color: #0f172a; }
     .alert-box { background: ${riskBg}; border: 1px solid ${riskColor}40; border-radius: 12px; padding: 18px; margin-bottom: 24px; }
     .disclaimer { background: #f1f5f9; border-radius: 8px; padding: 12px; font-size: 12px; color: #64748b; text-align: center; margin-top: 32px; line-height: 1.5; }
-    .print-btn { display: block; margin: 20px auto 0; padding: 12px 28px; background: #0891b2; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .print-btn { display: block; margin: 20px auto 0; padding: 12px 28px; background: #02738a; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
     @media print { .print-btn { display: none; } body { padding: 0; background: #fff; } .page { box-shadow: none; border: none; padding: 0; } }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="header">
-      <div>
-        <div class="logo-title">SwarSanket</div>
-        <div class="tagline">Early Cognitive & Voice Biomarker Screening</div>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <img src="/logo.png" style="width: 48px; height: 48px; border-radius: 12px; object-fit: contain; box-shadow: 0 2px 8px rgba(2,115,138,0.2);" alt="SwarSanket Logo" />
+        <div>
+          <div class="logo-title">SwarSanket</div>
+          <div class="tagline">Early Cognitive & Voice Biomarker Screening</div>
+        </div>
       </div>
       <div class="report-meta">
         <div><strong>Report ID:</strong> ${session.id}</div>

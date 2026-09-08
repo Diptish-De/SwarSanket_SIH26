@@ -27,16 +27,18 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
       <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 bg-gradient-to-r from-cyan-50 to-sky-50">
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#dceef2] bg-gradient-to-r from-[#fdfcf7] via-[#f0f8fa] to-[#e4f4f7]">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-cyan-800 flex items-center justify-center text-white shadow-md shadow-cyan-600/30">
-              <Smartphone className="w-6 h-6" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="SwarSanket"
+              className="w-12 h-12 rounded-2xl shadow-md object-contain border border-[#bce3eb]"
+            />
             <div>
-              <h2 className="text-xl font-bold text-slate-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <h2 className="text-xl font-bold text-[#0c1e27]" style={{ fontFamily: "'Outfit', sans-serif" }}>
                 Download SwarSanket
               </h2>
-              <p className="text-xs text-slate-500 font-medium">Android Mobile App & PWA Release</p>
+              <p className="text-xs text-[#5e7380] font-medium">Android Mobile App & PWA Release</p>
             </div>
           </div>
           <button
@@ -48,12 +50,12 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-2">
+        <div className="flex border-b border-[#dceef2] bg-slate-50 px-6 pt-2">
           <button
             onClick={() => setActiveTab("apk")}
             className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-all ${
               activeTab === "apk"
-                ? "border-cyan-600 text-cyan-700 bg-white rounded-t-xl"
+                ? "border-[#02738a] text-[#02738a] bg-white rounded-t-xl"
                 : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -64,7 +66,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
             onClick={() => setActiveTab("pwa")}
             className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-all ${
               activeTab === "pwa"
-                ? "border-cyan-600 text-cyan-700 bg-white rounded-t-xl"
+                ? "border-[#02738a] text-[#02738a] bg-white rounded-t-xl"
                 : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -78,8 +80,8 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
           {activeTab === "apk" ? (
             <>
               {/* QR Code section */}
-              <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-cyan-50/60 border border-cyan-100">
-                <div className="p-3 bg-white rounded-2xl shadow-sm border border-cyan-100 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-[#f0f8fa] border border-[#cbe6ec]">
+                <div className="p-3 bg-white rounded-2xl shadow-sm border border-[#cbe6ec] flex-shrink-0">
                   <QRCodeSVG
                     value={APK_DOWNLOAD_URL}
                     size={132}
@@ -89,7 +91,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
                   />
                 </div>
                 <div className="text-center sm:text-left space-y-1.5">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-100 text-cyan-800 text-xs font-semibold">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#e4f4f7] text-[#01586a] text-xs font-semibold">
                     <QrCode className="w-3.5 h-3.5" />
                     Scan with Phone
                   </div>
@@ -97,7 +99,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
                     Scan QR on Android
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Point your Android camera at the QR code to download <span className="font-semibold text-cyan-800">SwarSanket.apk</span> directly to your phone.
+                    Point your Android camera at the QR code to download <span className="font-semibold text-[#02738a]">SwarSanket.apk</span> directly to your phone.
                   </p>
                 </div>
               </div>
@@ -108,7 +110,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
                   href={APK_DOWNLOAD_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white font-bold text-center flex items-center justify-center gap-2.5 shadow-lg shadow-cyan-600/25 transition-all active:scale-[0.98]"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white font-bold text-center flex items-center justify-center gap-2.5 shadow-lg shadow-[#02738a]/25 transition-all active:scale-[0.98]"
                 >
                   <Download className="w-5 h-5" />
                   Download SwarSanket APK (v1.0.0)

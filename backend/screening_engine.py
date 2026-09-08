@@ -189,6 +189,31 @@ def run_screening_pipeline(
         full_transcript = " ".join(transcript_parts).strip()
         word_count = len(words_list)
 
+        # Safety check: Reject pure silence or recordings with no audible speech
+        if word_count == 0 or len(full_transcript) == 0:
+            return {
+                "success": False,
+                "error": "No audible speech detected. Please ensure the recording is clear and contains audible speech.",
+                "transcript": "",
+                "word_count": 0,
+                "audio": {
+                    "duration_seconds": audio_metrics.get("duration_seconds", 0.0),
+                    "speech_timeline_duration": 0.0,
+                    "sample_rate": audio_metrics.get("sample_rate", 16000),
+                    "rms_energy": audio_metrics.get("rms_energy", 0.0),
+                    "peak_amplitude": audio_metrics.get("peak_amplitude", 0.0),
+                    "silence_percentage": audio_metrics.get("silence_percentage", 100.0),
+                },
+                "screening": {
+                    "predicted_class": None,
+                    "probability": None,
+                    "probability_percent": None,
+                    "technical_confidence_percent": None,
+                    "status": "Audio Quality Rejected",
+                    "interpretation": "Screening result only — not a diagnosis.",
+                },
+            }
+
         # Active speech timeline duration (from first word start to last word end)
         speech_timeline_duration = words_list[-1]["end"] if words_list else duration_sec
         if speech_timeline_duration <= 0:

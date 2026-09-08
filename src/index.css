@@ -6,8 +6,43 @@ body,
 #root {
   height: 100%;
   margin: 0;
+  background-color: #031e26;
+  font-family: 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
+  color: #0c1c24;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── Modern Sleek Custom Scrollbars ────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(2, 115, 138, 0.22);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(2, 115, 138, 0.55);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
 @keyframes pulse-ring {
   0% { transform: scale(1); opacity: 0.6; }
   100% { transform: scale(2.2); opacity: 0; }
@@ -24,7 +59,7 @@ body,
 }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -35,11 +70,11 @@ body,
 
 @keyframes spin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to { rotate: 360deg; }
 }
 
 @keyframes splash-logo {
-  0% { opacity: 0; transform: scale(0.85); }
+  0% { opacity: 0; transform: scale(0.88); }
   100% { opacity: 1; transform: scale(1); }
 }
 
@@ -48,16 +83,25 @@ body,
   50% { transform: scaleY(0.7); }
 }
 
+@keyframes soft-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
 .animate-fade-in-up {
-  animation: fade-in-up 0.4s ease-out both;
+  animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out both;
+  animation: fade-in 0.25s ease-out both;
 }
 
 .animate-splash {
-  animation: splash-logo 0.8s ease-out both;
+  animation: splash-logo 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-float {
+  animation: soft-float 4s ease-in-out infinite;
 }
 
 .bar-wave {
@@ -85,18 +129,21 @@ body,
 * { box-sizing: border-box; }
 
 :root {
-  --nv-primary: #0891b2;
-  --nv-primary-dark: #0e7490;
-  --nv-primary-light: #e0f7fa;
-  --nv-bg: #f0f9ff;
+  /* Official Logo Palette Tokens */
+  --nv-primary: #02738a;
+  --nv-primary-dark: #015364;
+  --nv-primary-deep: #013a46;
+  --nv-primary-light: #e4f4f7;
+  --nv-warm-glow: #fdfaf2;
+  --nv-sky-glow: #e8f5f8;
+  --nv-bg: #f3f9fb;
   --nv-surface: #ffffff;
-  --nv-text: #0f172a;
-  --nv-muted: #64748b;
-  --nv-border: #e2e8f0;
-  --nv-success: #16a34a;
-  --nv-warning: #d97706;
-  --nv-orange: #ea580c;
-  --nv-amber: #f59e0b;
+  --nv-text: #0c1e27;
+  --nv-muted: #5e7380;
+  --nv-border: #d7eaef;
+  --nv-success: #15803d;
+  --nv-warning: #c2410c;
+  --nv-amber: #b45309;
   --nv-error: #dc2626;
   --nv-font-display: 'Outfit', system-ui, sans-serif;
   --nv-font-body: 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;

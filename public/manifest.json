@@ -4,8 +4,8 @@
   "description": "Voice-first early screening mobile application for Alzheimer's disease using acoustic speech biomarkers.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0f9ff",
-  "theme_color": "#0891b2",
+  "background_color": "#f2f9fb",
+  "theme_color": "#02738a",
   "orientation": "portrait",
   "icons": [
     {

@@ -199,9 +199,18 @@ export class VoiceRecorder {
   }
 }
 
-export const API_BASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_BASE_URL) ||
-  "http://127.0.0.1:8001";
+import { getApiBaseUrl } from "./apiConfig";
+
+export function getExtensionForBlob(blob: Blob): string {
+  const type = (blob.type || "").toLowerCase();
+  if (type.includes("webm")) return ".webm";
+  if (type.includes("mp4") || type.includes("m4a") || type.includes("aac")) return ".m4a";
+  if (type.includes("wav")) return ".wav";
+  if (type.includes("ogg")) return ".ogg";
+  return ".webm";
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export interface BackendUploadResponse {
   success: boolean;
@@ -281,16 +290,25 @@ export interface ScreeningApiResponse {
 
 export async function uploadAudioToBackend(
   blob: Blob,
-  filename = "voice_check.webm",
-  endpoint = `${API_BASE_URL}/api/upload-audio`
+  filename?: string,
+  endpoint?: string
 ): Promise<BackendUploadResponse | null> {
-  console.log("[SwarSanket] Uploading audio recording to backend...");
+  const baseUrl = getApiBaseUrl();
+  const ext = getExtensionForBlob(blob);
+  const targetFilename = filename || `voice_check${ext}`;
+  const targetEndpoint = endpoint || `${baseUrl}/api/upload-audio`;
+
+  console.log("[SwarSanket] Uploading audio recording to backend...", {
+    endpoint: targetEndpoint,
+    filename: targetFilename,
+    sizeBytes: blob.size,
+  });
 
   const formData = new FormData();
-  formData.append("audio", blob, filename);
+  formData.append("audio", blob, targetFilename);
 
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetch(targetEndpoint, {
       method: "POST",
       body: formData,
     });
@@ -311,17 +329,23 @@ export async function uploadAudioToBackend(
 
 export async function analyzeAudioWithBackend(
   blob: Blob,
-  filename = "voice_check.webm",
+  filename?: string,
   timeoutMs = 60000
 ): Promise<ScreeningApiResponse> {
+  const baseUrl = getApiBaseUrl();
+  const endpoint = `${baseUrl}/api/analyze-audio`;
+  const ext = getExtensionForBlob(blob);
+  const targetFilename = filename || `voice_check${ext}`;
+
   console.log("[SwarSanket] Sending real audio recording for ML screening analysis...", {
+    endpoint,
+    filename: targetFilename,
     sizeBytes: blob.size,
     type: blob.type,
   });
 
-  const endpoint = `${API_BASE_URL}/api/analyze-audio`;
   const formData = new FormData();
-  formData.append("audio", blob, filename);
+  formData.append("audio", blob, targetFilename);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -359,7 +383,10 @@ export async function analyzeAudioWithBackend(
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error("Voice analysis timed out. Please check your network connection and try again.");
     }
-    const message = err instanceof Error ? err.message : "Unable to reach screening backend.";
+    let message = err instanceof Error ? err.message : "Unable to reach screening backend.";
+    if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+      message = `Cannot reach screening backend at ${baseUrl}. If testing on a mobile device, please check your network connection or configure the server IP in Settings.`;
+    }
     console.error("[SwarSanket] analyzeAudioWithBackend failed:", err);
     throw new Error(message);
   }
