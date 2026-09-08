@@ -1,113 +1,171 @@
 // ─── SwarSanket System Types & Data Contracts ─────────────────────────────────
 
-export type Screen =
-  | "splash" | "language" | "welcome" | "consent" | "profile" | "home"
-  | "voiceIntro" | "instruction" | "recording" | "voiceQuality" | "recordingReview"
-  | "pictureDesc" | "memory" | "conversation" | "completion" | "processing"
-  | "resultLow" | "resultElevated" | "resultUncertain"
-  | "screeningDetails" | "shareWithDoctor" | "offlineSaved" | "syncStatus"
-  | "caregiverAlert" | "referral" | "teleconsult" | "privacyScreen" | "reminder"
-  | "doctorDash" | "doctorPatient" | "doctorReport"
-  | "history" | "trend" | "help" | "caregiver" | "healthWorker" | "settings"
-  | "errorScreen" | "emptyHistory";
+export type Screen = "splash" | "language" | "welcome" | "consent" | "profile" | "home" | "voiceIntro" | "instruction" | "recording" | "voiceQuality" | "recordingReview" | "pictureDesc" | "memory" | "conversation" | "completion" | "processing" | "resultLow" | "resultElevated" | "resultUncertain" | "screeningDetails" | "shareWithDoctor" | "offlineSaved" | "syncStatus" | "caregiverAlert" | "referral" | "teleconsult" | "privacyScreen" | "reminder" | "doctorDash" | "doctorPatient" | "doctorReport" | "history" | "trend" | "help" | "caregiver" | "healthWorker" | "settings" | "errorScreen" | "emptyHistory"
 
-export type RecordingContext = "freeSpeech" | "pictureDesc" | "memoryRecall" | "conversation";
+export type RecordingContext = "freeSpeech" | "pictureDesc" | "memoryRecall" | "conversation"
 
-export type LanguageCode = "en" | "hi" | "bn" | "mr" | "ta" | "te" | "gu" | "kn" | "ml";
+export type LanguageCode = "en" | "hi" | "bn" | "mr" | "ta" | "te" | "gu" | "kn" | "ml"
 
-export type ScreeningRisk = "low" | "elevated" | "uncertain";
-export type ConfidenceLevel = "high" | "moderate" | "low";
-export type VoiceQualityGrade = "good" | "poor" | "low";
+export type ScreeningRisk = "low" | "elevated" | "uncertain"
+
+export type ConfidenceLevel = "high" | "moderate" | "low"
+
+export type VoiceQualityGrade = "good" | "poor" | "low"
 
 export interface AudioTaskRecord {
-  taskId: RecordingContext;
-  prompt: string;
-  durationSeconds: number;
-  audioBlobId?: string; // Stored in IndexedDB
-  audioUrl?: string;
-  quality: VoiceQualityGrade;
-  snrEstimateDb?: number;
-  speechRateWpm?: number;
-  timestamp: string;
+  taskId: RecordingContext
+
+  prompt: string
+
+  durationSeconds: number
+
+  audioBlobId?: string // Stored in IndexedDB
+
+  audioUrl?: string
+
+  quality: VoiceQualityGrade
+
+  snrEstimateDb?: number
+
+  speechRateWpm?: number
+
+  timestamp: string
 }
 
 export interface AcousticBiomarkers {
-  speechRateWpm: number;
-  pausePatternRatio: number; // percentage
-  pitchVariationHz: number;
-  jitterPercent: number; // vocal frequency perturbation
-  shimmerDb: number; // vocal amplitude perturbation
-  hnrDb: number; // Harmonics-to-Noise Ratio
+  speechRateWpm: number
+
+  pausePatternRatio: number // percentage
+
+  pitchVariationHz: number
+
+  jitterPercent: number // vocal frequency perturbation
+
+  shimmerDb: number // vocal amplitude perturbation
+
+  hnrDb: number // Harmonics-to-Noise Ratio
 }
 
 export interface MLInferenceResult {
-  screeningRisk: ScreeningRisk;
-  confidenceScore: number; // 0.0 - 1.0
-  confidenceLevel: ConfidenceLevel;
+  screeningRisk: ScreeningRisk
+
+  confidenceScore: number // 0.0 - 1.0
+
+  confidenceLevel: ConfidenceLevel
+
   classicalModel: {
-    name: string; // "Xception + XGBoost"
-    riskScore: number;
-    aucScore: number;
-  };
+    name: string // "Quantum-Classical Hybrid"
+
+    riskScore: number
+
+    aucScore: number
+  }
+
   quantumHybridModel: {
-    name: string; // "PennyLane + PyTorch QNN"
-    riskScore: number;
-    aucScore: number;
-  };
+    name: string // "PennyLane + PyTorch QNN"
+
+    riskScore: number
+
+    aucScore: number
+  }
+
   shapContributions: {
-    feature: string;
-    impact: "positive" | "negative" | "neutral";
-    weight: number;
-  }[];
+    feature: string
+
+    impact: "positive" | "negative" | "neutral"
+
+    weight: number
+  }[]
 }
 
 export interface ScreeningSession {
-  id: string;
-  patientName: string;
-  patientAge: number;
-  language: LanguageCode;
-  assistedMode: boolean;
-  createdAt: string;
-  durationSeconds: number;
-  audioQuality: VoiceQualityGrade;
-  tasks: AudioTaskRecord[];
-  biomarkers: AcousticBiomarkers;
-  mlResult: MLInferenceResult;
-  synced: boolean;
-  notes?: string;
+  id: string
+
+  patientName: string
+
+  patientAge: number
+
+  language: LanguageCode
+
+  assistedMode: boolean
+
+  createdAt: string
+
+  durationSeconds: number
+
+  audioQuality: VoiceQualityGrade
+
+  tasks: AudioTaskRecord[]
+
+  biomarkers: AcousticBiomarkers
+
+  mlResult: MLInferenceResult
+
+  synced: boolean
+
+  notes?: string
 }
 
 export interface OfflineSyncItem {
-  id: string;
-  sessionId: string;
-  patientName: string;
-  createdAt: string;
-  sizeBytes: number;
-  status: "pending" | "syncing" | "synced" | "failed";
-  retryCount: number;
-  lastAttempt?: string;
+  id: string
+
+  sessionId: string
+
+  patientName: string
+
+  createdAt: string
+
+  sizeBytes: number
+
+  status: "pending" | "syncing" | "synced" | "failed"
+
+  retryCount: number
+
+  lastAttempt?: string
 }
 
 export interface UserProfile {
-  name: string;
-  age: number;
-  language: LanguageCode;
-  assistedMode: boolean;
-  caregiverPhone?: string;
-  dataSaver: boolean;
-  audioInstructions: boolean;
+  name: string
+
+  age: number
+
+  language: LanguageCode
+
+  assistedMode: boolean
+
+  caregiverPhone?: string
+
+  dataSaver: boolean
+
+  audioInstructions: boolean
+}
+
+export interface MonthlyTrendPoint {
+  month: string
+
+  riskScore: number
 }
 
 export interface DoctorPatientRecord {
-  id: string;
-  name: string;
-  age: number;
-  village?: string;
-  language: string;
-  lastScreeningDate: string;
-  risk: ScreeningRisk;
-  confidence: ConfidenceLevel;
-  trend: { month: string; riskScore: number }[];
-  audioQuality: VoiceQualityGrade;
-  notes: string[];
+  id: string
+
+  name: string
+
+  age: number
+
+  village?: string
+
+  language: string
+
+  lastScreeningDate: string
+
+  risk: ScreeningRisk
+
+  confidence: ConfidenceLevel
+
+  trend: MonthlyTrendPoint[]
+
+  audioQuality: VoiceQualityGrade
+
+  notes: string[]
 }

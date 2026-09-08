@@ -1,27 +1,52 @@
-import React, { useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
-import { Download, ExternalLink, QrCode, CheckCircle2, ShieldCheck, Smartphone, Globe, Copy, Check, X } from "lucide-react";
+import React, { useState } from "react"
 
-export const APK_DOWNLOAD_URL = "https://github.com/Diptish-De/SIH-26/releases/latest/download/SwarSanket.apk";
-export const GITHUB_RELEASES_URL = "https://github.com/Diptish-De/SIH-26/releases";
-export const GITHUB_REPO_URL = "https://github.com/Diptish-De/SIH-26";
+import { QRCodeSVG } from "qrcode.react"
+
+import {
+  Download,
+  ExternalLink,
+  QrCode,
+  CheckCircle2,
+  ShieldCheck,
+  Smartphone,
+  Globe,
+  Copy,
+  Check,
+  X,
+} from "lucide-react"
+
+export const APK_DOWNLOAD_URL =
+  "https://github.com/Diptish-De/SIH-26/releases/latest/download/SwarSanket.apk"
+
+export const GITHUB_RELEASES_URL =
+  "https://github.com/Diptish-De/SIH-26/releases"
+
+export const GITHUB_REPO_URL = "https://github.com/Diptish-De/SIH-26"
 
 interface ApkDownloadModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+
+  onClose: () => void
 }
 
-export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onClose }) => {
-  const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<"apk" | "pwa">("apk");
+export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
+  isOpen,
 
-  if (!isOpen) return null;
+  onClose,
+}) => {
+  const [copied, setCopied] = useState(false)
+
+  const [activeTab, setActiveTab] = useState<"apk" | "pwa">("apk")
+
+  if (!isOpen) return null
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(APK_DOWNLOAD_URL);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
+    navigator.clipboard.writeText(APK_DOWNLOAD_URL)
+
+    setCopied(true)
+
+    setTimeout(() => setCopied(false), 2500)
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
@@ -35,10 +60,15 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
               className="w-12 h-12 rounded-2xl shadow-md object-contain border border-[#bce3eb]"
             />
             <div>
-              <h2 className="text-xl font-bold text-[#0c1e27]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <h2
+                className="text-xl font-bold text-[#0c1e27]"
+                style={{ fontFamily: "'Outfit', sans-serif" }}
+              >
                 Download SwarSanket
               </h2>
-              <p className="text-xs text-[#5e7380] font-medium">Android Mobile App & PWA Release</p>
+              <p className="text-xs text-[#5e7380] font-medium">
+                Android Mobile App & PWA Release
+              </p>
             </div>
           </div>
           <button
@@ -95,11 +125,18 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
                     <QrCode className="w-3.5 h-3.5" />
                     Scan with Phone
                   </div>
-                  <h3 className="font-bold text-slate-900 text-base" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                  <h3
+                    className="font-bold text-slate-900 text-base"
+                    style={{ fontFamily: "'Outfit', sans-serif" }}
+                  >
                     Scan QR on Android
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Point your Android camera at the QR code to download <span className="font-semibold text-[#02738a]">SwarSanket.apk</span> directly to your phone.
+                    Point your Android camera at the QR code to download{" "}
+                    <span className="font-semibold text-[#02738a]">
+                      SwarSanket.apk
+                    </span>{" "}
+                    directly to your phone.
                   </p>
                 </div>
               </div>
@@ -121,7 +158,11 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
                     onClick={handleCopyLink}
                     className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                    {copied ? (
+                      <Check className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-slate-400" />
+                    )}
                     {copied ? "Link Copied!" : "Copy APK Download Link"}
                   </button>
 
@@ -139,7 +180,10 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
 
               {/* Installation steps */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <div
+                  className="text-xs font-bold uppercase tracking-wider text-slate-500"
+                  style={{ fontFamily: "'Outfit', sans-serif" }}
+                >
                   Easy 3-Step Phone Installation:
                 </div>
                 <div className="space-y-2 text-xs text-slate-600">
@@ -147,19 +191,29 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
                     <span className="w-5 h-5 rounded-full bg-cyan-100 text-cyan-800 font-bold flex items-center justify-center flex-shrink-0 text-[11px]">
                       1
                     </span>
-                    <span>Tap <strong>Download APK</strong> or scan the QR code with your mobile browser.</span>
+                    <span>
+                      Tap <strong>Download APK</strong> or scan the QR code with
+                      your mobile browser.
+                    </span>
                   </div>
                   <div className="flex items-start gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-cyan-100 text-cyan-800 font-bold flex items-center justify-center flex-shrink-0 text-[11px]">
                       2
                     </span>
-                    <span>If Android asks <em>"File might be harmful"</em>, tap <strong>Download anyway</strong> (standard for direct GitHub releases).</span>
+                    <span>
+                      If Android asks <em>"File might be harmful"</em>, tap{" "}
+                      <strong>Download anyway</strong> (standard for direct
+                      GitHub releases).
+                    </span>
                   </div>
                   <div className="flex items-start gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-cyan-100 text-cyan-800 font-bold flex items-center justify-center flex-shrink-0 text-[11px]">
                       3
                     </span>
-                    <span>Open downloaded file, tap <strong>Install</strong>, and launch SwarSanket.</span>
+                    <span>
+                      Open downloaded file, tap <strong>Install</strong>, and
+                      launch SwarSanket.
+                    </span>
                   </div>
                 </div>
               </div>
@@ -175,23 +229,38 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
                 <div className="w-12 h-12 rounded-2xl bg-cyan-600 text-white flex items-center justify-center mx-auto sm:mx-0">
                   <Globe className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-slate-900 text-base" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <h3
+                  className="font-bold text-slate-900 text-base"
+                  style={{ fontFamily: "'Outfit', sans-serif" }}
+                >
                   Instant Web App (PWA)
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  You can use SwarSanket directly in your mobile browser without installing an APK. It works fully offline with microphone support!
+                  You can use SwarSanket directly in your mobile browser without
+                  installing an APK. It works fully offline with microphone
+                  support!
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs text-slate-600">
-                <div className="font-bold text-slate-800">How to add to phone home screen:</div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-cyan-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>On Android (Chrome):</strong> Tap the 3 dots (⋮) in the top right &rarr; tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.</span>
+                <div className="font-bold text-slate-800">
+                  How to add to phone home screen:
                 </div>
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-cyan-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>On iPhone (Safari):</strong> Tap the Share button &rarr; tap <strong>"Add to Home Screen"</strong>.</span>
+                  <span>
+                    <strong>On Android (Chrome):</strong> Tap the 3 dots (⋮) in
+                    the top right &rarr; tap{" "}
+                    <strong>"Add to Home screen"</strong> or{" "}
+                    <strong>"Install app"</strong>.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-600 flex-shrink-0 mt-0.5" />
+                  <span>
+                    <strong>On iPhone (Safari):</strong> Tap the Share button
+                    &rarr; tap <strong>"Add to Home Screen"</strong>.
+                  </span>
                 </div>
               </div>
             </div>
@@ -200,12 +269,17 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
 
         {/* Footer */}
         <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
-          <span>GitHub: <strong>Diptish-De/SIH-26</strong></span>
-          <button onClick={onClose} className="font-semibold text-cyan-700 hover:underline">
+          <span>
+            GitHub: <strong>Diptish-De/SIH-26</strong>
+          </span>
+          <button
+            onClick={onClose}
+            className="font-semibold text-cyan-700 hover:underline"
+          >
             Close
           </button>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

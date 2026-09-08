@@ -1,0 +1,33 @@
+{
+  "n_qubits": 8,
+  "n_quantum_layers": 3,
+  "encoder_hidden": 16,
+  "latent_dim": 8,
+  "decoder_hidden": 8,
+  "dropout_p": 0.2,
+  "n_features": 22,
+  "selected_features": [
+    "CTP_F0 SD(st)",
+    "CTP_DPI(ms)",
+    "CTP_RST(-/s)",
+    "CTP_EST",
+    "CTP_Voiced Rate(1/s)",
+    "CTP_Hesitation Ratio",
+    "CTP_Energy Mean(Pa^2\u00b7s)",
+    "CTP_verb_num",
+    "CTP_noun_ratio",
+    "CTP_Pronouns_ratio",
+    "CTP_noun to verb",
+    "CTP_Word Rate(-/s)",
+    "CTP_Noun No Phrase Rate",
+    "CTP_Verb phrase type proportion",
+    "CTP_Prep phrase type proportion",
+    "CTP_Prep average phrase type length 1",
+    "CTP_num_unique_IU",
+    "CTP_num_unique_keywords",
+    "CTP_unique_IU_densitys",
+    "CTP_total_IU_density",
+    "CTP_keyword_to_non_keyword_ratio",
+    "CTP_unique_IU_efficiency"
+  ]
+}

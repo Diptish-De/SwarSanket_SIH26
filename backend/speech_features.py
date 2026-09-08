@@ -14,7 +14,7 @@ They are NOT claimed to be identical to the proprietary CTP dataset feature defi
 import io
 import re
 from pathlib import Path
-from typing import Union, BinaryIO, Dict, Any, List, Optional
+from typing import Union, BinaryIO, Dict, Any, List, Optional, cast
 import av
 import numpy as np
 
@@ -70,7 +70,8 @@ def decode_audio_pcm(file_source: Union[str, Path, BinaryIO, bytes]) -> Dict[str
         }
 
     try:
-        audio_stream = next((s for s in container.streams if s.type == "audio"), None)
+        container_any = cast(Any, container)
+        audio_stream = next((s for s in container_any.streams if s.type == "audio"), None)
         if audio_stream is None:
             return {
                 "mono_pcm": np.zeros(0, dtype=np.float32),
@@ -78,12 +79,16 @@ def decode_audio_pcm(file_source: Union[str, Path, BinaryIO, bytes]) -> Dict[str
                 "duration_seconds": 0.0,
             }
 
-        sample_rate = audio_stream.codec_context.sample_rate or 16000
+        codec_ctx = getattr(audio_stream, "codec_context", None)
+        sample_rate = getattr(codec_ctx, "sample_rate", None) or getattr(audio_stream, "sample_rate", None) or 16000
         frames_list = []
-        for frame in container.decode(audio_stream):
-            arr = frame.to_ndarray()
+        for frame in container_any.decode(audio_stream):
+            frame_any = cast(Any, frame)
+            if not hasattr(frame_any, "to_ndarray"):
+                continue
+            arr = frame_any.to_ndarray()
             if np.issubdtype(arr.dtype, np.integer):
-                max_val = float(np.iinfo(arr.dtype).max)
+                max_val = float(np.iinfo(cast(Any, arr.dtype)).max)
                 arr = arr.astype(np.float32) / max_val
             elif arr.dtype != np.float32:
                 arr = arr.astype(np.float32)

@@ -209,50 +209,57 @@ class HomeTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Hello, $userName',
-                        style: GoogleFonts.outfit(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.text,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Hello, $userName',
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text('👋', style: TextStyle(fontSize: 20)),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'How are you feeling today?',
-                    style: GoogleFonts.notoSans(
-                      fontSize: 13,
-                      color: AppColors.muted,
+                        const SizedBox(width: 6),
+                        const Text('👋', style: TextStyle(fontSize: 20)),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      'How are you feeling today?',
+                      style: GoogleFonts.notoSans(
+                        fontSize: 13,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               InkWell(
-                onTap: onSettings,
+                onTap: onHelp,
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.waves, color: Colors.white, size: 20),
+                  child: const Icon(Icons.help_outline, color: AppColors.primary, size: 20),
                 ),
               ),
             ],
@@ -461,14 +468,12 @@ class HomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // 3 Quick Action Tiles
+          // 2 Quick Action Tiles
           Row(
             children: [
-              _buildQuickAction('History', Icons.history, onHistory),
-              const SizedBox(width: 10),
-              _buildQuickAction('Help', Icons.help_outline, onHelp),
-              const SizedBox(width: 10),
               _buildQuickAction('Caregiver', Icons.people_outline, onCaregiver),
+              const SizedBox(width: 10),
+              _buildQuickAction('Trends', Icons.show_chart, onTrend),
             ],
           ),
         ],

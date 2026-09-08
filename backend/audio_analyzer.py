@@ -1,6 +1,6 @@
 import io
 from pathlib import Path
-from typing import Union, BinaryIO, Dict, Any
+from typing import Union, BinaryIO, Dict, Any, cast
 import av
 import numpy as np
 
@@ -21,21 +21,26 @@ def decode_and_inspect_audio(
         container = av.open(file_source)
 
     try:
-        audio_stream = next((s for s in container.streams if s.type == "audio"), None)
+        container_any = cast(Any, container)
+        audio_stream = next((s for s in container_any.streams if s.type == "audio"), None)
         if audio_stream is None:
             raise ValueError("No audio stream found in media container.")
 
-        sample_rate = audio_stream.codec_context.sample_rate or 48000
-        num_channels = audio_stream.codec_context.channels or 1
+        codec_ctx = getattr(audio_stream, "codec_context", None)
+        sample_rate = getattr(codec_ctx, "sample_rate", None) or getattr(audio_stream, "sample_rate", None) or 48000
+        num_channels = getattr(codec_ctx, "channels", None) or getattr(audio_stream, "channels", None) or 1
 
         # Decode all audio frames into numpy float32
         frames_list = []
-        for frame in container.decode(audio_stream):
+        for frame in container_any.decode(audio_stream):
             # frame.to_ndarray() gives shape (channels, samples) in float32 or int16
-            arr = frame.to_ndarray()
+            frame_any = cast(Any, frame)
+            if not hasattr(frame_any, "to_ndarray"):
+                continue
+            arr = frame_any.to_ndarray()
             # If int16, normalize to float32 range [-1.0, 1.0]
             if np.issubdtype(arr.dtype, np.integer):
-                max_val = float(np.iinfo(arr.dtype).max)
+                max_val = float(np.iinfo(cast(Any, arr.dtype)).max)
                 arr = arr.astype(np.float32) / max_val
             elif arr.dtype != np.float32:
                 arr = arr.astype(np.float32)
@@ -53,7 +58,7 @@ def decode_and_inspect_audio(
             mono_pcm = audio_pcm[0]
 
         total_samples = int(mono_pcm.shape[0])
-        duration_seconds = float(total_samples / sample_rate) if sample_rate > 0 else 0.0
+        duration_seconds = total_samples / sample_rate if sample_rate > 0 else 0.0
 
         # Energy & Amplitude Metrics
         peak_amplitude = float(np.max(np.abs(mono_pcm)))
@@ -61,7 +66,7 @@ def decode_and_inspect_audio(
 
         # Silence Analysis: percentage of samples with absolute amplitude below threshold
         silent_samples = int(np.sum(np.abs(mono_pcm) < silence_threshold))
-        silence_percentage = float((silent_samples / total_samples) * 100.0) if total_samples > 0 else 0.0
+        silence_percentage = (silent_samples / total_samples) * 100.0 if total_samples > 0 else 0.0
 
         return {
             "success": True,

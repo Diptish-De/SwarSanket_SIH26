@@ -9,7 +9,7 @@ import sys
 import io
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Set up paths
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -88,11 +88,11 @@ def run_qa_suite():
 
     print("=" * 90)
     print("SwarSanket Step 99: Real-World End-to-End QA Test Suite")
-    print(f"Timestamp: {datetime.utcnow().isoformat()}Z")
+    print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
     print("=" * 90)
 
     for tc in test_cases:
-        filepath = TEST_AUDIO_DIR / tc["filename"]
+        filepath = TEST_AUDIO_DIR / str(tc["filename"])
         print(f"\n--- [Test {tc['id']}/8] {tc['name']} ---")
         print(f"  File: {tc['filename']} ({filepath.stat().st_size} bytes)")
         print(f"  Description: {tc['description']}")
@@ -138,9 +138,9 @@ def run_qa_suite():
             interpretation = screening.get("interpretation")
 
             explanation = response_json.get("explanation", {})
-            has_shap = "shap_contributions" in explanation
-            top_pos = [f"{x['feature']} (+{x['shap_value']:.3f})" for x in explanation.get("top_positive_contributions", [])[:2]]
-            top_neg = [f"{x['feature']} ({x['shap_value']:.3f})" for x in explanation.get("top_negative_contributions", [])[:2]]
+            has_shap = "shap_contributions" in explanation or "feature_attributions" in explanation
+            top_pos = [f"{x['feature']} (+{x.get('shap_value', x.get('contribution', 0.0)):.3f})" for x in explanation.get("top_positive_contributions", [])[:2]]
+            top_neg = [f"{x['feature']} ({x.get('shap_value', x.get('contribution', 0.0)):.3f})" for x in explanation.get("top_negative_contributions", [])[:2]]
 
             asr_success = bool(transcript.strip())
 
@@ -150,7 +150,7 @@ def run_qa_suite():
             print(f"  Feature Counts:    {live_count} live / {imputed_count} median-imputed")
             print(f"  Screening Output:  Class {pred_class} | Prob: {prob_pct}% | Confidence: {conf_pct}% | Status: \"{status_text}\"")
             print(f"  Interpretation:    \"{interpretation}\"")
-            print(f"  SHAP Available:    {has_shap} (Top+: {top_pos} | Top-: {top_neg})")
+            print(f"  Attribution (XAI): {has_shap} (Top+: {top_pos} | Top-: {top_neg})")
 
             # Determine React frontend behavior
             if pred_class == 1:

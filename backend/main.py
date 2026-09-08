@@ -3,7 +3,7 @@ import uuid
 import shutil
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,8 +16,8 @@ logger = logging.getLogger("swarsanket.backend")
 
 app = FastAPI(
     title="SwarSanket Voice Biomarker & Screening Backend",
-    description="FastAPI service for acoustic/linguistic feature extraction and validated XGBoost screening inference.",
-    version="1.0.0",
+    description="FastAPI service for acoustic/linguistic feature extraction and 22-Feature Quantum-Hybrid screening inference.",
+    version="2.0.0",
 )
 
 # Enable CORS for Vite frontend running on localhost / 127.0.0.1
@@ -58,7 +58,7 @@ def _generate_saved_path(original_filename: str, content_type: str = "") -> Path
         else:
             ext = ".webm"
 
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
     unique_filename = f"swarsanket_{timestamp}_{unique_id}{ext}"
     return UPLOADS_DIR / unique_filename
@@ -70,8 +70,9 @@ def health_check():
     return {
         "status": "ok",
         "service": "SwarSanket Voice Biomarker Backend",
-        "timestamp": datetime.utcnow().isoformat(),
-        "pipeline": "Faster-Whisper + spaCy + 20-Feature XGBoost Classifier",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "model": "PyTorch + PennyLane 8-Qubit Quantum-Classical Hybrid (22 Features, MC Dropout)",
+        "pipeline": "Faster-Whisper ASR + spaCy NLP + Quantum Variational Classifier",
     }
 
 
@@ -117,10 +118,11 @@ async def analyze_audio(audio: UploadFile = File(...)):
       1. Saves uploaded voice recording (WebM, M4A, WAV).
       2. Runs Faster-Whisper ASR + word timestamps.
       3. Performs spaCy linguistic POS and keyword extraction.
-      4. Assembles the exact 20-feature production contract vector (8 live, 12 median-imputed).
-      5. Executes frozen XGBoost screening inference.
-      6. Returns structured clinical screening signal metadata.
+      4. Assembles the 22-feature Quantum-Hybrid contract vector.
+      5. Executes 8-Qubit Variational Quantum Circuit inference with MC Dropout.
+      6. Returns structured clinical screening signal & uncertainty metadata.
     """
+
     if not audio or not audio.filename:
         raise HTTPException(status_code=400, detail="No valid audio file provided.")
 
