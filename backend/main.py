@@ -2,6 +2,7 @@ import os
 import uuid
 import shutil
 import logging
+import tempfile
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -20,28 +21,35 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# Enable CORS for Vite frontend running on localhost / 127.0.0.1
+# Configure CORS: support ALLOWED_ORIGINS env var for production frontend domains (comma-separated),
+# while preserving standard local development origins.
+raw_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "")
+custom_origins = [orig.strip() for orig in raw_allowed_origins.split(",") if orig.strip()]
+
+default_origins = [
+    "http://localhost:8443",
+    "http://127.0.0.1:8443",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8001",
+    "http://127.0.0.1:8001",
+    "*",
+]
+allowed_origins = list(dict.fromkeys(default_origins + custom_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8443",
-        "http://127.0.0.1:8443",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8001",
-        "http://127.0.0.1:8001",
-        "*",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Uploads storage directory
+# Uploads storage directory (runtime-safe ephemeral storage in /tmp by default, configurable via UPLOADS_DIR)
 BASE_DIR = Path(__file__).resolve().parent
-UPLOADS_DIR = BASE_DIR / "uploads"
+UPLOADS_DIR = Path(os.environ.get("UPLOADS_DIR", Path(tempfile.gettempdir()) / "swarsanket_uploads"))
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -162,6 +170,11 @@ async def analyze_audio(audio: UploadFile = File(...)):
         )
     finally:
         audio.file.close()
+        # Clean up temporary uploaded audio file after analysis to prevent storage leaks
+        try:
+            saved_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
