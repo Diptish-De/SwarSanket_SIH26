@@ -1,0 +1,89 @@
+{
+  "language": "en",
+  "quality": "provisional",
+  "sample_size": 59,
+  "distinct_speakers": null,
+  "built_at": "2026-09-09T17:49:42.254338+00:00",
+  "source_directory": "backend\\uploads",
+  "warning": "PROVISIONAL: built from an unlabelled convenience sample. Describes these recordings, not the language population. Not sufficient for clinical use.",
+  "statistics": {
+    "CTP_verb_num": {
+      "mean": 8.88135593220339,
+      "sd": 2.8892472815400585,
+      "median": 10.0,
+      "n": 59
+    },
+    "CTP_noun_ratio": {
+      "mean": 0.2383848474576271,
+      "sd": 0.20468352177597066,
+      "median": 0.153846,
+      "n": 59
+    },
+    "CTP_Pronouns_ratio": {
+      "mean": 0.11879901694915257,
+      "sd": 0.043220243942685296,
+      "median": 0.128205,
+      "n": 59
+    },
+    "CTP_noun to verb": {
+      "mean": 2.6177293389830507,
+      "sd": 6.648966275714971,
+      "median": 0.6,
+      "n": 59
+    },
+    "CTP_num_unique_IU": {
+      "mean": 10.610169491525424,
+      "sd": 3.3937922495117894,
+      "median": 11.0,
+      "n": 59
+    },
+    "CTP_num_unique_keywords": {
+      "mean": 17.864406779661017,
+      "sd": 5.772878404492571,
+      "median": 16.0,
+      "n": 59
+    },
+    "CTP_unique_IU_densitys": {
+      "mean": 0.12631133898305083,
+      "sd": 0.04040224953177653,
+      "median": 0.130952,
+      "n": 59
+    },
+    "CTP_total_IU_density": {
+      "mean": 0.12974145762711864,
+      "sd": 0.04463626877494395,
+      "median": 0.130952,
+      "n": 59
+    },
+    "CTP_keyword_to_non_keyword_ratio": {
+      "mean": 0.15202188135593217,
+      "sd": 0.05856407894101826,
+      "median": 0.150685,
+      "n": 59
+    },
+    "CTP_unique_IU_efficiency": {
+      "mean": 0.21267140677966104,
+      "sd": 0.0687247231110737,
+      "median": 0.190476,
+      "n": 59
+    },
+    "CTP_RST(-/s)": {
+      "mean": 3.3927280847457624,
+      "sd": 0.9849060846981245,
+      "median": 3.706755,
+      "n": 59
+    },
+    "CTP_Voiced Rate(1/s)": {
+      "mean": 2.9555961186440682,
+      "sd": 0.4400508793986443,
+      "median": 3.212521,
+      "n": 59
+    },
+    "CTP_Word Rate(-/s)": {
+      "mean": 2.8269310677966097,
+      "sd": 0.43006258749752274,
+      "median": 3.080569,
+      "n": 59
+    }
+  }
+}

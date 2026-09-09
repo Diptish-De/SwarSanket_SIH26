@@ -111,6 +111,7 @@ import {
 } from "./components/ApkDownloadModal"
 
 import DemoAuth, { readDemoUser } from "./components/DemoAuth"
+import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
 
 // ─── Design Tokens & Theme (Aligned with Official Logo Palette) ───────────────
 
@@ -2341,292 +2342,517 @@ function CookieTheftScene() {
     <svg
       width="100%"
       height="100%"
-      viewBox="0 0 360 210"
+      viewBox="0 0 400 250"
       fill="none"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="A kitchen scene: a boy on a tipping stool reaches into a cookie jar in an open cupboard while a girl reaches up beside him; a woman washes dishes at a sink where the water is overflowing onto the floor, next to a window with curtains."
+      aria-label="A kitchen. A boy stands on a tipping three-legged stool taking cookies from a cookie jar in an open cupboard, handing one down to a girl who reaches up for it. Beside them a mother stands at the sink washing a plate; the tap is running and water overflows the sink onto the floor. A curtained window above the sink looks onto a garden."
     >
-      <rect width="360" height="210" fill="#fdfaf3" />
+      <rect width="400" height="250" fill="#fffdf7" />
 
-      {/* Back wall and floor */}
-      <rect x="0" y="150" width="360" height="60" fill="#e7d9c3" />
-      <line
-        x1="0"
-        y1="150"
-        x2="360"
-        y2="150"
-        stroke="#c9bda4"
-        strokeWidth="2"
-      />
+      {/* ---- Room: wall, floor, skirting ---- */}
+      <rect x="0" y="182" width="400" height="68" fill="#f0e4cf" />
+      <rect x="0" y="182" width="400" height="5" fill="#b99b70" />
 
-      {/* Window with curtains and garden view */}
+      {/* ================= CUPBOARD, open, cookie jar inside ================= */}
       <rect
-        x="238"
-        y="26"
-        width="92"
-        height="66"
-        rx="3"
-        fill="#d6eefb"
-        stroke="#8a7f6d"
-        strokeWidth="2.5"
+        x="16"
+        y="14"
+        width="118"
+        height="74"
+        rx="2"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="3"
       />
-      <line
-        x1="284"
-        y1="26"
-        x2="284"
-        y2="92"
-        stroke="#8a7f6d"
-        strokeWidth="2"
-      />
-      <line
-        x1="238"
-        y1="59"
-        x2="330"
-        y2="59"
-        stroke="#8a7f6d"
-        strokeWidth="2"
-      />
-      <path d="M246 92 q10 -22 22 -30 q10 12 12 30 z" fill="#9fd39f" />
-      <rect x="228" y="20" width="14" height="76" rx="5" fill="#e8a0a0" />
-      <rect x="326" y="20" width="14" height="76" rx="5" fill="#e8a0a0" />
-
-      {/* Cupboard with the cookie jar */}
       <rect
         x="22"
-        y="18"
-        width="104"
-        height="52"
-        rx="3"
-        fill="#e3cfae"
-        stroke="#8a7f6d"
-        strokeWidth="2.5"
-      />
-      <path
-        d="M126 18 l30 -8 l0 52 l-30 8 z"
-        fill="#d6bd96"
-        stroke="#8a7f6d"
-        strokeWidth="2.5"
-      />
-      <rect
-        x="52"
-        y="30"
-        width="26"
-        height="30"
-        rx="3"
-        fill="#f6f1e6"
-        stroke="#8a7f6d"
+        y="20"
+        width="106"
+        height="62"
+        fill="#f5e6cf"
+        stroke="#5d4326"
         strokeWidth="2"
       />
-      <rect x="50" y="26" width="30" height="6" rx="2" fill="#c58f5a" />
-      <circle cx="59" cy="42" r="2.6" fill="#8a5a2b" />
-      <circle cx="70" cy="48" r="2.6" fill="#8a5a2b" />
-      <circle cx="64" cy="54" r="2.6" fill="#8a5a2b" />
-
-      {/* Counter, sink and overflowing water */}
-      <rect
-        x="196"
-        y="96"
-        width="148"
-        height="12"
-        rx="3"
-        fill="#cbb79a"
-        stroke="#8a7f6d"
-        strokeWidth="2"
-      />
-      <rect
-        x="238"
-        y="100"
-        width="60"
-        height="26"
-        rx="4"
-        fill="#dfe9ee"
-        stroke="#8a7f6d"
-        strokeWidth="2.5"
-      />
       <path
-        d="M268 84 q0 -14 14 -14 q10 0 10 10"
-        stroke="#8a7f6d"
+        d="M16 14 L-4 4 L-4 96 L16 88 Z"
+        fill="#b57f42"
+        stroke="#5d4326"
         strokeWidth="3"
-        fill="none"
       />
-      <path
-        d="M292 80 l0 14"
-        stroke="#7fb8dd"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M238 118 q-10 14 -12 32"
-        stroke="#7fb8dd"
-        strokeWidth="4"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <ellipse cx="220" cy="158" rx="30" ry="7" fill="#a9d5ee" />
-      <ellipse cx="248" cy="163" rx="17" ry="4.5" fill="#c2e2f5" />
-
-      {/* Dishes on the counter */}
-      <circle
-        cx="316"
-        cy="94"
-        r="9"
-        fill="#f2f5f6"
-        stroke="#8a7f6d"
-        strokeWidth="2"
-      />
-      <circle
-        cx="330"
-        cy="96"
-        r="7"
-        fill="#f2f5f6"
-        stroke="#8a7f6d"
-        strokeWidth="2"
+      <line
+        x1="22"
+        y1="56"
+        x2="128"
+        y2="56"
+        stroke="#5d4326"
+        strokeWidth="2.5"
       />
 
-      {/* Woman washing dishes, ignoring the overflow */}
+      {/* cookie jar, lid tilted off, cookies visible inside */}
+      <path
+        d="M58 30 q18 -5 36 0 l4 24 q-22 6 -44 0 z"
+        fill="#eaf3f7"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <ellipse
+        cx="76"
+        cy="30"
+        rx="19"
+        ry="5"
+        fill="#dceaf1"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M96 20 q14 -3 20 4 q-8 6 -20 3 z"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
       <circle
-        cx="204"
-        cy="74"
-        r="13"
-        fill="#f3d6bb"
-        stroke="#6b6153"
-        strokeWidth="2"
+        cx="68"
+        cy="42"
+        r="5"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="1.8"
       />
-      <path
-        d="M191 70 q13 -16 26 0 q-6 -8 -13 -8 q-8 0 -13 8 z"
-        fill="#8a6b4f"
+      <circle
+        cx="83"
+        cy="45"
+        r="5"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="1.8"
       />
-      <path d="M204 87 l0 42" stroke="#6b6153" strokeWidth="2.5" />
-      <path
-        d="M190 96 q14 -12 28 0 l0 34 l-28 0 z"
-        fill="#bcd9c6"
-        stroke="#6b6153"
-        strokeWidth="2"
-      />
-      <path
-        d="M218 100 q18 4 24 12"
-        stroke="#6b6153"
-        strokeWidth="2.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <path
-        d="M190 100 q-10 6 -12 14"
-        stroke="#6b6153"
-        strokeWidth="2.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <path
-        d="M196 130 l0 24 M212 130 l0 24"
-        stroke="#6b6153"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
+      <circle cx="66.5" cy="41" r="1" fill="#5d4326" />
+      <circle cx="70" cy="44" r="1" fill="#5d4326" />
+      <circle cx="82" cy="44" r="1" fill="#5d4326" />
 
-      {/* Tipping stool */}
-      <g transform="rotate(-13 84 132)">
+      {/* a cookie already dropped on the floor */}
+      <circle
+        cx="120"
+        cy="176"
+        r="6"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="1.8"
+      />
+      <circle cx="118" cy="175" r="1.1" fill="#5d4326" />
+      <circle cx="122" cy="178" r="1.1" fill="#5d4326" />
+
+      {/* ================= TIPPING THREE-LEGGED STOOL ================= */}
+      <g transform="rotate(-16 92 168)">
         <rect
-          x="58"
-          y="112"
-          width="52"
-          height="8"
+          x="60"
+          y="128"
+          width="66"
+          height="10"
           rx="3"
-          fill="#c58f5a"
-          stroke="#6b6153"
-          strokeWidth="2"
-        />
-        <path
-          d="M64 120 l-6 34 M104 120 l6 34"
-          stroke="#6b6153"
+          fill="#d8a566"
+          stroke="#5d4326"
           strokeWidth="3"
+        />
+        <line
+          x1="68"
+          y1="138"
+          x2="60"
+          y2="180"
+          stroke="#5d4326"
+          strokeWidth="5"
           strokeLinecap="round"
         />
-        <path d="M61 138 l46 0" stroke="#6b6153" strokeWidth="2.5" />
+        <line
+          x1="118"
+          y1="138"
+          x2="126"
+          y2="180"
+          stroke="#5d4326"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <line
+          x1="93"
+          y1="138"
+          x2="93"
+          y2="180"
+          stroke="#5d4326"
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <line
+          x1="64"
+          y1="160"
+          x2="122"
+          y2="160"
+          stroke="#5d4326"
+          strokeWidth="3.5"
+        />
       </g>
 
-      {/* Boy reaching into the cookie jar */}
+      {/* ================= BOY ================= */}
       <circle
-        cx="80"
-        cy="78"
-        r="12"
-        fill="#f3d6bb"
-        stroke="#6b6153"
-        strokeWidth="2"
-      />
-      <path
-        d="M69 73 q11 -14 22 -1 q-5 -7 -11 -7 q-7 0 -11 8 z"
-        fill="#6b4a2f"
-      />
-      <path d="M80 90 l0 22" stroke="#6b6153" strokeWidth="2.5" />
-      <path
-        d="M68 98 q12 -10 24 0 l0 16 l-24 0 z"
-        fill="#8fbcd8"
-        stroke="#6b6153"
-        strokeWidth="2"
-      />
-      <path
-        d="M70 98 q-8 -22 -6 -34"
-        stroke="#6b6153"
+        cx="86"
+        cy="98"
+        r="15"
+        fill="#f7dcc0"
+        stroke="#4a4038"
         strokeWidth="2.5"
+      />
+      <path
+        d="M71 94 q15 -19 30 -2 q-4 -11 -15 -11 q-12 0 -15 13 z"
+        fill="#4a3423"
+      />
+      <circle cx="81" cy="99" r="1.7" fill="#4a4038" />
+      <circle cx="92" cy="99" r="1.7" fill="#4a4038" />
+      <path
+        d="M82 106 q4 3 8 0"
+        stroke="#4a4038"
+        strokeWidth="1.6"
         fill="none"
         strokeLinecap="round"
       />
       <path
-        d="M92 100 q10 6 16 2"
-        stroke="#6b6153"
+        d="M72 118 q14 -8 28 0 l3 30 l-34 0 z"
+        fill="#5fa8d3"
+        stroke="#4a4038"
         strokeWidth="2.5"
+      />
+      <path
+        d="M75 120 q-12 -30 5 -48"
+        stroke="#f7dcc0"
+        strokeWidth="9"
         fill="none"
         strokeLinecap="round"
       />
       <path
-        d="M74 114 l-4 18 M88 114 l4 18"
-        stroke="#6b6153"
+        d="M75 120 q-12 -30 5 -48"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M100 124 q22 8 32 22"
+        stroke="#f7dcc0"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M100 124 q22 8 32 22"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="134"
+        cy="148"
+        r="6"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="2"
+      />
+      <path
+        d="M69 148 l34 0 l-2 14 l-30 0 z"
+        fill="#3f6f96"
+        stroke="#4a4038"
         strokeWidth="2.5"
+      />
+      <line
+        x1="78"
+        y1="162"
+        x2="74"
+        y2="182"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      <line
+        x1="94"
+        y1="162"
+        x2="98"
+        y2="182"
+        stroke="#f7dcc0"
+        strokeWidth="8"
         strokeLinecap="round"
       />
 
-      {/* Girl reaching up for a cookie */}
+      {/* ================= GIRL reaching up ================= */}
       <circle
-        cx="134"
-        cy="104"
-        r="11"
-        fill="#f3d6bb"
-        stroke="#6b6153"
-        strokeWidth="2"
-      />
-      <path
-        d="M123 100 q11 -13 22 -1 q1 10 -3 14 q2 -12 -8 -13 q-9 -1 -11 0 z"
-        fill="#a8703c"
-      />
-      <path d="M134 115 l0 20" stroke="#6b6153" strokeWidth="2.5" />
-      <path
-        d="M123 122 q11 -9 22 0 l4 18 l-30 0 z"
-        fill="#f0b6c8"
-        stroke="#6b6153"
-        strokeWidth="2"
-      />
-      <path
-        d="M126 122 q-6 -16 -10 -22"
-        stroke="#6b6153"
+        cx="158"
+        cy="132"
+        r="14"
+        fill="#f7dcc0"
+        stroke="#4a4038"
         strokeWidth="2.5"
+      />
+      <path
+        d="M144 130 q14 -20 28 -2 q3 16 -2 22 q3 -20 -12 -21 q-14 -1 -14 1 z"
+        fill="#7a4a22"
+      />
+      <path
+        d="M172 140 q8 10 4 22"
+        stroke="#7a4a22"
+        strokeWidth="6"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="153" cy="133" r="1.7" fill="#4a4038" />
+      <circle cx="164" cy="133" r="1.7" fill="#4a4038" />
+      <path
+        d="M154 140 q4 3 8 0"
+        stroke="#4a4038"
+        strokeWidth="1.6"
         fill="none"
         strokeLinecap="round"
       />
       <path
-        d="M144 124 q8 4 10 12"
-        stroke="#6b6153"
+        d="M145 150 q13 -8 26 0 l7 32 l-40 0 z"
+        fill="#ef9bb8"
+        stroke="#4a4038"
         strokeWidth="2.5"
+      />
+      <path
+        d="M148 152 q-8 -14 -12 -20"
+        stroke="#f7dcc0"
+        strokeWidth="8"
         fill="none"
         strokeLinecap="round"
       />
       <path
-        d="M128 140 l-2 14 M140 140 l2 14"
-        stroke="#6b6153"
-        strokeWidth="2.5"
+        d="M148 152 q-8 -14 -12 -20"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
         strokeLinecap="round"
       />
+      <path
+        d="M172 154 q10 6 12 16"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <line
+        x1="152"
+        y1="182"
+        x2="152"
+        y2="190"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      <line
+        x1="168"
+        y1="182"
+        x2="168"
+        y2="190"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+
+      {/* ================= WINDOW, curtains, garden ================= */}
+      <rect
+        x="264"
+        y="20"
+        width="104"
+        height="72"
+        rx="2"
+        fill="#cdeaf8"
+        stroke="#5d4326"
+        strokeWidth="3"
+      />
+      <line
+        x1="316"
+        y1="20"
+        x2="316"
+        y2="92"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <line
+        x1="264"
+        y1="56"
+        x2="368"
+        y2="56"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <rect x="266" y="76" width="100" height="14" fill="#8fce8f" />
+      <line
+        x1="330"
+        y1="66"
+        x2="330"
+        y2="78"
+        stroke="#7a4a22"
+        strokeWidth="4"
+      />
+      <circle cx="330" cy="60" r="11" fill="#5fae5f" />
+      <ellipse cx="285" cy="80" rx="12" ry="7" fill="#5fae5f" />
+      <path
+        d="M252 12 q16 40 0 86 l16 0 q-9 -44 0 -86 z"
+        fill="#e4746f"
+        stroke="#8f3f3c"
+        strokeWidth="2"
+      />
+      <path
+        d="M380 12 q-16 40 0 86 l-16 0 q9 -44 0 -86 z"
+        fill="#e4746f"
+        stroke="#8f3f3c"
+        strokeWidth="2"
+      />
+      <rect x="248" y="8" width="136" height="7" rx="3" fill="#5d4326" />
+
+      {/* ================= SINK, RUNNING TAP, OVERFLOW ================= */}
+      <rect
+        x="236"
+        y="120"
+        width="150"
+        height="12"
+        rx="2"
+        fill="#d9c3a0"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <rect
+        x="272"
+        y="126"
+        width="82"
+        height="34"
+        rx="3"
+        fill="#e9f1f5"
+        stroke="#5d4326"
+        strokeWidth="3"
+      />
+      <path
+        d="M300 106 q0 -14 16 -14 q14 0 14 12"
+        stroke="#5d4326"
+        strokeWidth="4"
+        fill="none"
+      />
+      <line
+        x1="330"
+        y1="104"
+        x2="330"
+        y2="118"
+        stroke="#5d4326"
+        strokeWidth="4"
+      />
+      <path
+        d="M330 118 l0 12"
+        stroke="#63b6e0"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <rect x="275" y="129" width="76" height="9" rx="3" fill="#9ed4ef" />
+      <path
+        d="M276 138 q-14 18 -18 44"
+        stroke="#63b6e0"
+        strokeWidth="7"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M286 140 q-10 20 -10 42"
+        stroke="#9ed4ef"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="262" cy="196" rx="46" ry="10" fill="#9ed4ef" />
+      <ellipse cx="240" cy="204" rx="24" ry="6" fill="#c3e5f5" />
+
+      {/* dishes drying on the counter */}
+      <ellipse
+        cx="368"
+        cy="116"
+        rx="14"
+        ry="5"
+        fill="#f4f8fa"
+        stroke="#5d4326"
+        strokeWidth="2"
+      />
+      <ellipse
+        cx="368"
+        cy="110"
+        rx="11"
+        ry="4"
+        fill="#f4f8fa"
+        stroke="#5d4326"
+        strokeWidth="2"
+      />
+
+      {/* ================= MOTHER at the sink ================= */}
+      <circle
+        cx="228"
+        cy="96"
+        r="15"
+        fill="#f7dcc0"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M213 92 q15 -20 30 -2 q2 -16 -15 -16 q-16 0 -15 18 z"
+        fill="#5b3a1e"
+      />
+      <circle
+        cx="243"
+        cy="84"
+        r="8"
+        fill="#5b3a1e"
+        stroke="#4a4038"
+        strokeWidth="1.5"
+      />
+      <circle cx="223" cy="97" r="1.7" fill="#4a4038" />
+      <circle cx="234" cy="97" r="1.7" fill="#4a4038" />
+      <path
+        d="M212 118 q16 -9 32 0 l5 64 l-42 0 z"
+        fill="#8fbf9f"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M220 122 l16 0 l4 46 l-24 0 z"
+        fill="#f7f2e4"
+        stroke="#4a4038"
+        strokeWidth="2"
+      />
+      <path
+        d="M244 126 q26 4 34 12"
+        stroke="#f7dcc0"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M244 126 q26 4 34 12"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="286"
+        cy="140"
+        r="10"
+        fill="#f4f8fa"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M212 128 q-10 10 -8 22"
+        stroke="#f7dcc0"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="219" cy="186" rx="9" ry="4.5" fill="#4a4038" />
+      <ellipse cx="240" cy="186" rx="9" ry="4.5" fill="#4a4038" />
     </svg>
   )
 }
@@ -2664,6 +2890,8 @@ function ScreeningQualityCard({
 
   const clampedCount =
     result?.feature_calibration?.clamped_features?.length ?? 0
+
+  const lc = result?.language_calibration
 
   const accent =
     tone === "low"
@@ -2736,6 +2964,28 @@ function ScreeningQualityCard({
         Dropout passes. A wider spread means the model is less settled on this
         recording.
       </p>
+
+      {lc && !lc.is_calibrated && (
+        <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[10px] text-rose-800 leading-relaxed">
+          <span className="font-bold">
+            No risk level is shown for this recording.
+          </span>{" "}
+          This model learned its language features from Chinese speech, where
+          pronouns and word counts behave differently. Until a reference profile
+          for {lc.language.toUpperCase()} is built, scoring across languages
+          would bias the result, so the number is withheld rather than guessed.
+        </div>
+      )}
+
+      {lc?.is_calibrated && lc.profile_quality !== "validated" && (
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-relaxed">
+          <span className="font-bold">Provisional language calibration.</span>{" "}
+          Adjusted for {lc.language.toUpperCase()} speech using a reference
+          built from {lc.profile_sample_size ?? "a small number of"} recordings.
+          That sample is not clinically validated, so treat this result as
+          exploratory.
+        </div>
+      )}
 
       {clampedCount > 0 && (
         <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-relaxed">
@@ -3596,6 +3846,19 @@ function SwarSanketApp({
 
       setAnalysisStep("complete")
 
+      // Too little speech to estimate the ratio features from. Ask for more rather
+      // than presenting a number built on a sample that cannot support one.
+      if (apiResult.sample_sufficient === false) {
+        setIsAnalyzing(false)
+        navigate("needMoreSpeech")
+        return
+      }
+
+      // Past the sample-sufficiency return above, the backend always supplies a
+      // probability; the fallback keeps the persisted record well-formed rather
+      // than writing null into a stored session.
+      const probability = apiResult.screening.probability ?? 0
+
       const risk: ScreeningRisk =
         apiResult.screening.predicted_class === 1 ? "elevated" : "low"
 
@@ -3706,14 +3969,14 @@ function SwarSanketApp({
         mlResult: {
           screeningRisk: risk,
 
-          confidenceScore: apiResult.screening.probability,
+          confidenceScore: probability,
 
           confidenceLevel,
 
           classicalModel: {
             name: "Linguistic & Acoustic Biomarker Pipeline",
 
-            riskScore: apiResult.screening.probability,
+            riskScore: probability,
 
             aucScore: 0.898,
           },
@@ -3721,7 +3984,7 @@ function SwarSanketApp({
           quantumHybridModel: {
             name: "PennyLane 8-Qubit VQC (Quantum Hybrid)",
 
-            riskScore: apiResult.screening.probability,
+            riskScore: probability,
 
             aucScore: 0.943,
           },
@@ -5096,112 +5359,32 @@ function SwarSanketApp({
 
       case "processing":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden items-center justify-center px-8 bg-[#f3f9fb] animate-fade-in space-y-6">
-            <div className="w-24 h-24 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
-              <Activity className="w-12 h-12 animate-pulse" />
-            </div>
-
-            <div className="text-center space-y-1">
-              <h1
-                className="text-2xl font-bold text-[#0c1e27]"
-                style={{ fontFamily: F.display }}
-              >
-                {t(lang, "analyzingVoice")}
-              </h1>
-              <p className="text-xs text-[#5e7380]">{t(lang, "thisMayTake")}</p>
-            </div>
-
-            {analysisError ? (
-              <div className="w-full space-y-4">
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-                    <AlertCircle className="w-6 h-6" />
-                  </div>
-                  <p className="text-xs font-semibold text-rose-800 leading-relaxed">
-                    {analysisError}
-                  </p>
-                </div>
-
-                <div className="w-full space-y-2 pt-2">
-                  <Btn
-                    label="Try Again"
-                    onClick={() => {
-                      setAnalysisError(null)
-
-                      handleRunRealScreening()
-                    }}
-                  />
-                  <Btn
-                    label="Save Offline & Sync Later"
-                    onClick={() => {
-                      setAnalysisError(null)
-
-                      handleSaveCompletedSession("uncertain")
-
-                      navigate("offlineSaved")
-                    }}
-                    variant="secondary"
-                  />
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => {
-                        setAnalysisError(null)
-
-                        navigate("recording")
-                      }}
-                      className="flex-1 py-2 text-xs font-semibold text-[#30434f] hover:text-[#0c1e27] border border-[#d7eaef] rounded-xl bg-white"
-                    >
-                      Record Again
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAnalysisError(null)
-
-                        navigate("settings")
-                      }}
-                      className="flex-1 py-2 text-xs font-semibold text-[#02738a] hover:text-[#01586a] border border-[#bce3eb] rounded-xl bg-[#e4f4f7]"
-                    >
-                      Server Settings
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="w-full space-y-2">
-                  <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[#02738a] to-[#015364] animate-pulse w-4/5" />
-                  </div>
-                  <div className="flex justify-between text-[11px] text-[#5e7380] font-medium">
-                    <span>
-                      {analysisStep === "uploading"
-                        ? "Uploading voice recording…"
-                        : analysisStep === "analyzing"
-                          ? "Extracting acoustic & linguistic features…"
-                          : "Evaluating screening signal…"}
-                    </span>
-                    <span>{analysisStep === "uploading" ? "35%" : "85%"}</span>
-                  </div>
-                </div>
-
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] space-y-2 text-xs text-[#30434f]">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Whisper ASR word-level transcription</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>spaCy linguistic feature extraction</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>
-                      Validated 22-feature Quantum-Hybrid VQC screening engine
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#f3f9fb] animate-fade-in">
+            <StatusBar />
+            <VoiceProcessingVisualizer
+              analysisStep={analysisStep}
+              analysisError={analysisError}
+              lang={lang}
+              t={t}
+              F={F}
+              onRetry={() => {
+                setAnalysisError(null)
+                handleRunRealScreening()
+              }}
+              onSaveOffline={() => {
+                setAnalysisError(null)
+                handleSaveCompletedSession("uncertain")
+                navigate("offlineSaved")
+              }}
+              onRecordAgain={() => {
+                setAnalysisError(null)
+                navigate("recording")
+              }}
+              onServerSettings={() => {
+                setAnalysisError(null)
+                navigate("settings")
+              }}
+            />
           </div>
         )
 
@@ -7342,6 +7525,91 @@ function SwarSanketApp({
           </div>
         )
 
+      case "needMoreSpeech": {
+        const req = screeningApiResult?.sample_requirements
+        return (
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+            <StatusBar />
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+              <div className="flex flex-col items-center justify-center pt-4 gap-3 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-sky-50 border border-sky-200 text-[#02738a] flex items-center justify-center shadow-xs">
+                  <Mic className="w-9 h-9" />
+                </div>
+                <h1
+                  className="text-2xl font-bold text-slate-900"
+                  style={{ fontFamily: F.display }}
+                >
+                  A Little More, Please
+                </h1>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  We need a bit more speech before we can look at it properly.
+                </p>
+              </div>
+
+              {req && (
+                <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Words recorded</span>
+                    <span className="font-bold text-slate-900">
+                      {req.words_recorded} of {req.words_required} needed
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#02738a]"
+                      style={{
+                        width: `${Math.min(100, (req.words_recorded / req.words_required) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-slate-500">Time recorded</span>
+                    <span className="font-bold text-slate-900">
+                      {req.seconds_recorded.toFixed(0)}s of{" "}
+                      {req.seconds_required.toFixed(0)}s needed
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {screeningApiResult?.transcript && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    What we heard
+                  </div>
+                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
+                    "{screeningApiResult.transcript}"
+                  </p>
+                </div>
+              )}
+
+              <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 text-xs text-[#015364] leading-relaxed">
+                <span className="font-bold">Tip:</span> describe everyone in the
+                picture, what each person is doing, and what is happening around
+                them. Take your time — there is no rush, and nothing here is a
+                test you can fail.
+              </div>
+
+              <div className="w-full space-y-2.5 pt-1 pb-4">
+                <Btn
+                  label="Try Again"
+                  onClick={() => {
+                    setRecordingContext("pictureDesc")
+                    navigate("instruction")
+                  }}
+                />
+                <Btn
+                  label={t(lang, "done")}
+                  onClick={() => navigate("home")}
+                  variant="ghost"
+                />
+              </div>
+            </div>
+            <HomeIndicator />
+          </div>
+        )
+      }
+
       case "offlineSaved":
         return (
           <div className="h-full flex flex-col items-center justify-center px-6 bg-[#f3f9fb] min-h-0 overflow-hidden animate-fade-in space-y-6">
@@ -7461,6 +7729,14 @@ function SwarSanketApp({
           >
             <Stethoscope className="w-3.5 h-3.5 text-[#38bdf8]" />
             <span>Doctor View</span>
+          </button>
+
+          <button
+            onClick={() => navigate("processing")}
+            className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-[#38bdf8] hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span>Processing View</span>
           </button>
 
           <button

@@ -76,6 +76,7 @@ def explain_single_prediction(
     top_k: int = 5,
     n_passes: int = 30,
     reference_probability: Optional[float] = None,
+    measured_features: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Computes biomarker feature attributions for a single sample using
@@ -89,6 +90,12 @@ def explain_single_prediction(
         reference_probability: the probability actually reported to the caller. When
             given it is echoed back as the explained probability, so the explanation
             and the screening result can never describe two different numbers.
+        measured_features: features actually extracted from this recording. Anything
+            outside this list is a median-imputed constant - identical for every
+            patient - and is excluded from the ranked contributions, because
+            presenting a constant as "a biomarker influencing your result" tells the
+            reader something about the model's defaults, not about themselves. Their
+            attribution is still returned in shap_contributions for engineering use.
     """
     if not isinstance(input_df, pd.DataFrame):
         raise TypeError(f"Expected pandas DataFrame, got {type(input_df).__name__}")
@@ -158,9 +165,13 @@ def explain_single_prediction(
     for idx, col in enumerate(production_features):
         shap_contributions[col] = round(float(normalized_attributions[idx]), 4)
 
-    # Rank top positive (pushing toward elevated risk) and negative (pushing toward low risk)
+    # Rank top positive (pushing toward elevated risk) and negative (pushing toward low risk),
+    # over measured features only.
+    measured = set(measured_features) if measured_features is not None else set(production_features)
+    imputed_constants = [c for c in production_features if c not in measured]
+
     sorted_features = sorted(
-        shap_contributions.items(),
+        ((col, val) for col, val in shap_contributions.items() if col in measured),
         key=lambda item: abs(item[1]),
         reverse=True,
     )
@@ -215,6 +226,12 @@ def explain_single_prediction(
         "explained_probability": round(explained_probability, 4),
         "reconstructed_probability": round(explained_probability, 4),
         "shap_contributions": shap_contributions,
+        # Features never extracted from audio; held at their training median for every
+        # patient. Excluded from the ranked contributions above.
+        "imputed_constant_features": imputed_constants,
+        "imputed_constant_attribution_share": round(
+            float(sum(abs(shap_contributions[c]) for c in imputed_constants)), 4
+        ),
         "top_positive_contributions": top_pos,
         "top_negative_contributions": top_neg,
         "human_readable_explanation": human_explanation,

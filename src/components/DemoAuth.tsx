@@ -300,6 +300,18 @@ export default function DemoAuth({ onAuthenticated }: DemoAuthProps) {
               >
                 {mode === "login" ? "Login" : "Create Account"}
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("swarsanket-demo-session", "active")
+                  onAuthenticated("Demo Screener")
+                }}
+                className="w-full py-3 rounded-2xl border border-[#bce3eb] bg-[#e4f4f7] hover:bg-[#d5edf2] text-[#02738a] font-bold text-xs shadow-xs transition active:scale-[0.98] flex items-center justify-center gap-1.5"
+                style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
+              >
+                <span>⚡ Instant Demo Access (One-Click)</span>
+              </button>
             </form>
 
             <p className="mt-5 text-center text-xs text-[#5e7380]">

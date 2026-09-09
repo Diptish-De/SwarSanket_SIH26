@@ -126,6 +126,67 @@ Beyond that envelope the network has no training evidence; the sigmoid saturates
 - Gradients are averaged over the **same 30 MC-dropout passes** as inference (BatchNorm frozen identically), so the attribution describes the reported predictive mean rather than a separate deterministic pass. `explained_probability` now equals `screening.probability` exactly.
 - `net_attribution_direction` added with accurate naming; the legacy `shap_*` keys are retained only for API compatibility. **No SHAP library is used anywhere** — `grep` for `shap.|TreeExplainer|xgboost|lightgbm|RandomForest` across `backend/*.py` returns nothing.
 
+### 4.6 Cross-lingual calibration layer
+`backend/language_calibration.py`, with profiles built by `backend/build_language_profile.py`.
+
+Several contract features are lexical or segmentation-bound, and their population
+values differ between languages for grammatical reasons rather than cognitive ones.
+Measured against a 59-recording English reference:
+
+| Feature | English mean | Training (Chinese) mean | Ratio |
+|---|---|---|---|
+| `CTP_Pronouns_ratio` | 0.1188 | 0.0643 | **1.85x** |
+| `CTP_unique_IU_efficiency` | 0.2127 | 0.0818 | 2.60x |
+| `CTP_num_unique_keywords` | 17.86 | 6.96 | 2.57x |
+| `CTP_num_unique_IU` | 10.61 | 4.68 | 2.27x |
+| `CTP_Word Rate(-/s)` | 2.83 | 1.33 | 2.12x |
+| `CTP_verb_num` | 8.88 | 21.94 | 0.40x |
+
+The pronoun result confirms the predicted mechanism: **Mandarin is pro-drop**,
+omitting pronouns where English grammar requires them, so an English speaker reads as
+pronoun-heavy - and pronoun overuse is a dementia marker in this model. The bias is
+directional, pushing English input toward Elevated Risk.
+
+The correction is mean/standard-deviation domain transfer. For a language-dependent
+feature the speaker is scored as a z-score within their **own** language reference,
+then mapped onto the training distribution:
+
+```
+z_speaker = (value - mu_reference) / sd_reference
+value'    = mu_training + z_speaker * sd_training
+```
+
+A speaker typical for their language maps to the training mean and contributes
+nothing, instead of contributing a spurious signal. On a 68-word English sample the
+pronoun ratio went from a raw 0.103 (reading as elevated against the Chinese mean) to
+a calibrated 0.045, correctly reflecting that the speaker sits at z = -0.37 within
+English. The screening flipped from a spurious elevated reading to Low Risk.
+
+The module **will not invent reference statistics.** A language is calibrated only
+when a profile built from real recordings exists; otherwise it reports
+`status="uncalibrated"`, changes nothing, and the pipeline withholds the clinical risk
+tier entirely rather than presenting a known-biased score as a category.
+
+### 4.7 Minimum-sample gate
+At 28 words, two extra pronouns move `CTP_Pronouns_ratio` by ~40% - larger than the
+effect the model is trying to detect. Recordings below 50 words or 20 seconds now
+return `sample_sufficient: false` with no probability, no risk tier and no feature
+vector, and the UI asks for more speech instead of showing a number.
+
+### 4.8 Imputed constants excluded from attributions
+Six of the 22 features are never extracted from audio and sit at their training median
+for every patient: `CTP_F0 SD(st)`, `CTP_EST`, `CTP_Noun No Phrase Rate` and the three
+phrase-type features. They were being ranked and shown to patients as biomarkers
+"influencing this screening signal" while carrying zero information about the
+individual. They are now excluded from the ranked contributions and reported
+separately as `imputed_constant_features`.
+
+### 4.9 ASR accuracy
+Faster-Whisper was upgraded from `tiny` to `base`. `tiny` mis-transcribed enough to
+corrupt the linguistic features that decide the score - a dropped or invented pronoun
+moves the deciding feature materially on a short sample. Override with
+`SWARSANKET_WHISPER_MODEL`.
+
 ---
 
 ## 5. Clinical recommendation
@@ -174,6 +235,7 @@ The UI already ships 11 languages; the model behind it is monolingual Chinese-de
 |---|---|---|
 | 1 | IU/keyword feature definitions unrecoverable; English extraction unvalidated against training semantics (§2, §3) | **High** — blocks clinical calibration |
 | 2 | On-protocol English descriptions clamp ~6 of 22 features at +3σ, degrading discrimination | **High** |
+| 2a | *Mitigated* by the cross-lingual calibration layer (§4.6). The English reference profile currently shipped is **provisional** — built from an unlabelled convenience sample — so results remain exploratory until a validated profile replaces it. | **High** |
 | 3 | `CTP_F0 SD(st)`, `CTP_EST` and the four syntactic-phrase features remain median-imputed — never extracted live | Medium |
 | 4 | Expanded picture-description prompts for 10 Indic locales were authored without native review | Medium |
 | 5 | `CTP_Voiced Rate(1/s)` semantics inferred, not recovered; currently words per second of active speech | Low |

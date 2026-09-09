@@ -1,6 +1,6 @@
 // ─── SwarSanket System Types & Data Contracts ─────────────────────────────────
 
-export type Screen = "splash" | "language" | "welcome" | "consent" | "profile" | "home" | "voiceIntro" | "instruction" | "recording" | "voiceQuality" | "recordingReview" | "pictureDesc" | "memory" | "conversation" | "completion" | "processing" | "resultLow" | "resultElevated" | "resultUncertain" | "screeningDetails" | "shareWithDoctor" | "offlineSaved" | "syncStatus" | "caregiverAlert" | "referral" | "teleconsult" | "privacyScreen" | "reminder" | "doctorDash" | "doctorPatient" | "doctorReport" | "history" | "trend" | "help" | "caregiver" | "healthWorker" | "settings" | "errorScreen" | "emptyHistory"
+export type Screen = "splash" | "language" | "welcome" | "consent" | "profile" | "home" | "voiceIntro" | "instruction" | "recording" | "voiceQuality" | "recordingReview" | "pictureDesc" | "memory" | "conversation" | "completion" | "processing" | "needMoreSpeech" | "resultLow" | "resultElevated" | "resultUncertain" | "screeningDetails" | "shareWithDoctor" | "offlineSaved" | "syncStatus" | "caregiverAlert" | "referral" | "teleconsult" | "privacyScreen" | "reminder" | "doctorDash" | "doctorPatient" | "doctorReport" | "history" | "trend" | "help" | "caregiver" | "healthWorker" | "settings" | "errorScreen" | "emptyHistory"
 
 export type RecordingContext = "freeSpeech" | "pictureDesc" | "memoryRecall" | "conversation"
 
