@@ -109,6 +109,7 @@ import {
   APK_DOWNLOAD_URL,
   GITHUB_RELEASES_URL,
 } from "./components/ApkDownloadModal"
+
 import DemoAuth, { readDemoUser } from "./components/DemoAuth"
 
 // ─── Design Tokens & Theme (Aligned with Official Logo Palette) ───────────────
@@ -157,39 +158,65 @@ const C = {
 
 const F = {
   display: "'Outfit', system-ui, sans-serif",
+
   body: "'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Gujarati', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Tamil', 'Noto Sans Telugu', system-ui, sans-serif",
 }
 
 const formatBiomarkerName = (feature: string): string => {
   const map: Record<string, string> = {
     "CTP_F0 SD(st)": "Pitch Variation (F0 SD)",
+
     "CTP_DPI(ms)": "Pause Duration (DPI)",
+
     "CTP_RST(-/s)": "Phonation Rate (syll/s)",
+
     CTP_EST: "Speech Timing (EST)",
+
     "CTP_Voiced Rate(1/s)": "Voiced Speech Rate (words/s)",
+
     "CTP_Hesitation Ratio": "Hesitation Ratio",
+
     "CTP_Energy Mean(Pa^2·s)": "Acoustic Energy Mean",
+
     CTP_verb_num: "Verb Count",
+
     CTP_noun_ratio: "Noun Ratio",
+
     CTP_Pronouns_ratio: "Pronoun Ratio",
+
     "CTP_noun to verb": "Noun-to-Verb Ratio",
+
     "CTP_Word Rate(-/s)": "Word Rate (words/s)",
+
     "CTP_Noun No Phrase Rate": "Noun Non-Phrase Rate",
+
     "CTP_Verb phrase type proportion": "Verb Phrase Proportion",
+
     "CTP_Prep phrase type proportion": "Prepositional Density",
+
     "CTP_Prep average phrase type length 1": "Prepositional Length",
+
     CTP_num_unique_IU: "Unique Info Units",
+
     CTP_num_unique_keywords: "Unique Keywords",
+
     CTP_unique_IU_densitys: "Information Unit Density",
+
     CTP_total_IU_density: "Total Information Density",
+
     CTP_keyword_to_non_keyword_ratio: "Keyword-to-Filler Ratio",
+
     CTP_unique_IU_efficiency: "Information Efficiency",
   }
+
   return (
     map[feature] ||
     feature
+
       .replace(/^CTP_/, "")
+
       .replace(/_/g, " ")
+
       .replace(/\(st\)/, "")
   )
 }
@@ -230,7 +257,9 @@ const TX: Record<string, Record<string, string>> = {
     start: "START",
 
     previousCheck: "Previous Check",
+
     viewDetailsLabel: "View Report",
+
     readyWhen: "Daily Screening",
 
     lastCheck: "Last check",
@@ -256,7 +285,9 @@ const TX: Record<string, Record<string, string>> = {
     voiceIntroSub: "This is a short voice check. It takes about 3–5 minutes.",
 
     step1: "Listen",
+
     step2: "Speak",
+
     step3: "Finish",
 
     beginVoiceCheck: "Begin Voice Check",
@@ -288,7 +319,9 @@ const TX: Record<string, Record<string, string>> = {
     continue: "Continue",
 
     whatDoYouSee: "What do you see?",
+
     clinicalProtocolTag: "Picture Description Task",
+
     describeSceneHint: "Take your time and describe as much as you notice.",
 
     pictureDescSub: "Tell us what you see in the picture.",
@@ -495,7 +528,9 @@ const TX: Record<string, Record<string, string>> = {
     voiceIntroSub: "यह एक छोटी Voice Check है। इसमें लगभग 3–5 मिनट लगेंगे।",
 
     step1: "सुनें",
+
     step2: "बोलें",
+
     step3: "पूरा करें",
 
     beginVoiceCheck: "Voice Check शुरू करें",
@@ -527,7 +562,9 @@ const TX: Record<string, Record<string, string>> = {
     continue: "आगे बढ़ें",
 
     whatDoYouSee: "आप क्या देख रहे हैं?",
+
     clinicalProtocolTag: "चित्र वर्णन कार्य",
+
     describeSceneHint: "आराम से बताइए, जो कुछ भी आपको दिखे।",
 
     pictureDescSub: "तस्वीर में जो दिखे वो बताइए।",
@@ -732,7 +769,9 @@ const TX: Record<string, Record<string, string>> = {
     voiceIntroSub: "এটি একটি ছোট Voice Check। প্রায় ৩–৫ মিনিট সময় লাগবে।",
 
     step1: "শুনুন",
+
     step2: "বলুন",
+
     step3: "শেষ করুন",
 
     beginVoiceCheck: "Voice Check শুরু করুন",
@@ -764,7 +803,9 @@ const TX: Record<string, Record<string, string>> = {
     continue: "চালিয়ে যান",
 
     whatDoYouSee: "আপনি কী দেখছেন?",
+
     clinicalProtocolTag: "ছবি বর্ণনার কাজ",
+
     describeSceneHint: "সময় নিন, যা যা চোখে পড়ে সবই বলুন।",
 
     pictureDescSub: "ছবিতে যা দেখছেন তা বলুন।",
@@ -856,357 +897,659 @@ const TX: Record<string, Record<string, string>> = {
 const INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     voiceCheckCard: "आवाज़ की जांच",
+
     voiceCheckDesc:
       "3–5 मिनट की छोटी जांच करें। सहज रूप से बोलें—यहां सही या गलत उत्तर नहीं हैं।",
 
     welcomeSub: "आइए, आवाज़ की एक छोटी जांच करते हैं।",
+
     startVoiceCheck: "आवाज़ की जांच शुरू करें",
+
     letsBegin: "आइए शुरू करें",
+
     voiceIntroSub: "यह एक छोटी आवाज़ जांच है। इसमें लगभग 3–5 मिनट लगेंगे।",
 
     step1: "सुनें",
+
     step2: "बोलें",
+
     step3: "पूरा करें",
+
     beginVoiceCheck: "आवाज़ की जांच शुरू करें",
+
     listenToQuestion: "प्रश्न सुनें",
+
     playAgain: "दोबारा सुनें",
+
     startSpeaking: "बोलना शुरू करें",
+
     tapToSpeak: "बोलने के लिए टैप करें",
+
     speakNaturally: "स्वाभाविक रूप से बोलें…",
+
     finishRecording: "रिकॉर्डिंग पूरी करें",
+
     recordingReady: "आपकी रिकॉर्डिंग तैयार है",
+
     listenBefore: "आगे बढ़ने से पहले सुनें",
+
     recordAgain: "दोबारा रिकॉर्ड करें",
+
     continue: "आगे बढ़ें",
+
     whatDoYouSee: "आपको क्या दिखाई दे रहा है?",
+
     clinicalProtocolTag: "चित्र वर्णन कार्य",
+
     describeSceneHint: "आराम से बताइए, जो कुछ भी आपको दिखे।",
+
     pictureDescSub: "चित्र में जो दिखाई दे रहा है, उसके बारे में बताइए।",
+
     listenCarefully: "ध्यान से सुनें",
+
     memorySub: "हम कुछ शब्द पढ़ेंगे। उन्हें याद रखने की कोशिश करें।",
+
     iHeardWords: "मैंने शब्द सुन लिए हैं—आगे बढ़ें",
+
     oneMore: "एक और सवाल",
+
     conversationSub: "यहां कोई सही या गलत उत्तर नहीं है।",
+
     youreDone: "आपने पूरा कर लिया!",
+
     completionSub: "धन्यवाद। अब हम आपकी आवाज़ की जांच कर रहे हैं।",
 
     home: "होम",
+
     history: "पिछली जांचें",
+
     help: "मदद",
+
     caregiver: "देखभालकर्ता",
+
     profile: "प्रोफ़ाइल",
   },
 
   bn: {
     greeting: "নমস্কার",
+
     howFeeling: "আজ আপনি কেমন আছেন?",
+
     voiceCheckCard: "ভয়েস পরীক্ষা",
+
     voiceCheckDesc:
       "৩–৫ মিনিটের একটি ছোট পরীক্ষা করুন। স্বাভাবিকভাবে কথা বলুন—এখানে ঠিক বা ভুল উত্তর নেই।",
 
     welcomeSub: "চলুন একটি ছোট ভয়েস পরীক্ষা করি।",
+
     welcomeTime: "এতে প্রায় ৩–৫ মিনিট সময় লাগবে।",
+
     startVoiceCheck: "ভয়েস পরীক্ষা শুরু করুন",
+
     someoneHelping: "কেউ আমাকে সাহায্য করছেন",
+
     letsBegin: "চলুন শুরু করি",
+
     voiceIntroSub: "এটি একটি ছোট ভয়েস পরীক্ষা। এতে প্রায় ৩–৫ মিনিট সময় লাগবে।",
 
     step1: "শুনুন",
+
     step2: "বলুন",
+
     step3: "শেষ করুন",
+
     beginVoiceCheck: "ভয়েস পরীক্ষা শুরু করুন",
+
     listenToQuestion: "প্রশ্নটি শুনুন",
+
     playAgain: "আবার শুনুন",
+
     startSpeaking: "কথা বলা শুরু করুন",
+
     tapToSpeak: "কথা বলতে ট্যাপ করুন",
+
     speakNaturally: "স্বাভাবিকভাবে কথা বলুন…",
+
     finishRecording: "রেকর্ডিং শেষ করুন",
+
     recordingReady: "আপনার রেকর্ডিং প্রস্তুত",
+
     listenBefore: "এগিয়ে যাওয়ার আগে শুনুন",
+
     recordAgain: "আবার রেকর্ড করুন",
+
     continue: "এগিয়ে যান",
+
     whatDoYouSee: "আপনি কী দেখতে পাচ্ছেন?",
+
     clinicalProtocolTag: "ছবি বর্ণনার কাজ",
+
     describeSceneHint: "সময় নিন, যা যা চোখে পড়ে সবই বলুন।",
+
     pictureDescSub: "ছবিতে যা দেখতে পাচ্ছেন, সে সম্পর্কে বলুন।",
+
     listenCarefully: "মন দিয়ে শুনুন",
+
     memorySub: "আমরা কয়েকটি শব্দ পড়ব। সেগুলো মনে রাখার চেষ্টা করুন।",
+
     iHeardWords: "শব্দগুলো শুনেছি—এগিয়ে যান",
+
     oneMore: "আরও একটি প্রশ্ন",
+
     conversationSub: "এখানে ঠিক বা ভুল উত্তর নেই।",
+
     youreDone: "আপনার কাজ শেষ!",
+
     completionSub: "ধন্যবাদ। এখন আমরা আপনার কণ্ঠস্বর পরীক্ষা করছি।",
 
     home: "হোম",
+
     history: "আগের পরীক্ষাগুলি",
+
     help: "সহায়তা",
+
     caregiver: "পরিচর্যাকারী",
+
     profile: "প্রোফাইল",
   },
 
   mr: {
     greeting: "नमस्कार",
+
     howFeeling: "आज तुम्हाला कसे वाटत आहे?",
+
     voiceCheckCard: "आवाजाची तपासणी",
+
     voiceCheckDesc:
       "3–5 मिनिटांची छोटी तपासणी करा. सहजपणे बोला—यात बरोबर किंवा चूक उत्तर नाही.",
+
     welcomeSub: "चला, आवाजाची एक छोटी तपासणी करूया.",
+
     welcomeTime: "यासाठी सुमारे 3–5 मिनिटे लागतील.",
+
     startVoiceCheck: "आवाजाची तपासणी सुरू करा",
+
     someoneHelping: "कोणी तरी मला मदत करत आहे",
+
     letsBegin: "चला सुरू करूया",
+
     voiceIntroSub:
       "ही आवाजाची एक छोटी तपासणी आहे. यासाठी सुमारे 3–5 मिनिटे लागतील.",
+
     step1: "ऐका",
+
     step2: "बोला",
+
     step3: "पूर्ण करा",
+
     beginVoiceCheck: "आवाजाची तपासणी सुरू करा",
+
     listenToQuestion: "प्रश्न ऐका",
+
     playAgain: "पुन्हा ऐका",
+
     startSpeaking: "बोलायला सुरुवात करा",
+
     tapToSpeak: "बोलण्यासाठी टॅप करा",
+
     speakNaturally: "सहजपणे बोला…",
+
     finishRecording: "रेकॉर्डिंग पूर्ण करा",
+
     recordingReady: "तुमचे रेकॉर्डिंग तयार आहे",
+
     listenBefore: "पुढे जाण्यापूर्वी ऐका",
+
     recordAgain: "पुन्हा रेकॉर्ड करा",
+
     continue: "पुढे चला",
+
     whatDoYouSee: "तुम्हाला काय दिसत आहे?",
+
     clinicalProtocolTag: "चित्र वर्णन कार्य",
+
     describeSceneHint: "सावकाश सांगा, जे काही तुम्हाला दिसते ते सर्व.",
+
     pictureDescSub: "चित्रात तुम्हाला जे दिसते त्याबद्दल सांगा.",
+
     listenCarefully: "लक्षपूर्वक ऐका",
+
     memorySub: "आम्ही काही शब्द वाचू. ते लक्षात ठेवण्याचा प्रयत्न करा.",
+
     iHeardWords: "मी शब्द ऐकले आहेत—पुढे चला",
+
     oneMore: "आणखी एक प्रश्न",
+
     conversationSub: "यात बरोबर किंवा चूक उत्तर नाही.",
+
     youreDone: "तुम्ही पूर्ण केले!",
+
     completionSub: "धन्यवाद. आता आम्ही तुमच्या आवाजाची तपासणी करत आहोत.",
+
     home: "मुख्यपृष्ठ",
+
     history: "मागील तपासण्या",
+
     help: "मदत",
+
     caregiver: "काळजीवाहक",
+
     profile: "प्रोफाइल",
   },
 
   ta: {
     greeting: "வணக்கம்",
+
     howFeeling: "இன்று நீங்கள் எப்படி உணர்கிறீர்கள்?",
+
     voiceCheckCard: "குரல் பரிசோதனை",
+
     voiceCheckDesc:
       "3–5 நிமிட சிறிய பரிசோதனையை மேற்கொள்ளுங்கள். இயல்பாகப் பேசுங்கள்—சரி அல்லது தவறு என்ற பதில் எதுவும் இல்லை.",
+
     welcomeSub: "சிறிய குரல் பரிசோதனையைத் தொடங்கலாம்.",
+
     welcomeTime: "இதற்கு சுமார் 3–5 நிமிடங்கள் ஆகும்.",
+
     startVoiceCheck: "குரல் பரிசோதனையைத் தொடங்குங்கள்",
+
     someoneHelping: "யாரோ எனக்கு உதவுகிறார்கள்",
+
     letsBegin: "தொடங்கலாம்",
+
     voiceIntroSub: "இது ஒரு சிறிய குரல் பரிசோதனை. இதற்கு சுமார் 3–5 நிமிடங்கள் ஆகும்.",
+
     step1: "கேளுங்கள்",
+
     step2: "பேசுங்கள்",
+
     step3: "முடிக்கவும்",
+
     beginVoiceCheck: "குரல் பரிசோதனையைத் தொடங்குங்கள்",
+
     listenToQuestion: "கேள்வியைக் கேளுங்கள்",
+
     playAgain: "மீண்டும் கேளுங்கள்",
+
     startSpeaking: "பேசத் தொடங்குங்கள்",
+
     tapToSpeak: "பேசத் தட்டுங்கள்",
+
     speakNaturally: "இயல்பாகப் பேசுங்கள்…",
+
     finishRecording: "பதிவை முடிக்கவும்",
+
     recordingReady: "உங்கள் பதிவு தயாராக உள்ளது",
+
     listenBefore: "தொடர்வதற்கு முன் கேளுங்கள்",
+
     recordAgain: "மீண்டும் பதிவு செய்யுங்கள்",
+
     continue: "தொடரவும்",
+
     whatDoYouSee: "உங்களுக்கு என்ன தெரிகிறது?",
+
     clinicalProtocolTag: "படம் விவரிக்கும் பணி",
+
     describeSceneHint: "நிதானமாக, நீங்கள் கவனிக்கும் அனைத்தையும் சொல்லுங்கள்.",
+
     pictureDescSub: "படத்தில் நீங்கள் காண்பதைப் பற்றி சொல்லுங்கள்.",
+
     listenCarefully: "கவனமாகக் கேளுங்கள்",
+
     memorySub:
       "சில சொற்களை நாங்கள் வாசிப்போம். அவற்றை நினைவில் வைத்துக்கொள்ள முயற்சி செய்யுங்கள்.",
+
     iHeardWords: "சொற்களைக் கேட்டுவிட்டேன்—தொடரவும்",
+
     oneMore: "இன்னொரு கேள்வி",
+
     conversationSub: "சரியான அல்லது தவறான பதில் என்று எதுவும் இல்லை.",
+
     youreDone: "முடித்துவிட்டீர்கள்!",
+
     completionSub: "நன்றி. இப்போது உங்கள் குரலைப் பரிசோதிக்கிறோம்.",
+
     home: "முகப்பு",
+
     history: "முந்தைய பரிசோதனைகள்",
+
     help: "உதவி",
+
     caregiver: "பராமரிப்பாளர்",
+
     profile: "சுயவிவரம்",
   },
 
   te: {
     greeting: "నమస్కారం",
+
     howFeeling: "ఈ రోజు మీకు ఎలా అనిపిస్తోంది?",
+
     voiceCheckCard: "వాయిస్ పరీక్ష",
+
     voiceCheckDesc:
       "3–5 నిమిషాల చిన్న పరీక్ష చేయండి. సహజంగా మాట్లాడండి—సరైన లేదా తప్పు సమాధానాలు ఉండవు.",
+
     welcomeSub: "చిన్న వాయిస్ పరీక్షను ప్రారంభిద్దాం.",
+
     welcomeTime: "దీనికి సుమారు 3–5 నిమిషాలు పడుతుంది.",
+
     startVoiceCheck: "వాయిస్ పరీక్షను ప్రారంభించండి",
+
     someoneHelping: "ఎవరో నాకు సహాయం చేస్తున్నారు",
+
     letsBegin: "ప్రారంభిద్దాం",
+
     voiceIntroSub: "ఇది చిన్న వాయిస్ పరీక్ష. దీనికి సుమారు 3–5 నిమిషాలు పడుతుంది.",
+
     step1: "వినండి",
+
     step2: "మాట్లాడండి",
+
     step3: "ముగించండి",
+
     beginVoiceCheck: "వాయిస్ పరీక్షను ప్రారంభించండి",
+
     listenToQuestion: "ప్రశ్నను వినండి",
+
     playAgain: "మళ్లీ వినండి",
+
     startSpeaking: "మాట్లాడటం ప్రారంభించండి",
+
     tapToSpeak: "మాట్లాడేందుకు ట్యాప్ చేయండి",
+
     speakNaturally: "సహజంగా మాట్లాడండి…",
+
     finishRecording: "రికార్డింగ్‌ను ముగించండి",
+
     recordingReady: "మీ రికార్డింగ్ సిద్ధంగా ఉంది",
+
     listenBefore: "కొనసాగించే ముందు వినండి",
+
     recordAgain: "మళ్లీ రికార్డ్ చేయండి",
+
     continue: "కొనసాగించండి",
+
     whatDoYouSee: "మీకు ఏమి కనిపిస్తోంది?",
+
     clinicalProtocolTag: "చిత్ర వర్ణన పని",
+
     describeSceneHint: "నెమ్మదిగా, మీరు గమనించినదంతా చెప్పండి.",
+
     pictureDescSub: "చిత్రంలో మీకు కనిపిస్తున్నదాన్ని చెప్పండి.",
+
     listenCarefully: "శ్రద్ధగా వినండి",
+
     memorySub: "మేము కొన్ని పదాలను చదువుతాము. వాటిని గుర్తుంచుకోవడానికి ప్రయత్నించండి.",
+
     iHeardWords: "పదాలను విన్నాను—కొనసాగించండి",
+
     oneMore: "మరో ప్రశ్న",
+
     conversationSub: "సరైన లేదా తప్పు సమాధానం ఏదీ లేదు.",
+
     youreDone: "మీరు పూర్తి చేశారు!",
+
     completionSub: "ధన్యవాదాలు. ఇప్పుడు మీ వాయిస్‌ను పరీక్షిస్తున్నాము.",
+
     home: "హోమ్",
+
     history: "మునుపటి పరీక్షలు",
+
     help: "సహాయం",
+
     caregiver: "సంరక్షకుడు",
+
     profile: "ప్రొఫైల్",
   },
 
   gu: {
     greeting: "નમસ્તે",
+
     howFeeling: "આજે તમને કેવું લાગે છે?",
+
     voiceCheckCard: "અવાજની તપાસ",
+
     voiceCheckDesc:
       "3–5 મિનિટની ટૂંકી તપાસ કરો. સ્વાભાવિક રીતે બોલો—અહીં સાચો કે ખોટો જવાબ નથી.",
+
     welcomeSub: "ચાલો, અવાજની એક ટૂંકી તપાસ કરીએ.",
+
     welcomeTime: "આમાં લગભગ 3–5 મિનિટ લાગશે.",
+
     startVoiceCheck: "અવાજની તપાસ શરૂ કરો",
+
     someoneHelping: "કોઈ મને મદદ કરી રહ્યું છે",
+
     letsBegin: "ચાલો શરૂ કરીએ",
+
     voiceIntroSub: "આ અવાજની એક ટૂંકી તપાસ છે. આમાં લગભગ 3–5 મિનિટ લાગશે.",
+
     step1: "સાંભળો",
+
     step2: "બોલો",
+
     step3: "પૂર્ણ કરો",
+
     beginVoiceCheck: "અવાજની તપાસ શરૂ કરો",
+
     listenToQuestion: "પ્રશ્ન સાંભળો",
+
     playAgain: "ફરી સાંભળો",
+
     startSpeaking: "બોલવાનું શરૂ કરો",
+
     tapToSpeak: "બોલવા માટે ટૅપ કરો",
+
     speakNaturally: "સ્વાભાવિક રીતે બોલો…",
+
     finishRecording: "રેકોર્ડિંગ પૂર્ણ કરો",
+
     recordingReady: "તમારું રેકોર્ડિંગ તૈયાર છે",
+
     listenBefore: "આગળ વધતા પહેલાં સાંભળો",
+
     recordAgain: "ફરી રેકોર્ડ કરો",
+
     continue: "આગળ વધો",
+
     whatDoYouSee: "તમને શું દેખાય છે?",
+
     clinicalProtocolTag: "ચિત્ર વર્ણન કાર્ય",
+
     describeSceneHint: "નિરાંતે, તમને જે કંઈ દેખાય તે બધું જણાવો.",
+
     pictureDescSub: "ચિત્રમાં તમને જે દેખાય છે તે જણાવો.",
+
     listenCarefully: "ધ્યાનથી સાંભળો",
+
     memorySub: "અમે કેટલાક શબ્દો વાંચીશું. તેમને યાદ રાખવાનો પ્રયાસ કરો.",
+
     iHeardWords: "મેં શબ્દો સાંભળ્યા છે—આગળ વધો",
+
     oneMore: "વધુ એક પ્રશ્ન",
+
     conversationSub: "અહીં સાચો કે ખોટો જવાબ નથી.",
+
     youreDone: "તમે પૂર્ણ કર્યું!",
+
     completionSub: "આભાર. હવે અમે તમારા અવાજની તપાસ કરી રહ્યા છીએ.",
+
     home: "હોમ",
+
     history: "અગાઉની તપાસો",
+
     help: "મદદ",
+
     caregiver: "સંભાળ રાખનાર",
+
     profile: "પ્રોફાઇલ",
   },
 
   kn: {
     greeting: "ನಮಸ್ಕಾರ",
+
     howFeeling: "ಇಂದು ನಿಮಗೆ ಹೇಗನಿಸುತ್ತಿದೆ?",
+
     voiceCheckCard: "ಧ್ವನಿ ಪರೀಕ್ಷೆ",
+
     voiceCheckDesc:
       "3–5 ನಿಮಿಷಗಳ ಸಣ್ಣ ಪರೀಕ್ಷೆ ಮಾಡಿ. ಸಹಜವಾಗಿ ಮಾತನಾಡಿ—ಸರಿಯಾದ ಅಥವಾ ತಪ್ಪಾದ ಉತ್ತರಗಳಿಲ್ಲ.",
+
     welcomeSub: "ಸಣ್ಣ ಧ್ವನಿ ಪರೀಕ್ಷೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ.",
+
     welcomeTime: "ಇದಕ್ಕೆ ಸುಮಾರು 3–5 ನಿಮಿಷಗಳು ಬೇಕಾಗುತ್ತವೆ.",
+
     startVoiceCheck: "ಧ್ವನಿ ಪರೀಕ್ಷೆ ಪ್ರಾರಂಭಿಸಿ",
+
     someoneHelping: "ಯಾರೋ ನನಗೆ ಸಹಾಯ ಮಾಡುತ್ತಿದ್ದಾರೆ",
+
     letsBegin: "ಪ್ರಾರಂಭಿಸೋಣ",
+
     voiceIntroSub: "ಇದು ಒಂದು ಸಣ್ಣ ಧ್ವನಿ ಪರೀಕ್ಷೆ. ಇದಕ್ಕೆ ಸುಮಾರು 3–5 ನಿಮಿಷಗಳು ಬೇಕಾಗುತ್ತವೆ.",
+
     step1: "ಆಲಿಸಿ",
+
     step2: "ಮಾತನಾಡಿ",
+
     step3: "ಮುಗಿಸಿ",
+
     beginVoiceCheck: "ಧ್ವನಿ ಪರೀಕ್ಷೆ ಪ್ರಾರಂಭಿಸಿ",
+
     listenToQuestion: "ಪ್ರಶ್ನೆಯನ್ನು ಆಲಿಸಿ",
+
     playAgain: "ಮತ್ತೆ ಆಲಿಸಿ",
+
     startSpeaking: "ಮಾತನಾಡಲು ಪ್ರಾರಂಭಿಸಿ",
+
     tapToSpeak: "ಮಾತನಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+
     speakNaturally: "ಸಹಜವಾಗಿ ಮಾತನಾಡಿ…",
+
     finishRecording: "ರೆಕಾರ್ಡಿಂಗ್ ಮುಗಿಸಿ",
+
     recordingReady: "ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್ ಸಿದ್ಧವಾಗಿದೆ",
+
     listenBefore: "ಮುಂದುವರಿಯುವ ಮೊದಲು ಆಲಿಸಿ",
+
     recordAgain: "ಮತ್ತೆ ರೆಕಾರ್ಡ್ ಮಾಡಿ",
+
     continue: "ಮುಂದುವರಿಸಿ",
+
     whatDoYouSee: "ನಿಮಗೆ ಏನು ಕಾಣುತ್ತಿದೆ?",
+
     clinicalProtocolTag: "ಚಿತ್ರ ವಿವರಣೆ ಕಾರ್ಯ",
+
     describeSceneHint: "ನಿಧಾನವಾಗಿ, ನಿಮಗೆ ಕಾಣುವ ಎಲ್ಲವನ್ನೂ ತಿಳಿಸಿ.",
+
     pictureDescSub: "ಚಿತ್ರದಲ್ಲಿ ನಿಮಗೆ ಕಾಣುತ್ತಿರುವುದನ್ನು ತಿಳಿಸಿ.",
+
     listenCarefully: "ಗಮನವಿಟ್ಟು ಆಲಿಸಿ",
+
     memorySub: "ನಾವು ಕೆಲವು ಪದಗಳನ್ನು ಓದುತ್ತೇವೆ. ಅವುಗಳನ್ನು ನೆನಪಿಟ್ಟುಕೊಳ್ಳಲು ಪ್ರಯತ್ನಿಸಿ.",
+
     iHeardWords: "ಪದಗಳನ್ನು ಆಲಿಸಿದ್ದೇನೆ—ಮುಂದುವರಿಸಿ",
+
     oneMore: "ಇನ್ನೊಂದು ಪ್ರಶ್ನೆ",
+
     conversationSub: "ಸರಿಯಾದ ಅಥವಾ ತಪ್ಪಾದ ಉತ್ತರ ಎಂಬುದಿಲ್ಲ.",
+
     youreDone: "ನೀವು ಮುಗಿಸಿದ್ದೀರಿ!",
+
     completionSub: "ಧನ್ಯವಾದಗಳು. ಈಗ ನಿಮ್ಮ ಧ್ವನಿಯನ್ನು ಪರೀಕ್ಷಿಸುತ್ತಿದ್ದೇವೆ.",
+
     home: "ಮುಖಪುಟ",
+
     history: "ಹಿಂದಿನ ಪರೀಕ್ಷೆಗಳು",
+
     help: "ಸಹಾಯ",
+
     caregiver: "ಆರೈಕೆದಾರರು",
+
     profile: "ಪ್ರೊಫೈಲ್",
   },
 
   ml: {
     greeting: "നമസ്കാരം",
+
     howFeeling: "ഇന്ന് നിങ്ങൾക്ക് എങ്ങനെയുണ്ട്?",
+
     voiceCheckCard: "ശബ്ദ പരിശോധന",
+
     voiceCheckDesc:
       "3–5 മിനിറ്റ് ദൈർഘ്യമുള്ള ഒരു ചെറിയ പരിശോധന നടത്തൂ. സ്വാഭാവികമായി സംസാരിക്കൂ—ശരിയോ തെറ്റോ ആയ ഉത്തരങ്ങളില്ല.",
+
     welcomeSub: "ഒരു ചെറിയ ശബ്ദ പരിശോധന നടത്താം.",
+
     welcomeTime: "ഇതിന് ഏകദേശം 3–5 മിനിറ്റ് എടുക്കും.",
+
     startVoiceCheck: "ശബ്ദ പരിശോധന ആരംഭിക്കുക",
+
     someoneHelping: "ആരെങ്കിലും എന്നെ സഹായിക്കുന്നു",
+
     letsBegin: "തുടങ്ങാം",
+
     voiceIntroSub: "ഇതൊരു ചെറിയ ശബ്ദ പരിശോധനയാണ്. ഇതിന് ഏകദേശം 3–5 മിനിറ്റ് എടുക്കും.",
+
     step1: "കേൾക്കുക",
+
     step2: "സംസാരിക്കുക",
+
     step3: "പൂർത്തിയാക്കുക",
+
     beginVoiceCheck: "ശബ്ദ പരിശോധന ആരംഭിക്കുക",
+
     listenToQuestion: "ചോദ്യം കേൾക്കുക",
+
     playAgain: "വീണ്ടും കേൾക്കുക",
+
     startSpeaking: "സംസാരിക്കാൻ തുടങ്ങുക",
+
     tapToSpeak: "സംസാരിക്കാൻ ടാപ്പ് ചെയ്യുക",
+
     speakNaturally: "സ്വാഭാവികമായി സംസാരിക്കൂ…",
+
     finishRecording: "റെക്കോർഡിംഗ് പൂർത്തിയാക്കുക",
+
     recordingReady: "നിങ്ങളുടെ റെക്കോർഡിംഗ് തയ്യാറാണ്",
+
     listenBefore: "തുടരുന്നതിന് മുമ്പ് കേൾക്കുക",
+
     recordAgain: "വീണ്ടും റെക്കോർഡ് ചെയ്യുക",
+
     continue: "തുടരുക",
+
     whatDoYouSee: "നിങ്ങൾ എന്താണ് കാണുന്നത്?",
+
     clinicalProtocolTag: "ചിത്ര വിവരണ ദൗത്യം",
+
     describeSceneHint: "സാവധാനം, നിങ്ങൾ കാണുന്നതെല്ലാം പറയൂ.",
+
     pictureDescSub: "ചിത്രത്തിൽ നിങ്ങൾ കാണുന്നത് വിവരിക്കൂ.",
+
     listenCarefully: "ശ്രദ്ധയോടെ കേൾക്കുക",
+
     memorySub: "ഞങ്ങൾ കുറച്ച് വാക്കുകൾ വായിക്കും. അവ ഓർമ്മിക്കാൻ ശ്രമിക്കൂ.",
+
     iHeardWords: "വാക്കുകൾ കേട്ടു—തുടരുക",
+
     oneMore: "ഒരു ചോദ്യം കൂടി",
+
     conversationSub: "ശരിയോ തെറ്റോ ആയ ഉത്തരങ്ങളില്ല.",
+
     youreDone: "നിങ്ങൾ പൂർത്തിയാക്കി!",
+
     completionSub: "നന്ദി. ഇപ്പോൾ നിങ്ങളുടെ ശബ്ദം പരിശോധിക്കുകയാണ്.",
+
     home: "ഹോം",
+
     history: "മുൻ പരിശോധനകൾ",
+
     help: "സഹായം",
+
     caregiver: "പരിചരിക്കുന്നയാൾ",
+
     profile: "പ്രൊഫൈൽ",
   },
 }
@@ -1214,209 +1557,385 @@ const INDIC_TX: Record<string, Record<string, string>> = {
 const STATIC_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     chooseLanguage: "अपनी भाषा चुनें",
+
     changeLanguageLater: "आप इसे बाद में भी बदल सकते हैं।",
+
     listenEnglish: "अंग्रेज़ी में सुनें",
+
     continueBtn: "आगे बढ़ें",
+
     screeningTitle: "आवाज़ की स्वास्थ्य जांच",
+
     screeningSubtitle: "आवाज़ के आधार पर शुरुआती संज्ञानात्मक जांच",
+
     beforeBegin: "शुरू करने से पहले",
+
     privacyNote: "आपकी गोपनीयता और सुरक्षा के बारे में एक ज़रूरी बात",
+
     voiceRecording: "आवाज़ की रिकॉर्डिंग",
+
     privacyEncryption: "गोपनीयता और सुरक्षा",
+
     screeningInstrument: "जांच की जानकारी",
+
     understandContinue: "समझ गया/गई, आगे बढ़ें",
+
     tellAboutYou: "अपने बारे में बताइए",
+
     calibrationNote: "सटीक परिणाम के लिए हम केवल ज़रूरी जानकारी पूछते हैं।",
+
     yourName: "आपका नाम",
+
     enterName: "अपना नाम लिखें",
+
     age: "उम्र",
+
     caregiverMode: "देखभालकर्ता की सहायता वाला तरीका",
+
     readyWhen: "जब आप तैयार हों",
+
     viewDetailsLabel: "विवरण देखें",
+
     apkTitle: "SwarSanket Android ऐप",
+
     installApk: "SwarSanket ऐप इंस्टॉल करें",
+
     getApk: "ऐप लें",
   },
 
   bn: {
     chooseLanguage: "আপনার ভাষা বেছে নিন",
+
     changeLanguageLater: "আপনি পরে ভাষা পরিবর্তন করতে পারবেন।",
+
     listenEnglish: "ইংরেজিতে শুনুন",
+
     continueBtn: "এগিয়ে যান",
+
     screeningTitle: "ভয়েসের মাধ্যমে স্বাস্থ্য পরীক্ষা",
+
     screeningSubtitle: "কণ্ঠস্বরের সাহায্যে প্রাথমিক স্মৃতি ও চিন্তাশক্তির পরীক্ষা",
+
     beforeBegin: "শুরু করার আগে",
+
     privacyNote: "আপনার গোপনীয়তা ও নিরাপত্তা সম্পর্কে একটি গুরুত্বপূর্ণ কথা",
+
     voiceRecording: "কণ্ঠস্বর রেকর্ড করা",
+
     privacyEncryption: "গোপনীয়তা ও নিরাপত্তা",
+
     screeningInstrument: "পরীক্ষা সম্পর্কে তথ্য",
+
     understandContinue: "বুঝেছি, এগিয়ে যান",
+
     tellAboutYou: "আপনার সম্পর্কে বলুন",
+
     calibrationNote: "সঠিক ফলাফলের জন্য আমরা শুধু প্রয়োজনীয় তথ্যই চাই।",
+
     yourName: "আপনার নাম",
+
     enterName: "আপনার নাম লিখুন",
+
     age: "বয়স",
+
     caregiverMode: "পরিচর্যাকারীর সহায়তায় পরীক্ষা",
+
     readyWhen: "আপনি প্রস্তুত হলেই শুরু করুন",
+
     viewDetailsLabel: "বিস্তারিত দেখুন",
+
     apkTitle: "SwarSanket অ্যান্ড্রয়েড অ্যাপ",
+
     installApk: "SwarSanket অ্যাপ ইনস্টল করুন",
+
     getApk: "অ্যাপ নিন",
   },
 
   mr: {
     chooseLanguage: "तुमची भाषा निवडा",
+
     changeLanguageLater: "तुम्ही हे नंतरही बदलू शकता.",
+
     listenEnglish: "इंग्रजीत ऐका",
+
     continueBtn: "पुढे चला",
+
     screeningTitle: "आवाजाची आरोग्य तपासणी",
+
     screeningSubtitle: "आवाजाच्या आधारे सुरुवातीची स्मरणशक्ती व विचारशक्ती तपासणी",
+
     beforeBegin: "सुरुवात करण्यापूर्वी",
+
     privacyNote: "तुमच्या गोपनीयतेबद्दल आणि सुरक्षिततेबद्दल महत्त्वाची माहिती",
+
     voiceRecording: "आवाजाचे रेकॉर्डिंग",
+
     privacyEncryption: "गोपनीयता आणि सुरक्षितता",
+
     screeningInstrument: "तपासणीची माहिती",
+
     understandContinue: "समजले, पुढे चला",
+
     tellAboutYou: "तुमच्याबद्दल सांगा",
+
     calibrationNote: "अचूक परिणामांसाठी आम्ही फक्त आवश्यक माहिती विचारतो.",
+
     yourName: "तुमचे नाव",
+
     enterName: "तुमचे नाव लिहा",
+
     age: "वय",
+
     caregiverMode: "काळजीवाहकाच्या मदतीने तपासणी",
+
     readyWhen: "तुम्ही तयार असाल तेव्हा सुरू करा",
+
     viewDetailsLabel: "तपशील पहा",
+
     apkTitle: "SwarSanket Android अॅप",
+
     installApk: "SwarSanket अॅप इंस्टॉल करा",
+
     getApk: "अॅप मिळवा",
   },
 
   ta: {
     chooseLanguage: "உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்",
+
     changeLanguageLater: "இதைப் பின்னரும் மாற்றலாம்.",
+
     listenEnglish: "ஆங்கிலத்தில் கேளுங்கள்",
+
     continueBtn: "தொடரவும்",
+
     screeningTitle: "குரல் மூலம் உடல்நலப் பரிசோதனை",
+
     screeningSubtitle: "குரலின் அடிப்படையிலான ஆரம்பநிலை நினைவாற்றல் பரிசோதனை",
+
     beforeBegin: "தொடங்குவதற்கு முன்",
+
     privacyNote: "உங்கள் தனியுரிமை மற்றும் பாதுகாப்பு பற்றிய முக்கிய குறிப்பு",
+
     voiceRecording: "குரல் பதிவு",
+
     privacyEncryption: "தனியுரிமை மற்றும் பாதுகாப்பு",
+
     screeningInstrument: "பரிசோதனை பற்றிய தகவல்",
+
     understandContinue: "புரிந்துகொண்டேன், தொடரவும்",
+
     tellAboutYou: "உங்களைப் பற்றி சொல்லுங்கள்",
+
     calibrationNote: "துல்லியமான முடிவுகளுக்குத் தேவையான தகவல்களை மட்டுமே கேட்கிறோம்.",
+
     yourName: "உங்கள் பெயர்",
+
     enterName: "உங்கள் பெயரை உள்ளிடுங்கள்",
+
     age: "வயது",
+
     caregiverMode: "பராமரிப்பாளர் உதவியுடன் பரிசோதனை",
+
     readyWhen: "நீங்கள் தயாரானதும் தொடங்குங்கள்",
+
     viewDetailsLabel: "விவரங்களைப் பார்க்கவும்",
+
     apkTitle: "SwarSanket Android செயலி",
+
     installApk: "SwarSanket செயலியை நிறுவுங்கள்",
+
     getApk: "செயலியைப் பெறுங்கள்",
   },
 
   te: {
     chooseLanguage: "మీ భాషను ఎంచుకోండి",
+
     changeLanguageLater: "దీన్ని తర్వాత కూడా మార్చవచ్చు.",
+
     listenEnglish: "ఆంగ్లంలో వినండి",
+
     continueBtn: "కొనసాగించండి",
+
     screeningTitle: "వాయిస్ ఆరోగ్య పరీక్ష",
+
     screeningSubtitle: "వాయిస్ ఆధారంగా చేసే ప్రారంభ జ్ఞాపకశక్తి పరీక్ష",
+
     beforeBegin: "ప్రారంభించే ముందు",
+
     privacyNote: "మీ గోప్యత మరియు భద్రత గురించి ముఖ్యమైన సమాచారం",
+
     voiceRecording: "వాయిస్ రికార్డింగ్",
+
     privacyEncryption: "గోప్యత మరియు భద్రత",
+
     screeningInstrument: "పరీక్ష సమాచారం",
+
     understandContinue: "అర్థమైంది, కొనసాగించండి",
+
     tellAboutYou: "మీ గురించి చెప్పండి",
+
     calibrationNote: "ఖచ్చితమైన ఫలితాల కోసం అవసరమైన సమాచారాన్ని మాత్రమే అడుగుతాము.",
+
     yourName: "మీ పేరు",
+
     enterName: "మీ పేరు నమోదు చేయండి",
+
     age: "వయసు",
+
     caregiverMode: "సంరక్షకుడి సహాయంతో పరీక్ష",
+
     readyWhen: "మీరు సిద్ధమైనప్పుడు ప్రారంభించండి",
+
     viewDetailsLabel: "వివరాలను చూడండి",
+
     apkTitle: "SwarSanket Android యాప్",
+
     installApk: "SwarSanket యాప్‌ను ఇన్‌స్టాల్ చేయండి",
+
     getApk: "యాప్ పొందండి",
   },
 
   gu: {
     chooseLanguage: "તમારી ભાષા પસંદ કરો",
+
     changeLanguageLater: "તમે આ ભાષા પછી પણ બદલી શકો છો.",
+
     listenEnglish: "અંગ્રેજીમાં સાંભળો",
+
     continueBtn: "આગળ વધો",
+
     screeningTitle: "અવાજની આરોગ્ય તપાસ",
+
     screeningSubtitle: "અવાજના આધારે પ્રારંભિક સ્મરણશક્તિની તપાસ",
+
     beforeBegin: "શરૂ કરતાં પહેલાં",
+
     privacyNote: "તમારી ગોપનીયતા અને સુરક્ષા વિશે મહત્વની માહિતી",
+
     voiceRecording: "અવાજનું રેકોર્ડિંગ",
+
     privacyEncryption: "ગોપનીયતા અને સુરક્ષા",
+
     screeningInstrument: "તપાસ વિશે માહિતી",
+
     understandContinue: "સમજાયું, આગળ વધો",
+
     tellAboutYou: "તમારા વિશે જણાવો",
+
     calibrationNote: "ચોક્કસ પરિણામો માટે અમે ફક્ત જરૂરી માહિતી જ પૂછીએ છીએ.",
+
     yourName: "તમારું નામ",
+
     enterName: "તમારું નામ લખો",
+
     age: "ઉંમર",
+
     caregiverMode: "સંભાળ રાખનારની મદદથી તપાસ",
+
     readyWhen: "તમે તૈયાર હો ત્યારે શરૂ કરો",
+
     viewDetailsLabel: "વિગતો જુઓ",
+
     apkTitle: "SwarSanket Android ઍપ",
+
     installApk: "SwarSanket ઍપ ઇન્સ્ટોલ કરો",
+
     getApk: "ઍપ મેળવો",
   },
 
   kn: {
     chooseLanguage: "ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+
     changeLanguageLater: "ಇದನ್ನು ನಂತರವೂ ಬದಲಾಯಿಸಬಹುದು.",
+
     listenEnglish: "ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಆಲಿಸಿ",
+
     continueBtn: "ಮುಂದುವರಿಸಿ",
+
     screeningTitle: "ಧ್ವನಿ ಆರೋಗ್ಯ ಪರೀಕ್ಷೆ",
+
     screeningSubtitle: "ಧ್ವನಿಯ ಆಧಾರದ ಮೇಲಿನ ಆರಂಭಿಕ ಜ್ಞಾಪಕಶಕ್ತಿ ಪರೀಕ್ಷೆ",
+
     beforeBegin: "ಪ್ರಾರಂಭಿಸುವ ಮೊದಲು",
+
     privacyNote: "ನಿಮ್ಮ ಗೌಪ್ಯತೆ ಮತ್ತು ಸುರಕ್ಷತೆಯ ಕುರಿತು ಮುಖ್ಯ ಮಾಹಿತಿ",
+
     voiceRecording: "ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್",
+
     privacyEncryption: "ಗೌಪ್ಯತೆ ಮತ್ತು ಸುರಕ್ಷತೆ",
+
     screeningInstrument: "ಪರೀಕ್ಷೆಯ ಮಾಹಿತಿ",
+
     understandContinue: "ಅರ್ಥವಾಯಿತು, ಮುಂದುವರಿಸಿ",
+
     tellAboutYou: "ನಿಮ್ಮ ಬಗ್ಗೆ ತಿಳಿಸಿ",
+
     calibrationNote: "ನಿಖರ ಫಲಿತಾಂಶಕ್ಕಾಗಿ ಅಗತ್ಯವಿರುವ ಮಾಹಿತಿಯನ್ನು ಮಾತ್ರ ಕೇಳುತ್ತೇವೆ.",
+
     yourName: "ನಿಮ್ಮ ಹೆಸರು",
+
     enterName: "ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
+
     age: "ವಯಸ್ಸು",
+
     caregiverMode: "ಆರೈಕೆದಾರರ ಸಹಾಯದೊಂದಿಗೆ ಪರೀಕ್ಷೆ",
+
     readyWhen: "ನೀವು ಸಿದ್ಧರಾದಾಗ ಪ್ರಾರಂಭಿಸಿ",
+
     viewDetailsLabel: "ವಿವರಗಳನ್ನು ನೋಡಿ",
+
     apkTitle: "SwarSanket Android ಆ್ಯಪ್",
+
     installApk: "SwarSanket ಆ್ಯಪ್ ಸ್ಥಾಪಿಸಿ",
+
     getApk: "ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
   },
 
   ml: {
     chooseLanguage: "നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക",
+
     changeLanguageLater: "ഇത് പിന്നീട് മാറ്റാനും കഴിയും.",
+
     listenEnglish: "ഇംഗ്ലീഷിൽ കേൾക്കുക",
+
     continueBtn: "തുടരുക",
+
     screeningTitle: "ശബ്ദ ആരോഗ്യ പരിശോധന",
+
     screeningSubtitle: "ശബ്ദത്തെ അടിസ്ഥാനമാക്കിയുള്ള പ്രാഥമിക ഓർമ്മശക്തി പരിശോധന",
+
     beforeBegin: "തുടങ്ങുന്നതിന് മുമ്പ്",
+
     privacyNote: "നിങ്ങളുടെ സ്വകാര്യതയും സുരക്ഷയും സംബന്ധിച്ച പ്രധാന വിവരം",
+
     voiceRecording: "ശബ്ദ റെക്കോർഡിംഗ്",
+
     privacyEncryption: "സ്വകാര്യതയും സുരക്ഷയും",
+
     screeningInstrument: "പരിശോധനയെക്കുറിച്ചുള്ള വിവരം",
+
     understandContinue: "മനസ്സിലായി, തുടരുക",
+
     tellAboutYou: "നിങ്ങളെക്കുറിച്ച് പറയൂ",
+
     calibrationNote: "കൃത്യമായ ഫലങ്ങൾക്കായി ആവശ്യമായ വിവരങ്ങൾ മാത്രമേ ഞങ്ങൾ ചോദിക്കൂ.",
+
     yourName: "നിങ്ങളുടെ പേര്",
+
     enterName: "നിങ്ങളുടെ പേര് നൽകുക",
+
     age: "പ്രായം",
+
     caregiverMode: "പരിചരിക്കുന്നയാളുടെ സഹായത്തോടെയുള്ള പരിശോധന",
+
     readyWhen: "തയ്യാറാകുമ്പോൾ ആരംഭിക്കൂ",
+
     viewDetailsLabel: "വിശദാംശങ്ങൾ കാണുക",
+
     apkTitle: "SwarSanket Android ആപ്പ്",
+
     installApk: "SwarSanket ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്യുക",
+
     getApk: "ആപ്പ് നേടുക",
   },
 }
@@ -1424,64 +1943,88 @@ const STATIC_INDIC_TX: Record<string, Record<string, string>> = {
 const FLOW_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     listenSpeakScreen: "सुनें। बोलें। समय रहते जांच कराएं।",
+
     getStarted: "शुरू करें",
+
     pipelineTitle: "बहुभाषी जांच",
+
     pipelineDescription:
       "अंग्रेज़ी में आवाज़ की जांच के लिए प्रमाणित प्रणाली का उपयोग होता है। भारतीय भाषाओं में आवाज़ की पहचान और आवाज़ से जुड़े संकेतों की जांच की जाती है।",
   },
 
   bn: {
     listenSpeakScreen: "শুনুন। বলুন। সময় থাকতে পরীক্ষা করুন।",
+
     getStarted: "শুরু করুন",
+
     pipelineTitle: "বহুভাষিক পরীক্ষা",
+
     pipelineDescription:
       "ইংরেজি ভয়েস পরীক্ষায় যাচাই করা পদ্ধতি ব্যবহার করা হয়। ভারতীয় ভাষায় কণ্ঠস্বর শনাক্ত করে কণ্ঠস্বরের বৈশিষ্ট্য পরীক্ষা করা হয়।",
   },
 
   mr: {
     listenSpeakScreen: "ऐका. बोला. वेळेत तपासणी करा.",
+
     getStarted: "सुरू करा",
+
     pipelineTitle: "बहुभाषिक तपासणी",
+
     pipelineDescription:
       "इंग्रजी आवाजाच्या तपासणीसाठी प्रमाणित प्रणाली वापरली जाते. भारतीय भाषांमध्ये आवाज ओळखून आवाजाशी संबंधित संकेत तपासले जातात.",
   },
 
   ta: {
     listenSpeakScreen: "கேளுங்கள். பேசுங்கள். முன்கூட்டியே பரிசோதியுங்கள்.",
+
     getStarted: "தொடங்குங்கள்",
+
     pipelineTitle: "பலமொழிப் பரிசோதனை",
+
     pipelineDescription:
       "ஆங்கிலக் குரல் பரிசோதனைக்கு சரிபார்க்கப்பட்ட முறை பயன்படுத்தப்படுகிறது. இந்திய மொழிகளில் குரல் அடையாளம் காணப்பட்டு, குரல் சார்ந்த அறிகுறிகள் பரிசோதிக்கப்படுகின்றன.",
   },
 
   te: {
     listenSpeakScreen: "వినండి. మాట్లాడండి. ముందుగానే పరీక్షించుకోండి.",
+
     getStarted: "ప్రారంభించండి",
+
     pipelineTitle: "బహుభాషా పరీక్ష",
+
     pipelineDescription:
       "ఆంగ్ల వాయిస్ పరీక్షకు ధృవీకరించిన విధానం ఉపయోగించబడుతుంది. భారతీయ భాషల్లో వాయిస్‌ను గుర్తించి, వాయిస్‌కు సంబంధించిన సంకేతాలను పరీక్షిస్తాము.",
   },
 
   gu: {
     listenSpeakScreen: "સાંભળો. બોલો. સમયસર તપાસ કરાવો.",
+
     getStarted: "શરૂ કરો",
+
     pipelineTitle: "બહુભાષી તપાસ",
+
     pipelineDescription:
       "અંગ્રેજી અવાજની તપાસ માટે પ્રમાણિત પદ્ધતિનો ઉપયોગ થાય છે. ભારતીય ભાષાઓમાં અવાજ ઓળખીને અવાજ સાથે જોડાયેલા સંકેતોની તપાસ થાય છે.",
   },
 
   kn: {
     listenSpeakScreen: "ಆಲಿಸಿ. ಮಾತನಾಡಿ. ಮುಂಚಿತವಾಗಿ ಪರೀಕ್ಷಿಸಿಕೊಳ್ಳಿ.",
+
     getStarted: "ಪ್ರಾರಂಭಿಸಿ",
+
     pipelineTitle: "ಬಹುಭಾಷಾ ಪರೀಕ್ಷೆ",
+
     pipelineDescription:
       "ಇಂಗ್ಲಿಷ್ ಧ್ವನಿ ಪರೀಕ್ಷೆಗೆ ಪರಿಶೀಲಿತ ವಿಧಾನವನ್ನು ಬಳಸಲಾಗುತ್ತದೆ. ಭಾರತೀಯ ಭಾಷೆಗಳಲ್ಲಿ ಧ್ವನಿಯನ್ನು ಗುರುತಿಸಿ, ಧ್ವನಿಗೆ ಸಂಬಂಧಿಸಿದ ಸೂಚಕಗಳನ್ನು ಪರೀಕ್ಷಿಸಲಾಗುತ್ತದೆ.",
   },
 
   ml: {
     listenSpeakScreen: "കേൾക്കൂ. സംസാരിക്കൂ. നേരത്തെ പരിശോധന നടത്തൂ.",
+
     getStarted: "തുടങ്ങുക",
+
     pipelineTitle: "ബഹുഭാഷാ പരിശോധന",
+
     pipelineDescription:
       "ഇംഗ്ലീഷ് ശബ്ദ പരിശോധനയ്ക്ക് അംഗീകരിച്ച രീതിയാണ് ഉപയോഗിക്കുന്നത്. ഇന്ത്യൻ ഭാഷകളിൽ ശബ്ദം തിരിച്ചറിഞ്ഞ് ശബ്ദവുമായി ബന്ധപ്പെട്ട സൂചനകൾ പരിശോധിക്കുന്നു.",
   },
@@ -1491,8 +2034,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     voiceRecordingDesc:
       "शुरुआती संज्ञानात्मक जांच के लिए आवाज़ के छोटे नमूने रिकॉर्ड किए जाते हैं।",
+
     privacyEncryptionDesc:
       "जानकारी आपके फोन में सुरक्षित रखी जाती है और आपकी अनुमति के बिना साझा नहीं की जाती।",
+
     screeningInstrumentDesc:
       "यह परिणाम स्वास्थ्य संबंधी अगले कदम सुझाता है; यह चिकित्सकीय निदान का विकल्प नहीं है।",
   },
@@ -1500,8 +2045,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   bn: {
     voiceRecordingDesc:
       "প্রাথমিক স্মৃতি ও চিন্তাশক্তির পরীক্ষার জন্য কণ্ঠস্বরের ছোট নমুনা রেকর্ড করা হয়।",
+
     privacyEncryptionDesc:
       "তথ্য আপনার ফোনে নিরাপদে রাখা হয় এবং আপনার অনুমতি ছাড়া কারও সঙ্গে শেয়ার করা হয় না।",
+
     screeningInstrumentDesc:
       "এই ফলাফল স্বাস্থ্য সম্পর্কে পরবর্তী পদক্ষেপের পরামর্শ দেয়; এটি চিকিৎসকের রোগ নির্ণয়ের বিকল্প নয়।",
   },
@@ -1509,8 +2056,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   mr: {
     voiceRecordingDesc:
       "सुरुवातीच्या संज्ञानात्मक तपासणीसाठी आवाजाचे छोटे नमुने रेकॉर्ड केले जातात.",
+
     privacyEncryptionDesc:
       "माहिती तुमच्या फोनमध्ये सुरक्षित ठेवली जाते आणि तुमच्या परवानगीशिवाय शेअर केली जात नाही.",
+
     screeningInstrumentDesc:
       "हा निकाल आरोग्यविषयक पुढील पावले सुचवतो; तो वैद्यकीय निदानाचा पर्याय नाही.",
   },
@@ -1518,8 +2067,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   ta: {
     voiceRecordingDesc:
       "ஆரம்பநிலை நினைவாற்றல் பரிசோதனைக்காக குரலின் சிறிய மாதிரிகள் பதிவு செய்யப்படும்.",
+
     privacyEncryptionDesc:
       "தகவல்கள் உங்கள் தொலைபேசியில் பாதுகாப்பாக வைக்கப்படும்; உங்கள் அனுமதியின்றி பகிரப்படாது.",
+
     screeningInstrumentDesc:
       "இந்த முடிவு அடுத்தகட்ட உடல்நல நடவடிக்கைகளைப் பரிந்துரைக்கும்; இது மருத்துவ நோயறிதலுக்கு மாற்றாகாது.",
   },
@@ -1527,8 +2078,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   te: {
     voiceRecordingDesc:
       "ప్రారంభ జ్ఞాపకశక్తి పరీక్ష కోసం వాయిస్ యొక్క చిన్న నమూనాలను రికార్డ్ చేస్తాము.",
+
     privacyEncryptionDesc:
       "సమాచారం మీ ఫోన్‌లో సురక్షితంగా ఉంచబడుతుంది; మీ అనుమతి లేకుండా పంచబడదు.",
+
     screeningInstrumentDesc:
       "ఈ ఫలితం ఆరోగ్యానికి సంబంధించిన తదుపరి చర్యలను సూచిస్తుంది; ఇది వైద్య నిర్ధారణకు ప్రత్యామ్నాయం కాదు.",
   },
@@ -1536,8 +2089,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   gu: {
     voiceRecordingDesc:
       "પ્રારંભિક સ્મરણશક્તિની તપાસ માટે અવાજના નાના નમૂના રેકોર્ડ કરવામાં આવે છે.",
+
     privacyEncryptionDesc:
       "માહિતી તમારા ફોનમાં સુરક્ષિત રાખવામાં આવે છે અને તમારી પરવાનગી વિના શેર કરવામાં આવતી નથી.",
+
     screeningInstrumentDesc:
       "આ પરિણામ આરોગ્ય માટેના આગળના પગલાં સૂચવે છે; તે તબીબી નિદાનનો વિકલ્પ નથી.",
   },
@@ -1545,8 +2100,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   kn: {
     voiceRecordingDesc:
       "ಆರಂಭಿಕ ಜ್ಞಾಪಕಶಕ್ತಿ ಪರೀಕ್ಷೆಗಾಗಿ ಧ್ವನಿಯ ಸಣ್ಣ ಮಾದರಿಗಳನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತದೆ.",
+
     privacyEncryptionDesc:
       "ಮಾಹಿತಿಯನ್ನು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿ ಇರಿಸಲಾಗುತ್ತದೆ; ನಿಮ್ಮ ಅನುಮತಿಯಿಲ್ಲದೆ ಹಂಚಲಾಗುವುದಿಲ್ಲ.",
+
     screeningInstrumentDesc:
       "ಈ ಫಲಿತಾಂಶವು ಆರೋಗ್ಯದ ಮುಂದಿನ ಹಂತಗಳನ್ನು ಸೂಚಿಸುತ್ತದೆ; ಇದು ವೈದ್ಯಕೀಯ ರೋಗನಿರ್ಣಯಕ್ಕೆ ಪರ್ಯಾಯವಲ್ಲ.",
   },
@@ -1554,8 +2111,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   ml: {
     voiceRecordingDesc:
       "പ്രാഥമിക ഓർമ്മശക്തി പരിശോധനയ്ക്കായി ശബ്ദത്തിന്റെ ചെറിയ സാമ്പിളുകൾ റെക്കോർഡ് ചെയ്യും.",
+
     privacyEncryptionDesc:
       "വിവരങ്ങൾ നിങ്ങളുടെ ഫോണിൽ സുരക്ഷിതമായി സൂക്ഷിക്കും; നിങ്ങളുടെ അനുമതിയില്ലാതെ പങ്കിടില്ല.",
+
     screeningInstrumentDesc:
       "ഈ ഫലം ആരോഗ്യവുമായി ബന്ധപ്പെട്ട അടുത്ത നടപടികൾ നിർദ്ദേശിക്കുന്നു; ഇത് വൈദ്യപരമായ രോഗനിർണയത്തിന് പകരമല്ല.",
   },
@@ -1564,70 +2123,96 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
 const RECORDING_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     tapMicrophone: "तैयार होने पर माइक्रोफ़ोन दबाएं",
+
     recordingVoice: "आवाज़ रिकॉर्ड हो रही है",
   },
 
   bn: {
     tapMicrophone: "প্রস্তুত হলে মাইক্রোফোনে ট্যাপ করুন",
+
     recordingVoice: "কণ্ঠস্বর রেকর্ড করা হচ্ছে",
   },
 
   mr: {
     tapMicrophone: "तयार झाल्यावर मायक्रोफोन दाबा",
+
     recordingVoice: "आवाज रेकॉर्ड होत आहे",
   },
 
   ta: {
     tapMicrophone: "தயாரானதும் ஒலிவாங்கியைத் தட்டுங்கள்",
+
     recordingVoice: "குரல் பதிவு செய்யப்படுகிறது",
   },
 
   te: {
     tapMicrophone: "సిద్ధమైనప్పుడు మైక్రోఫోన్‌ను ట్యాప్ చేయండి",
+
     recordingVoice: "వాయిస్ రికార్డ్ అవుతోంది",
   },
 
   gu: {
     tapMicrophone: "તૈયાર હો ત્યારે માઇક્રોફોન દબાવો",
+
     recordingVoice: "અવાજ રેકોર્ડ થઈ રહ્યો છે",
   },
 
   kn: {
     tapMicrophone: "ಸಿದ್ಧರಾದಾಗ ಮೈಕ್ರೋಫೋನ್ ಒತ್ತಿರಿ",
+
     recordingVoice: "ಧ್ವನಿ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ",
   },
 
   ml: {
     tapMicrophone: "തയ്യാറാകുമ്പോൾ മൈക്രോഫോണിൽ ടാപ്പ് ചെയ്യൂ",
+
     recordingVoice: "ശബ്ദം റെക്കോർഡ് ചെയ്യുന്നു",
   },
 }
 
 const BASE_UI_TX: Record<string, string> = {
   getStarted: "Get Started",
+
   listenSpeakScreen: "Listen. Speak. Screen Early.",
+
   chooseLanguage: "Choose your language",
+
   changeLanguageLater: "You can change this later.",
+
   listenEnglish: "Listen in English",
+
   continueBtn: "Continue",
+
   pipelineTitle: "Multilingual Pipeline Scope",
+
   pipelineDescription:
     "English voice screenings use the validated acoustic & linguistic feature pipeline. Indic languages currently feature live speech recognition with acoustic biomarker screening.",
+
   screeningTitle: "SwarSanket Voice Screening",
+
   screeningSubtitle: "AI-Powered Cognitive Biomarker Analysis",
+
   viewDetailsLabel: "View Report",
+
   readyWhen: "Daily Screening",
 }
 
 function t(lang: string, key: string): string {
   const locale = {
     ...TX.en,
+
     ...BASE_UI_TX,
+
     ...(TX[lang] ?? {}),
+
     ...(INDIC_TX[lang] ?? {}),
+
     ...(STATIC_INDIC_TX[lang] ?? {}),
+
     ...(FLOW_INDIC_TX[lang] ?? {}),
+
     ...(CONSENT_INDIC_TX[lang] ?? {}),
+
     ...(RECORDING_INDIC_TX[lang] ?? {}),
   }
 
@@ -1736,9 +2321,9 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
 }
 
 function getTaskPrompt(lang: string, ctx: RecordingContext): string {
-  return (
-    (TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx]
-  ).normalize("NFC")
+  return ((TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx])
+
+    .normalize("NFC")
 }
 
 // ─── Reusable UI Components ───────────────────────────────────────────────────
@@ -1750,6 +2335,7 @@ function getTaskPrompt(lang: string, ctx: RecordingContext): string {
  * window, curtain, dish, cupboard, floor), so describing it naturally produces the
  * in-distribution vocabulary the screening model was trained on.
  */
+
 function CookieTheftScene() {
   return (
     <svg
@@ -2052,6 +2638,7 @@ function CookieTheftScene() {
  * The distinction matters clinically: the model was trained on picture
  * descriptions, so a proxy-mode result is the weaker of the two.
  */
+
 function protocolLabel(result: ScreeningApiResponse | null): string {
   return result?.feature_calibration?.iu_scoring_mode === "canonical"
     ? "Standardized Picture Description"
@@ -2063,11 +2650,14 @@ function protocolLabel(result: ScreeningApiResponse | null): string {
  * reports, and the Monte Carlo Dropout spread behind it. Showing confidence alone
  * would hide how unsettled the 30 stochastic passes actually were.
  */
+
 function ScreeningQualityCard({
   result,
+
   tone = "neutral",
 }: {
   result: ScreeningApiResponse | null
+
   tone?: "low" | "elevated" | "neutral"
 }) {
   const canonical = result?.feature_calibration?.iu_scoring_mode === "canonical"
@@ -2165,11 +2755,14 @@ function ScreeningQualityCard({
  * scene in front of them: the instruction screen, the live recording screen, and
  * the dedicated picture task screen.
  */
+
 function PictureTaskCard({
   lang,
+
   compact = false,
 }: {
   lang: LanguageCode
+
   compact?: boolean
 }) {
   return (
@@ -2261,9 +2854,11 @@ function HomeIndicator() {
 
 function NVLogo({
   size = 40,
+
   className = "",
 }: {
   size?: number
+
   className?: string
 }) {
   return (
@@ -2278,19 +2873,27 @@ function NVLogo({
 
 function Btn({
   label,
+
   onClick,
+
   variant = "primary",
+
   size = "lg",
+
   disabled,
+
   icon,
 }: {
   label: string
+
   onClick: () => void
 
   variant?: "primary" | "ghost" | "danger" | "secondary"
 
   size?: "lg" | "sm"
+
   disabled?: boolean
+
   icon?: React.ReactNode
 }) {
   const styles: Record<string, string> = {
@@ -2324,11 +2927,15 @@ function Btn({
 
 function AudioBtn({
   label,
+
   textToSpeak,
+
   lang,
 }: {
   label?: string
+
   textToSpeak?: string
+
   lang?: string
 }) {
   const [speaking, setSpeaking] = useState(false)
@@ -2349,8 +2956,11 @@ function AudioBtn({
 
       speakText(
         text,
+
         currentLang,
+
         () => setSpeaking(true),
+
         () => setSpeaking(false),
       )
     }
@@ -2392,18 +3002,24 @@ function OfflinePill() {
 
 function BottomNav({
   active,
+
   navigate,
+
   lang,
 }: {
   active: Screen
+
   navigate: (s: Screen) => void
+
   lang: string
 }) {
   const isHistory = active === "history" || active === "trend"
 
   const tabs = [
     { id: "home" as Screen, labelKey: "home", icon: HomeIcon },
+
     { id: "history" as Screen, labelKey: "history", icon: HistoryIcon },
+
     { id: "settings" as Screen, labelKey: "profile", icon: User },
   ]
 
@@ -2411,6 +3027,7 @@ function BottomNav({
     <div className="flex items-center justify-around border-t border-[#d8ebef] bg-white/95 backdrop-blur-md px-3 py-2 flex-shrink-0 shadow-[0_-4px_16px_rgba(2,115,138,0.04)]">
       {tabs.map((tab) => {
         const on = tab.id === active || (tab.id === "history" && isHistory)
+
         const Icon = tab.icon
 
         return (
@@ -2445,6 +3062,7 @@ function BottomNav({
 
 interface CheckProgressProps {
   step: number
+
   total: number
 }
 
@@ -2468,14 +3086,19 @@ function CheckProgress({ step, total }: CheckProgressProps) {
 
 function CheckHeader({
   step,
+
   total,
+
   onBack,
+
   onExit,
 }: {
   step: number
+
   total: number
 
   onBack: () => void
+
   onExit: () => void
 }) {
   return (
@@ -2499,11 +3122,15 @@ function CheckHeader({
 
 function ExitModal({
   lang,
+
   onContinue,
+
   onExit,
 }: {
   lang: string
+
   onContinue: () => void
+
   onExit: () => void
 }) {
   return (
@@ -2534,11 +3161,15 @@ function ExitModal({
 
 function DynamicWaveformBars({
   active,
+
   level = 0.3,
+
   bars = 24,
 }: {
   active: boolean
+
   level?: number
+
   bars?: number
 }) {
   return (
@@ -2568,12 +3199,20 @@ function DynamicWaveformBars({
 
 // ─── Main Application Component ───────────────────────────────────────────────
 
-function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: string; onLogout: () => void }) {
+function SwarSanketApp({
+  authenticatedName,
+  onLogout,
+}: {
+  authenticatedName: string
+  onLogout: () => void
+}) {
   const [screen, setScreen] = useState<Screen>("splash")
 
   const [lang, setLang] = useState<LanguageCode>("en")
 
-  const [userName, setUserName] = useState<string>(authenticatedName || "Rama Devi")
+  const [userName, setUserName] = useState<string>(
+    authenticatedName || "Rama Devi",
+  )
 
   const [userAge, setUserAge] = useState<number>(72)
 
@@ -2584,8 +3223,11 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
   const [isOffline, setIsOffline] = useState<boolean>(false)
 
   // Picture description is the primary clinical protocol: it is the task the
+
   // screening model was trained on, and it elicits the canonical Information Unit
+
   // vocabulary the backend scores against.
+
   const [recordingContext, setRecordingContext] =
     useState<RecordingContext>("pictureDesc")
 
@@ -2610,21 +3252,33 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
   const audioBlobRef = useRef<Blob | null>(null)
 
   // Functional Profile & Settings state
+
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false)
+
   const [editName, setEditName] = useState<string>("Rama Devi")
+
   const [editAge, setEditAge] = useState<string>("72")
+
   const [caregiverName, setCaregiverName] =
     useState<string>("Ramesh Kumar (Son)")
+
   const [caregiverPhone, setCaregiverPhone] =
     useState<string>("+91 98765 43210")
+
   const [caregiverAlerts, setCaregiverAlerts] = useState<boolean>(true)
+
   const [remindersEnabled, setRemindersEnabled] = useState<boolean>(true)
+
   const [reminderFreq, setReminderFreq] = useState<"monthly" | "biweekly">(
     "monthly",
   )
+
   const [ttsSpeed, setTtsSpeed] = useState<"normal" | "slow">("slow")
+
   const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false)
+
   const [settingsToast, setSettingsToast] = useState<string | null>(null)
+
   const [isTestingAudio, setIsTestingAudio] = useState<boolean>(false)
 
   // Real ML Screening state
@@ -2856,6 +3510,7 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
     if (!audioBlob || audioBlob.size < 1000) {
       console.warn(
         "[SwarSanket] Recorded audio Blob is empty or too short:",
+
         audioBlob?.size,
       )
 
@@ -2899,6 +3554,7 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
 
       const apiResult = await analyzeAudioWithBackend(
         audioBlob,
+
         "voice_check.webm",
       )
 
@@ -2906,27 +3562,32 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
 
       console.log(
         "[SwarSanket] Predicted class:",
+
         apiResult.screening.predicted_class,
       )
 
       console.log(
         "[SwarSanket] Screening probability:",
+
         apiResult.screening.probability,
       )
 
       console.log(
         "[SwarSanket] Technical confidence:",
+
         apiResult.screening.technical_confidence_percent + "%",
       )
 
       if (apiResult.explanation) {
         console.log(
           "[SwarSanket] Top positive SHAP:",
+
           apiResult.explanation.top_positive_contributions,
         )
 
         console.log(
           "[SwarSanket] Top negative SHAP:",
+
           apiResult.explanation.top_negative_contributions,
         )
       }
@@ -2955,13 +3616,16 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
 
       const realShapContributions: Array<{
         feature: string
+
         impact: "positive" | "negative"
+
         weight: number
       }> = []
 
       if (apiResult.explanation?.top_positive_contributions) {
         for (const item of apiResult.explanation.top_positive_contributions.slice(
           0,
+
           3,
         )) {
           realShapContributions.push({
@@ -2977,6 +3641,7 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
       if (apiResult.explanation?.top_negative_contributions) {
         for (const item of apiResult.explanation.top_negative_contributions.slice(
           0,
+
           3,
         )) {
           realShapContributions.push({
@@ -3089,9 +3754,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                     impact: "positive",
 
                     weight: Number(
-                      (
-                        apiResult.live_features?.CTP_unique_IU_efficiency || 0
-                      ).toFixed(2),
+                      (apiResult.live_features?.CTP_unique_IU_efficiency || 0)
+
+                        .toFixed(2),
                     ),
                   },
 
@@ -3104,7 +3769,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                       (
                         apiResult.live_features
                           ?.CTP_keyword_to_non_keyword_ratio || 0
-                      ).toFixed(2),
+                      )
+
+                        .toFixed(2),
                     ),
                   },
                 ],
@@ -3154,13 +3821,21 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
     }
   }, [
     audioBlobRef,
+
     currentAudioBlob,
+
     isOffline,
+
     lang,
+
     userName,
+
     userAge,
+
     assistedMode,
+
     vqState,
+
     recordingContext,
   ])
 
@@ -3219,20 +3894,26 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
 
         classicalModel: {
           name: "Production XGBoost",
+
           riskScore: risk === "low" ? 0.15 : 0.85,
+
           aucScore: 0.91,
         },
 
         quantumHybridModel: {
           name: "NLP Feature Engine",
+
           riskScore: risk === "low" ? 0.15 : 0.85,
+
           aucScore: 0.91,
         },
 
         shapContributions: [
           {
             feature: "Speech pause duration",
+
             impact: "positive",
+
             weight: +0.32,
           },
 
@@ -3247,7 +3928,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
       ? [
           {
             taskId: recordingContext,
+
             blob: audioBlobRef.current,
+
             durationSeconds: 24,
           },
         ]
@@ -3457,6 +4140,7 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                   label={t(lang, "someoneHelping")}
                   onClick={() => {
                     setAssistedMode(true)
+
                     navigate("consent")
                   }}
                   variant="ghost"
@@ -3488,19 +4172,25 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 {[
                   {
                     icon: <Mic className="w-5 h-5 text-[#02738a]" />,
+
                     title: t(lang, "voiceRecording"),
+
                     desc: t(lang, "voiceRecordingDesc"),
                   },
 
                   {
                     icon: <ShieldCheck className="w-5 h-5 text-[#02738a]" />,
+
                     title: t(lang, "privacyEncryption"),
+
                     desc: t(lang, "privacyEncryptionDesc"),
                   },
 
                   {
                     icon: <Activity className="w-5 h-5 text-[#02738a]" />,
+
                     title: t(lang, "screeningInstrument"),
+
                     desc: t(lang, "screeningInstrumentDesc"),
                   },
                 ].map((item) => (
@@ -3725,6 +4415,7 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 <button
                   onClick={() => {
                     setRecordingContext("pictureDesc")
+
                     navigate("voiceIntro")
                   }}
                   className="w-full py-3.5 sm:py-4 px-4 rounded-2xl bg-white hover:bg-cyan-50 text-[#014f5f] font-bold text-base sm:text-lg shadow-lg shadow-black/15 transition-all active:scale-[0.98] flex items-center justify-between relative z-10 group"
@@ -3745,17 +4436,23 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
               {/* Latest Screening Status Card */}
               {(() => {
                 const latest = screeningsList[0]
+
                 const dateStr = latest?.createdAt
                   ? new Date(latest.createdAt).toLocaleDateString("en-GB", {
                       day: "numeric",
+
                       month: "short",
+
                       year: "numeric",
                     })
                   : "8 Sep 2026"
+
                 const langLabel = latest?.language
                   ? latest.language.toUpperCase()
                   : "EN"
+
                 const wpmLabel = latest?.biomarkers?.speechRateWpm ?? 68
+
                 const isElevated = latest
                   ? latest.mlResult.screeningRisk === "elevated"
                   : lastResult === "elevated"
@@ -4586,7 +5283,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                   </p>
                   <div className="space-y-1.5 pt-1">
                     {screeningApiResult.explanation.top_positive_contributions
+
                       ?.slice(0, 2)
+
                       .map((item) => (
                         <div
                           key={item.feature}
@@ -4605,7 +5304,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                         </div>
                       ))}
                     {screeningApiResult.explanation.top_negative_contributions
+
                       ?.slice(0, 2)
+
                       .map((item) => (
                         <div
                           key={item.feature}
@@ -4728,7 +5429,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                   </p>
                   <div className="space-y-1.5 pt-1">
                     {screeningApiResult.explanation.top_positive_contributions
+
                       ?.slice(0, 3)
+
                       .map((item) => (
                         <div
                           key={item.feature}
@@ -4747,7 +5450,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                         </div>
                       ))}
                     {screeningApiResult.explanation.top_negative_contributions
+
                       ?.slice(0, 3)
+
                       .map((item) => (
                         <div
                           key={item.feature}
@@ -4912,25 +5617,33 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 {[
                   {
                     label: "Speech Word Rate",
+
                     val: displayWordRate,
+
                     sub: "Faster-Whisper temporal speech rate",
                   },
 
                   {
                     label: "Silence / Pause Ratio",
+
                     val: displayPauseRatio,
+
                     sub: "Energy-based silence detection",
                   },
 
                   {
                     label: "Unique IU Efficiency",
+
                     val: displayIU,
+
                     sub: "Information unit lexical density",
                   },
 
                   {
                     label: "Keyword-to-Filler Ratio",
+
                     val: displayKeywordRatio,
+
                     sub: "Information units against non-content words",
                   },
                 ].map((b) => (
@@ -5100,25 +5813,37 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
               {[
                 {
                   name: "Dr. Priya Sharma",
+
                   role: t(lang, "neurologist"),
+
                   spec: "Cognitive & Memory Health",
+
                   wait: "Today",
+
                   rating: "4.9",
                 },
 
                 {
                   name: "Dr. Rajesh Varma",
+
                   role: t(lang, "generalPhysician"),
+
                   spec: "Primary Healthcare",
+
                   wait: "Today",
+
                   rating: "4.8",
                 },
 
                 {
                   name: "Sunita Kumari",
+
                   role: t(lang, "healthWorkerRole"),
+
                   spec: "Community Health Center",
+
                   wait: "Available Now",
+
                   rating: "4.9",
                 },
               ].map((doc) => (
@@ -5212,8 +5937,11 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
 
                 {
                   icon: X,
+
                   label: "End Call",
+
                   bg: "bg-red-600 text-white",
+
                   fn: () => navigate("home"),
                 },
               ].map((btn) => {
@@ -5316,37 +6044,57 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 {[
                   {
                     name: "Rama Devi",
+
                     age: 72,
+
                     risk: "elevated",
+
                     date: "28 Aug 2026",
+
                     lang: "Hindi",
+
                     wpm: 68,
                   },
 
                   {
                     name: "Suresh Kumar",
+
                     age: 68,
+
                     risk: "low",
+
                     date: "15 Aug 2026",
+
                     lang: "Hindi",
+
                     wpm: 92,
                   },
 
                   {
                     name: "Meera Bai",
+
                     age: 80,
+
                     risk: "elevated",
+
                     date: "12 Aug 2026",
+
                     lang: "Bengali",
+
                     wpm: 60,
                   },
 
                   {
                     name: "Lakshmi Devi",
+
                     age: 75,
+
                     risk: "low",
+
                     date: "09 Aug 2026",
+
                     lang: "Hindi",
+
                     wpm: 88,
                   },
                 ].map((p) => (
@@ -5604,7 +6352,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                       <div className="text-xs text-slate-500 mt-0.5">
                         {new Date(s.createdAt).toLocaleDateString("en-IN", {
                           day: "numeric",
+
                           month: "short",
+
                           year: "numeric",
                         })}
                       </div>
@@ -5755,15 +6505,21 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 {[
                   {
                     name: "Rama Devi",
+
                     age: 72,
+
                     relation: "Mother",
+
                     status: "Follow-up Recommended",
                   },
 
                   {
                     name: "Suresh Kumar",
+
                     age: 68,
+
                     relation: "Father",
+
                     status: "Normal",
                   },
                 ].map((m) => (
@@ -5856,22 +6612,31 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 {[
                   {
                     name: "Rama Devi",
+
                     age: 72,
+
                     village: "Rampur",
+
                     status: "completed",
                   },
 
                   {
                     name: "Suresh Kumar",
+
                     age: 68,
+
                     village: "Rampur",
+
                     status: "completed",
                   },
 
                   {
                     name: "Lakshmi Bai",
+
                     age: 75,
+
                     village: "Kashipur",
+
                     status: "pending",
                   },
                 ].map((p) => (
@@ -5937,15 +6702,21 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
 
                 {
                   icon: Globe,
+
                   key: "helpLang",
+
                   descKey: "helpLangDesc",
+
                   to: "language" as Screen,
                 },
 
                 {
                   icon: Phone,
+
                   key: "helpContact",
+
                   descKey: "helpContactDesc",
+
                   to: "referral" as Screen,
                 },
 
@@ -6006,7 +6777,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 <button
                   onClick={() => {
                     setEditName(userName)
+
                     setEditAge(String(userAge))
+
                     setIsEditingProfile(true)
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#e3f4f7] text-[#01586a] border border-[#c2e7ef] text-xs font-bold shadow-2xs active:scale-95 transition-all"
@@ -6052,7 +6825,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                 <button
                   onClick={() => {
                     setEditName(userName)
+
                     setEditAge(String(userAge))
+
                     setIsEditingProfile(true)
                   }}
                   className="px-3 py-1.5 rounded-2xl bg-[#f2f9fb] border border-[#d2ebf1] text-[#02738a] hover:bg-[#e4f4f7] text-xs font-bold transition-colors shrink-0"
@@ -6154,12 +6929,15 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                     <button
                       onClick={() => {
                         const next = !caregiverAlerts
+
                         setCaregiverAlerts(next)
+
                         setSettingsToast(
                           next
                             ? "Caregiver alerts enabled"
                             : "Caregiver alerts paused",
                         )
+
                         setTimeout(() => setSettingsToast(null), 2500)
                       }}
                       className={`w-12 h-6 rounded-full transition-colors relative shrink-0 p-0.5 ${
@@ -6198,7 +6976,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                       <button
                         onClick={() => {
                           setTtsSpeed("slow")
+
                           setSettingsToast("Voice speed set to Relaxed (0.8x)")
+
                           setTimeout(() => setSettingsToast(null), 2500)
                         }}
                         className={`px-3 py-1 rounded-lg transition-all ${
@@ -6212,7 +6992,9 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                       <button
                         onClick={() => {
                           setTtsSpeed("normal")
+
                           setSettingsToast("Voice speed set to Standard (1.0x)")
+
                           setTimeout(() => setSettingsToast(null), 2500)
                         }}
                         className={`px-3 py-1 rounded-lg transition-all ${
@@ -6231,10 +7013,14 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                     <button
                       onClick={() => {
                         setIsTestingAudio(true)
+
                         speakText(
                           `Hello ${userName}. SwarSanket voice guidance is working clearly.`,
+
                           lang,
+
                           () => setIsTestingAudio(true),
+
                           () => setIsTestingAudio(false),
                         )
                       }}
@@ -6272,10 +7058,13 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                     <button
                       onClick={() => {
                         const next = !remindersEnabled
+
                         setRemindersEnabled(next)
+
                         setSettingsToast(
                           next ? "Reminders turned on" : "Reminders paused",
                         )
+
                         setTimeout(() => setSettingsToast(null), 2500)
                       }}
                       className={`w-12 h-6 rounded-full transition-colors relative shrink-0 p-0.5 ${
@@ -6345,12 +7134,15 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                       onClick={() => {
                         if (screeningsList.length > 0) {
                           generateAndDownloadReport(screeningsList[0])
+
                           setSettingsToast("Clinical PDF report downloaded!")
+
                           setTimeout(() => setSettingsToast(null), 3000)
                         } else {
                           setSettingsToast(
                             "No screening records found to export.",
                           )
+
                           setTimeout(() => setSettingsToast(null), 3000)
                         }
                       }}
@@ -6478,11 +7270,17 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                     <button
                       onClick={() => {
                         const trimmedName = editName.trim() || "Rama Devi"
+
                         const parsedAge = parseInt(editAge, 10) || 72
+
                         setUserName(trimmedName)
+
                         setUserAge(parsedAge)
+
                         setIsEditingProfile(false)
+
                         setSettingsToast("Patient profile updated!")
+
                         setTimeout(() => setSettingsToast(null), 3000)
                       }}
                       className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#02738a] to-[#01586a] hover:from-[#02849f] hover:to-[#02738a] text-white font-bold text-xs shadow-md shadow-[#02738a]/20 transition-all"
@@ -6521,9 +7319,13 @@ function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: str
                     <button
                       onClick={async () => {
                         await clearAllScreenings()
+
                         setScreeningsList([])
+
                         setShowClearConfirm(false)
+
                         setSettingsToast("Local screening history cleared!")
+
                         setTimeout(() => setSettingsToast(null), 3000)
                       }}
                       className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all"
@@ -6716,10 +7518,14 @@ export default function App() {
       return false
     }
   })
-  const [authenticatedName, setAuthenticatedName] = useState<string>(() => readDemoUser()?.fullName || "Participant")
+
+  const [authenticatedName, setAuthenticatedName] = useState<string>(
+    () => readDemoUser()?.fullName || "Participant",
+  )
 
   const handleLogout = () => {
     localStorage.removeItem("swarsanket-demo-session")
+
     setIsAuthenticated(false)
   }
 
@@ -6727,12 +7533,20 @@ export default function App() {
     return (
       <DemoAuth
         onAuthenticated={(fullName) => {
-          setAuthenticatedName(fullName || readDemoUser()?.fullName || "Participant")
+          setAuthenticatedName(
+            fullName || readDemoUser()?.fullName || "Participant",
+          )
+
           setIsAuthenticated(true)
         }}
       />
     )
   }
 
-  return <SwarSanketApp authenticatedName={authenticatedName} onLogout={handleLogout} />
+  return (
+    <SwarSanketApp
+      authenticatedName={authenticatedName}
+      onLogout={handleLogout}
+    />
+  )
 }

@@ -82,12 +82,15 @@ export interface MLInferenceResult {
    * Persisted alongside confidence so a stored result cannot be read back as more
    * settled than it was. Optional: absent on demo seeds and pre-existing records.
    */
+
   uncertaintyStd?: number
 
   /** Which protocol the recording was scored under by the backend. */
+
   iuScoringMode?: "canonical" | "proxy" | "empty"
 
   /** Canonical Information Units recognised in the description. */
+
   matchedInformationUnits?: number
 
   /**
@@ -95,6 +98,7 @@ export interface MLInferenceResult {
    * at the +/-3 sigma boundary. A non-zero count means the score is lower quality
    * than its confidence figure suggests.
    */
+
   clampedFeatureCount?: number
 }
 
