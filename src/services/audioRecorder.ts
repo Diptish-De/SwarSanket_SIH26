@@ -362,11 +362,15 @@ export interface ExplainabilityData {
 
   attribution_type?: string
 
+  mc_passes?: number
+
+  net_attribution_direction?: number
+
   shap_margin_sum: number
 
   reconstructed_probability: number
 
-  reconstruction_error: number
+  explained_probability?: number
 
   top_positive_contributions: ShapFactorContribution[]
 
@@ -405,11 +409,23 @@ export interface ScreeningApiResponse {
   }
 
   live_features: {
+    "CTP_F0 SD(st)": number
+
+    "CTP_DPI(ms)": number
+
+    "CTP_RST(-/s)": number
+
+    CTP_EST: number
+
+    "CTP_Voiced Rate(1/s)": number
+
+    "CTP_Hesitation Ratio": number
+
+    "CTP_Energy Mean(Pa^2·s)": number
+
+    CTP_verb_num: number
+
     CTP_noun_ratio: number
-
-    CTP_verb_ratio: number
-
-    CTP_adv_ratio: number
 
     CTP_Pronouns_ratio: number
 
@@ -417,32 +433,66 @@ export interface ScreeningApiResponse {
 
     "CTP_Word Rate(-/s)": number
 
-    CTP_unique_IU_efficiency: number
+    "CTP_Noun No Phrase Rate": number
 
-    "CTP_ keyword_TTR": number
+    "CTP_Verb phrase type proportion": number
+
+    "CTP_Prep phrase type proportion": number
+
+    "CTP_Prep average phrase type length 1": number
+
+    CTP_num_unique_IU: number
+
+    CTP_num_unique_keywords: number
+
+    CTP_unique_IU_densitys: number
+
+    CTP_total_IU_density: number
+
+    CTP_keyword_to_non_keyword_ratio: number
+
+    CTP_unique_IU_efficiency: number
   }
 
   production_features: Record<string, {
-    raw_value: number | null
-
-    imputed_value: number
+    value: number
 
     is_live_extracted: boolean
 
-    shap_contribution?: number
+    attribution: number
   }>
 
-  imputation: {
-    live_feature_count: number
+  /**
+   * Provenance for how the 22-feature vector was scored against the training
+   * distribution. "canonical" means the utterance matched the standardized
+   * picture-description Information Unit lexicon; "proxy" means it was scored
+   * as conversational speech.
+   */
+  feature_calibration?: {
+    iu_scoring_mode: "canonical" | "proxy" | "empty"
 
-    imputed_feature_count: number
+    matched_information_units: string[]
 
-    total_feature_count: number
+    density_word_base: number
 
-    imputation_note: string
+    task_reference_word_count: number
+
+    calibration_sigma: number
+
+    clamped_features: {
+      feature: string
+
+      raw_value: number
+
+      calibrated_value: number
+
+      training_z_score: number
+    }[]
   }
 
   screening: {
+    model_name?: string
+
     predicted_class: 0 | 1
 
     probability: number
@@ -451,9 +501,28 @@ export interface ScreeningApiResponse {
 
     technical_confidence_percent: number
 
+    /** Monte Carlo Dropout predictive standard deviation (epistemic uncertainty). */
+    uncertainty_std: number
+
+    predictive_entropy?: number
+
+    risk_tier?: string
+
     status: string
 
     interpretation: string
+
+    quantum_specs?: {
+      qubits: number
+
+      entangling_layers: number
+
+      mc_dropout_passes: number
+
+      benchmark_auc: number
+
+      benchmark_accuracy: number
+    }
   }
 
   explanation?: ExplainabilityData

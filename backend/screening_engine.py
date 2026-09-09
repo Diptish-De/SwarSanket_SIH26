@@ -34,7 +34,7 @@ from model_loader import (
     evaluation_metrics,
     run_monte_carlo_inference,
 )
-from audio_analyzer import decode_and_inspect_audio
+from audio_analyzer import decode_and_inspect_audio, analyze_silence_runs
 from explainability import explain_single_prediction, SCIENTIFIC_FRAMING_DISCLAIMER
 
 # Load full spaCy English pipeline once
@@ -73,6 +73,89 @@ LIVE_EXTRACTED_FEATURES = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Training-distribution calibration constants
+# ---------------------------------------------------------------------------
+# PROVENANCE WARNING
+# ------------------
+# The CTP_* features were NOT computed by this codebase. final.ipynb consumes them
+# pre-computed from six CSVs (xunfei / Tencent / ALiYun ASR exports, target column
+# "ad") and performs no tokenisation, IU scoring or text processing of any kind.
+# Those are Chinese-language ASR corpora, so the upstream IU and keyword counting
+# rules - including how a "word" is segmented - are not recoverable from any
+# artifact in this repository. Everything below is a calibrated approximation whose
+# only verifiable property is that it keeps inputs inside the training support. It
+# is NOT a faithful reproduction of the upstream feature definitions.
+#
+# The IU density features are ratios whose denominator is the full transcript
+# length. The reference length is recoverable from the fitted scaler statistics:
+#
+#   mean(CTP_num_unique_IU)       / mean(CTP_unique_IU_densitys)   = 4.6823 / 0.0559 = 83.7
+#   mean(CTP_num_unique_keywords) / mean(CTP_unique_IU_efficiency) = 6.9632 / 0.0818 = 85.1
+#
+# A short clip divided by its own (much smaller) word count therefore inflates every
+# density feature several-fold. Densities are standardised to this reference length
+# instead, the same way type-token measures are reported per fixed sample size.
+TASK_REFERENCE_WORD_COUNT = 84.0
+
+# mean(CTP_num_unique_IU) / mean(CTP_num_unique_keywords) = 4.6823 / 6.9632.
+# IUs are a restricted semantic subset of content words, never the whole set.
+#
+# NOTE: the training means are small in absolute terms (4.68 unique IUs, 6.96 unique
+# keywords) relative to any natural English count over a transcript of the implied
+# length. A fluent English description yields 20-30. The upstream counting rule is
+# therefore narrower than "content words" in a way this code cannot reconstruct, so
+# long descriptions still land high and are held at the boundary by the clamp below.
+IU_TO_KEYWORD_RATIO = 0.6725
+
+# Features are clamped to this many standard deviations around the training mean.
+# Beyond that range the model is extrapolating outside its support, where the
+# sigmoid saturates and the prediction carries no evidential value.
+CALIBRATION_SIGMA = 3.0
+
+# Canonical Cookie Theft Information Units, lemmatised, matched against spaCy lemmas.
+# This drives the clinically useful part - reporting WHICH task-relevant units the
+# patient actually produced - and distinguishes an on-protocol description from free
+# conversation. It is not claimed to reproduce the upstream corpus IU scale.
+COOKIE_THEFT_IU_LEXICON = frozenset({
+    # Subjects
+    "boy", "girl", "woman", "mother", "mom", "mum", "lady", "child", "children",
+    "kid", "son", "daughter", "brother", "sister",
+    # Places
+    "kitchen", "window", "garden", "yard", "path", "outside", "driveway", "sidewalk",
+    # Objects
+    "cookie", "biscuit", "jar", "stool", "sink", "water", "plate", "dish", "cup",
+    "saucer", "cupboard", "cabinet", "curtain", "counter", "countertop", "faucet",
+    "tap", "floor", "apron", "towel", "shelf", "lid", "drape",
+    # Actions and states
+    "steal", "take", "fall", "reach", "wash", "dry", "overflow", "spill", "run",
+    "ignore", "hand", "climb", "stand", "tip", "topple", "wobble", "drop", "pour",
+    "clean", "look", "laugh", "hold", "give", "ask",
+})
+
+_VOWEL_GROUP_RE = re.compile(r"[aeiouy]+")
+
+
+def _count_syllables(word: str) -> int:
+    """
+    Estimates syllable count via vowel-group counting with silent-e correction.
+
+    Used for CTP_RST(-/s), which is a phonation-rate biomarker measured in
+    syllables per second of active speech, distinct from CTP_Word Rate(-/s).
+    """
+    cleaned = re.sub(r"[^a-z]", "", word.lower())
+    if not cleaned:
+        return 0
+    groups = _VOWEL_GROUP_RE.findall(cleaned)
+    count = len(groups)
+    # Drop a trailing silent "e", but only when the final vowel group IS a bare "e".
+    # In "cookie" or "movie" the final group is "ie", a pronounced nucleus; in "-le"
+    # endings ("little") the e carries the syllable.
+    if count > 1 and groups[-1] == "e" and cleaned.endswith("e") and not cleaned.endswith("le"):
+        count -= 1
+    return max(1, count)
+
+
 def _safe_div(num: float, den: float, default: float = 0.0) -> float:
     """Safely divide two numbers, returning default on zero or invalid division."""
     if den is None or den == 0 or np.isnan(den):
@@ -91,8 +174,14 @@ def extract_linguistic_pos_features(transcript: str, word_num: int) -> Dict[str,
       - Adverbs: ADV
       - Pronouns: PRON
       - Keywords (Content Words): NOUN, PROPN, VERB, ADJ, ADV (lemmatized)
-      - unique_IU_efficiency: len(unique_keywords) / word_num
       - keyword_TTR: len(unique_keywords) / len(keywords)
+
+    Information Units (IUs) are scored separately from content words. An IU is a
+    task-relevant semantic unit from the canonical picture-description scoring
+    scheme (COOKIE_THEFT_IU_LEXICON), not any arbitrary content word. When the
+    utterance is not a picture description at all, no canonical unit can match;
+    scoring it as zero IUs would encode a task mismatch as a cognitive deficit,
+    so the counts fall back to a proxy derived from the training IU:keyword ratio.
     """
     raw_text = transcript.strip() if transcript else ""
     if not raw_text:
@@ -102,13 +191,18 @@ def extract_linguistic_pos_features(transcript: str, word_num: int) -> Dict[str,
             "adv_ratio": 0.0,
             "pronoun_ratio": 0.0,
             "noun_to_verb": 0.0,
-            "unique_iu_efficiency": 0.0,
             "keyword_ttr": 0.0,
             "verb_count": 0,
             "noun_count": 0,
             "pronoun_count": 0,
+            "syllable_count": 0,
             "keywords": [],
             "unique_keywords": [],
+            "iu_tokens": [],
+            "unique_ius": [],
+            "num_unique_iu": 0,
+            "total_iu_mentions": 0,
+            "iu_scoring_mode": "empty",
         }
 
     doc = nlp(raw_text)
@@ -138,9 +232,27 @@ def extract_linguistic_pos_features(transcript: str, word_num: int) -> Dict[str,
         if t.pos_ in ("NOUN", "PROPN", "VERB", "ADJ", "ADV")
     ]
     unique_keywords = sorted(list(set(keyword_tokens)))
-
-    unique_iu_efficiency = _safe_div(len(unique_keywords), total_words, 0.0)
     keyword_ttr = _safe_div(len(unique_keywords), len(keyword_tokens), 0.0)
+
+    # 3. Information Units: canonical task-relevant semantic units only
+    iu_tokens = [lemma for lemma in keyword_tokens if lemma in COOKIE_THEFT_IU_LEXICON]
+    unique_ius = sorted(set(iu_tokens))
+
+    if iu_tokens:
+        iu_scoring_mode = "canonical"
+        num_unique_iu = len(unique_ius)
+        total_iu_mentions = len(iu_tokens)
+    else:
+        # Free-form speech carries no Cookie Theft units by construction. Scale the
+        # generic content-word counts by the training IU:keyword ratio so the
+        # features stay responsive to content production without reading a task
+        # mismatch as an absence of information units.
+        iu_scoring_mode = "proxy"
+        num_unique_iu = int(round(len(unique_keywords) * IU_TO_KEYWORD_RATIO))
+        total_iu_mentions = int(round(len(keyword_tokens) * IU_TO_KEYWORD_RATIO))
+
+    # 4. Syllable count drives the phonation-rate biomarker CTP_RST(-/s)
+    syllable_count = sum(_count_syllables(t.text) for t in tokens)
 
     return {
         "noun_ratio": round(noun_ratio, 6),
@@ -148,14 +260,63 @@ def extract_linguistic_pos_features(transcript: str, word_num: int) -> Dict[str,
         "adv_ratio": round(adv_ratio, 6),
         "pronoun_ratio": round(pronoun_ratio, 6),
         "noun_to_verb": round(noun_to_verb, 6),
-        "unique_iu_efficiency": round(unique_iu_efficiency, 6),
         "keyword_ttr": round(keyword_ttr, 6),
         "verb_count": verb_count,
         "noun_count": noun_count,
         "pronoun_count": pronoun_count,
+        "syllable_count": syllable_count,
         "keywords": keyword_tokens,
         "unique_keywords": unique_keywords,
+        "iu_tokens": iu_tokens,
+        "unique_ius": unique_ius,
+        "num_unique_iu": num_unique_iu,
+        "total_iu_mentions": total_iu_mentions,
+        "iu_scoring_mode": iu_scoring_mode,
     }
+
+
+def _rewind(audio_source: Any) -> None:
+    """Rewinds a seekable stream so it can be decoded more than once."""
+    seek = getattr(audio_source, "seek", None)
+    if callable(seek) and getattr(audio_source, "seekable", lambda: False)():
+        seek(0)
+
+
+def _calibrate_to_training_support(
+    features: Dict[str, float],
+    sigma: float = CALIBRATION_SIGMA,
+) -> tuple[Dict[str, float], List[Dict[str, Any]]]:
+    """
+    Clamps each feature to the training distribution's support, [mean - k*sigma, mean + k*sigma],
+    taken from the fitted StandardScaler.
+
+    Outside that envelope the network has no training evidence: the sigmoid saturates
+    and the prediction is decided by extrapolation rather than by the biomarker. Values
+    that land there are held at the boundary and reported, so a recording that falls
+    outside the model's support is visible rather than silently converted into a
+    confident score.
+    """
+    means = np.asarray(scaler.mean_, dtype=np.float64)
+    scales = np.asarray(scaler.scale_, dtype=np.float64)
+
+    calibrated = dict(features)
+    clamped: List[Dict[str, Any]] = []
+
+    for idx, feat in enumerate(production_features):
+        raw = float(features[feat])
+        lower = float(means[idx] - sigma * scales[idx])
+        upper = float(means[idx] + sigma * scales[idx])
+        bounded = min(max(raw, lower), upper)
+        if bounded != raw:
+            calibrated[feat] = bounded
+            clamped.append({
+                "feature": feat,
+                "raw_value": round(raw, 6),
+                "calibrated_value": round(bounded, 6),
+                "training_z_score": round(float((raw - means[idx]) / scales[idx]), 3),
+            })
+
+    return calibrated, clamped
 
 
 def run_screening_pipeline(
@@ -239,23 +400,49 @@ def run_screening_pipeline(
         nlp_features = extract_linguistic_pos_features(full_transcript, word_count)
 
         # 4. Extract Acoustic & Pause Metrics
-        pauses = []
-        for idx in range(len(words_list) - 1):
-            gap = words_list[idx + 1]["start"] - words_list[idx]["end"]
-            if gap >= 0.15:
-                pauses.append(gap)
+        # Faster-Whisper word timestamps are contiguous - each word's end abuts the
+        # next word's start - so inter-word gaps collapse to ~0 s and cannot measure
+        # hesitation. Pause structure is taken from the PCM energy envelope instead.
+        _rewind(audio_source)
+        pause_stats = analyze_silence_runs(audio_source)
 
-        mean_pause_ms = (float(np.mean(pauses)) * 1000.0) if pauses else medians_dict.get("CTP_DPI(ms)", 401.99)
-        total_pause_sec = sum(pauses)
-        hesitation_ratio = _safe_div(total_pause_sec, duration_sec, medians_dict.get("CTP_Hesitation Ratio", 0.639))
-        voiced_rate = _safe_div(float(word_count), max(0.1, speech_timeline_duration), medians_dict.get("CTP_Voiced Rate(1/s)", 1.411))
+        mean_pause_ms = pause_stats["mean_pause_ms"] or medians_dict.get("CTP_DPI(ms)", 401.99)
+
+        # Hesitation Ratio is the proportion of the recording not occupied by phonation.
+        hesitation_ratio = pause_stats["silence_frame_ratio"]
+        if hesitation_ratio <= 0.0:
+            hesitation_ratio = medians_dict.get("CTP_Hesitation Ratio", 0.639)
+
+        # Three distinct rate biomarkers, previously all collapsed onto word_rate:
+        #   CTP_Word Rate(-/s)    words per second of the whole recording (pauses included)
+        #   CTP_Voiced Rate(1/s)  words per second of active speech time
+        #   CTP_RST(-/s)          syllables per second of active speech (phonation rate)
+        word_rate = _safe_div(
+            float(word_count), duration_sec, medians_dict.get("CTP_Word Rate(-/s)", 1.288)
+        )
+        voiced_rate = _safe_div(
+            float(word_count), max(0.1, speech_timeline_duration),
+            medians_dict.get("CTP_Voiced Rate(1/s)", 1.411),
+        )
+        syllable_rate = _safe_div(
+            float(nlp_features["syllable_count"]), max(0.1, speech_timeline_duration),
+            medians_dict.get("CTP_RST(-/s)", 2.787),
+        )
         energy_mean = float(audio_metrics.get("rms_energy", 0.0) ** 2)
 
         # 5. Populate the 22-Feature Production Contract Vector
+        # Density features are standardised to TASK_REFERENCE_WORD_COUNT. Dividing by a
+        # short clip's own word count inflates every ratio several-fold relative to the
+        # full-length transcripts the scaler was fitted on.
+        density_word_base = max(float(word_count), TASK_REFERENCE_WORD_COUNT)
+        num_unique_iu = float(nlp_features["num_unique_iu"])
+        total_iu_mentions = float(nlp_features["total_iu_mentions"])
+        num_unique_keywords = float(len(nlp_features["unique_keywords"]))
+
         live_features = {
             "CTP_F0 SD(st)": medians_dict.get("CTP_F0 SD(st)", 5.554),
             "CTP_DPI(ms)": mean_pause_ms,
-            "CTP_RST(-/s)": round(word_rate, 6),
+            "CTP_RST(-/s)": round(syllable_rate, 6),
             "CTP_EST": medians_dict.get("CTP_EST", 1.486),
             "CTP_Voiced Rate(1/s)": round(voiced_rate, 6),
             "CTP_Hesitation Ratio": round(hesitation_ratio, 6),
@@ -269,13 +456,16 @@ def run_screening_pipeline(
             "CTP_Verb phrase type proportion": medians_dict.get("CTP_Verb phrase type proportion", 2.617),
             "CTP_Prep phrase type proportion": medians_dict.get("CTP_Prep phrase type proportion", 0.8167),
             "CTP_Prep average phrase type length 1": medians_dict.get("CTP_Prep average phrase type length 1", 3.4226),
-            "CTP_num_unique_IU": float(len(nlp_features["unique_keywords"])),
-            "CTP_num_unique_keywords": float(len(nlp_features["unique_keywords"])),
-            "CTP_unique_IU_densitys": _safe_div(len(nlp_features["unique_keywords"]), word_count, medians_dict.get("CTP_unique_IU_densitys", 0.0534)),
-            "CTP_total_IU_density": _safe_div(len(nlp_features["keywords"]), word_count, medians_dict.get("CTP_total_IU_density", 0.101)),
-            "CTP_keyword_to_non_keyword_ratio": _safe_div(len(nlp_features["unique_keywords"]), max(1, word_count - len(nlp_features["unique_keywords"])), medians_dict.get("CTP_keyword_to_non_keyword_ratio", 0.112)),
-            "CTP_unique_IU_efficiency": nlp_features["unique_iu_efficiency"],
+            "CTP_num_unique_IU": num_unique_iu,
+            "CTP_num_unique_keywords": num_unique_keywords,
+            "CTP_unique_IU_densitys": round(_safe_div(num_unique_iu, density_word_base, medians_dict.get("CTP_unique_IU_densitys", 0.0534)), 6),
+            "CTP_total_IU_density": round(_safe_div(total_iu_mentions, density_word_base, medians_dict.get("CTP_total_IU_density", 0.101)), 6),
+            "CTP_keyword_to_non_keyword_ratio": round(_safe_div(total_iu_mentions, max(1.0, density_word_base - total_iu_mentions), medians_dict.get("CTP_keyword_to_non_keyword_ratio", 0.112)), 6),
+            "CTP_unique_IU_efficiency": round(_safe_div(num_unique_keywords, density_word_base, medians_dict.get("CTP_unique_IU_efficiency", 0.0769)), 6),
         }
+
+        # Hold features inside the training distribution's support before inference
+        live_features, clamped_features = _calibrate_to_training_support(live_features)
 
         # Build ordered 22-feature vector
         feature_vector = [live_features.get(f, medians_dict.get(f, 0.0)) for f in production_features]
@@ -299,9 +489,17 @@ def run_screening_pipeline(
 
         status = "Elevated screening signal" if predicted_class == 1 else "Lower screening signal"
 
-        # 7. Compute Quantum Feature Attributions
+        # 7. Compute Quantum Feature Attributions.
+        # Attributions are averaged over the same 30 Monte Carlo Dropout passes used
+        # for inference, and anchored to the probability actually reported, so the
+        # explanation describes the score the user is shown.
         df_for_explain = pd.DataFrame([live_features], columns=production_features)
-        explanation = explain_single_prediction(df_for_explain, top_k=5)
+        explanation = explain_single_prediction(
+            df_for_explain,
+            top_k=5,
+            n_passes=inference_res["mc_passes"],
+            reference_probability=prob,
+        )
 
         # Feature dictionary for UI radar & reports
         production_features_dict = {}
@@ -327,6 +525,14 @@ def run_screening_pipeline(
             },
             "live_features": live_features,
             "production_features": production_features_dict,
+            "feature_calibration": {
+                "iu_scoring_mode": nlp_features["iu_scoring_mode"],
+                "matched_information_units": nlp_features["unique_ius"],
+                "density_word_base": density_word_base,
+                "task_reference_word_count": TASK_REFERENCE_WORD_COUNT,
+                "calibration_sigma": CALIBRATION_SIGMA,
+                "clamped_features": clamped_features,
+            },
             "screening": {
                 "model_name": "SwarSanket Quantum-Classical Hybrid (PyTorch + 8-Qubit VQC)",
                 "predicted_class": predicted_class,

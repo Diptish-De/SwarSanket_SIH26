@@ -163,9 +163,9 @@ const formatBiomarkerName = (feature: string): string => {
   const map: Record<string, string> = {
     "CTP_F0 SD(st)": "Pitch Variation (F0 SD)",
     "CTP_DPI(ms)": "Pause Duration (DPI)",
-    "CTP_RST(-/s)": "Speech Response Rate",
+    "CTP_RST(-/s)": "Phonation Rate (syll/s)",
     CTP_EST: "Speech Timing (EST)",
-    "CTP_Voiced Rate(1/s)": "Voiced Speech Rate",
+    "CTP_Voiced Rate(1/s)": "Voiced Speech Rate (words/s)",
     "CTP_Hesitation Ratio": "Hesitation Ratio",
     "CTP_Energy Mean(Pa^2·s)": "Acoustic Energy Mean",
     CTP_verb_num: "Verb Count",
@@ -287,6 +287,8 @@ const TX: Record<string, Record<string, string>> = {
     continue: "Continue",
 
     whatDoYouSee: "What do you see?",
+    clinicalProtocolTag: "Picture Description Task",
+    describeSceneHint: "Take your time and describe as much as you notice.",
 
     pictureDescSub: "Tell us what you see in the picture.",
 
@@ -524,6 +526,8 @@ const TX: Record<string, Record<string, string>> = {
     continue: "आगे बढ़ें",
 
     whatDoYouSee: "आप क्या देख रहे हैं?",
+    clinicalProtocolTag: "चित्र वर्णन कार्य",
+    describeSceneHint: "आराम से बताइए, जो कुछ भी आपको दिखे।",
 
     pictureDescSub: "तस्वीर में जो दिखे वो बताइए।",
 
@@ -759,6 +763,8 @@ const TX: Record<string, Record<string, string>> = {
     continue: "চালিয়ে যান",
 
     whatDoYouSee: "আপনি কী দেখছেন?",
+    clinicalProtocolTag: "ছবি বর্ণনার কাজ",
+    describeSceneHint: "সময় নিন, যা যা চোখে পড়ে সবই বলুন।",
 
     pictureDescSub: "ছবিতে যা দেখছেন তা বলুন।",
 
@@ -872,6 +878,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "दोबारा रिकॉर्ड करें",
     continue: "आगे बढ़ें",
     whatDoYouSee: "आपको क्या दिखाई दे रहा है?",
+    clinicalProtocolTag: "चित्र वर्णन कार्य",
+    describeSceneHint: "आराम से बताइए, जो कुछ भी आपको दिखे।",
     pictureDescSub: "चित्र में जो दिखाई दे रहा है, उसके बारे में बताइए।",
     listenCarefully: "ध्यान से सुनें",
     memorySub: "हम कुछ शब्द पढ़ेंगे। उन्हें याद रखने की कोशिश करें।",
@@ -917,6 +925,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "আবার রেকর্ড করুন",
     continue: "এগিয়ে যান",
     whatDoYouSee: "আপনি কী দেখতে পাচ্ছেন?",
+    clinicalProtocolTag: "ছবি বর্ণনার কাজ",
+    describeSceneHint: "সময় নিন, যা যা চোখে পড়ে সবই বলুন।",
     pictureDescSub: "ছবিতে যা দেখতে পাচ্ছেন, সে সম্পর্কে বলুন।",
     listenCarefully: "মন দিয়ে শুনুন",
     memorySub: "আমরা কয়েকটি শব্দ পড়ব। সেগুলো মনে রাখার চেষ্টা করুন।",
@@ -961,6 +971,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "पुन्हा रेकॉर्ड करा",
     continue: "पुढे चला",
     whatDoYouSee: "तुम्हाला काय दिसत आहे?",
+    clinicalProtocolTag: "चित्र वर्णन कार्य",
+    describeSceneHint: "सावकाश सांगा, जे काही तुम्हाला दिसते ते सर्व.",
     pictureDescSub: "चित्रात तुम्हाला जे दिसते त्याबद्दल सांगा.",
     listenCarefully: "लक्षपूर्वक ऐका",
     memorySub: "आम्ही काही शब्द वाचू. ते लक्षात ठेवण्याचा प्रयत्न करा.",
@@ -1003,6 +1015,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "மீண்டும் பதிவு செய்யுங்கள்",
     continue: "தொடரவும்",
     whatDoYouSee: "உங்களுக்கு என்ன தெரிகிறது?",
+    clinicalProtocolTag: "படம் விவரிக்கும் பணி",
+    describeSceneHint: "நிதானமாக, நீங்கள் கவனிக்கும் அனைத்தையும் சொல்லுங்கள்.",
     pictureDescSub: "படத்தில் நீங்கள் காண்பதைப் பற்றி சொல்லுங்கள்.",
     listenCarefully: "கவனமாகக் கேளுங்கள்",
     memorySub:
@@ -1046,6 +1060,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "మళ్లీ రికార్డ్ చేయండి",
     continue: "కొనసాగించండి",
     whatDoYouSee: "మీకు ఏమి కనిపిస్తోంది?",
+    clinicalProtocolTag: "చిత్ర వర్ణన పని",
+    describeSceneHint: "నెమ్మదిగా, మీరు గమనించినదంతా చెప్పండి.",
     pictureDescSub: "చిత్రంలో మీకు కనిపిస్తున్నదాన్ని చెప్పండి.",
     listenCarefully: "శ్రద్ధగా వినండి",
     memorySub: "మేము కొన్ని పదాలను చదువుతాము. వాటిని గుర్తుంచుకోవడానికి ప్రయత్నించండి.",
@@ -1088,6 +1104,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "ફરી રેકોર્ડ કરો",
     continue: "આગળ વધો",
     whatDoYouSee: "તમને શું દેખાય છે?",
+    clinicalProtocolTag: "ચિત્ર વર્ણન કાર્ય",
+    describeSceneHint: "નિરાંતે, તમને જે કંઈ દેખાય તે બધું જણાવો.",
     pictureDescSub: "ચિત્રમાં તમને જે દેખાય છે તે જણાવો.",
     listenCarefully: "ધ્યાનથી સાંભળો",
     memorySub: "અમે કેટલાક શબ્દો વાંચીશું. તેમને યાદ રાખવાનો પ્રયાસ કરો.",
@@ -1130,6 +1148,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "ಮತ್ತೆ ರೆಕಾರ್ಡ್ ಮಾಡಿ",
     continue: "ಮುಂದುವರಿಸಿ",
     whatDoYouSee: "ನಿಮಗೆ ಏನು ಕಾಣುತ್ತಿದೆ?",
+    clinicalProtocolTag: "ಚಿತ್ರ ವಿವರಣೆ ಕಾರ್ಯ",
+    describeSceneHint: "ನಿಧಾನವಾಗಿ, ನಿಮಗೆ ಕಾಣುವ ಎಲ್ಲವನ್ನೂ ತಿಳಿಸಿ.",
     pictureDescSub: "ಚಿತ್ರದಲ್ಲಿ ನಿಮಗೆ ಕಾಣುತ್ತಿರುವುದನ್ನು ತಿಳಿಸಿ.",
     listenCarefully: "ಗಮನವಿಟ್ಟು ಆಲಿಸಿ",
     memorySub: "ನಾವು ಕೆಲವು ಪದಗಳನ್ನು ಓದುತ್ತೇವೆ. ಅವುಗಳನ್ನು ನೆನಪಿಟ್ಟುಕೊಳ್ಳಲು ಪ್ರಯತ್ನಿಸಿ.",
@@ -1172,6 +1192,8 @@ const INDIC_TX: Record<string, Record<string, string>> = {
     recordAgain: "വീണ്ടും റെക്കോർഡ് ചെയ്യുക",
     continue: "തുടരുക",
     whatDoYouSee: "നിങ്ങൾ എന്താണ് കാണുന്നത്?",
+    clinicalProtocolTag: "ചിത്ര വിവരണ ദൗത്യം",
+    describeSceneHint: "സാവധാനം, നിങ്ങൾ കാണുന്നതെല്ലാം പറയൂ.",
     pictureDescSub: "ചിത്രത്തിൽ നിങ്ങൾ കാണുന്നത് വിവരിക്കൂ.",
     listenCarefully: "ശ്രദ്ധയോടെ കേൾക്കുക",
     memorySub: "ഞങ്ങൾ കുറച്ച് വാക്കുകൾ വായിക്കും. അവ ഓർമ്മിക്കാൻ ശ്രമിക്കൂ.",
@@ -1615,7 +1637,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   en: {
     freeSpeech: "Tell us about your day.",
 
-    pictureDesc: "Tell us what you see in the picture.",
+    pictureDesc:
+      "Describe everything you see happening in this picture (who is there, what they are doing, and what is happening around them).",
 
     memoryRecall: "Cow, River, Book, House, Flower",
 
@@ -1625,7 +1648,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   hi: {
     freeSpeech: "हमें अपने दिन के बारे में बताइए।",
 
-    pictureDesc: "आप इस तस्वीर में क्या देख रहे हैं? बताइए।",
+    pictureDesc:
+      "इस तस्वीर में जो कुछ हो रहा है, वह सब बताइए — वहाँ कौन-कौन है, वे क्या कर रहे हैं, और उनके आसपास क्या हो रहा है।",
 
     memoryRecall: "गाय, नदी, किताब, घर, फूल",
 
@@ -1635,7 +1659,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   bn: {
     freeSpeech: "আপনার আজকের দিনটি কেমন কেটেছে, সে সম্পর্কে বলুন।",
 
-    pictureDesc: "ছবিতে আপনি কী দেখতে পাচ্ছেন, তা বলুন।",
+    pictureDesc:
+      "এই ছবিতে যা কিছু ঘটছে সব বলুন — সেখানে কে কে আছে, তাঁরা কী করছেন, এবং তাঁদের চারপাশে কী ঘটছে।",
 
     memoryRecall: "গরু, নদী, বই, বাড়ি, ফুল",
 
@@ -1645,7 +1670,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   mr: {
     freeSpeech: "तुमचा आजचा दिवस कसा गेला, याबद्दल आम्हाला सांगा.",
 
-    pictureDesc: "चित्रात तुम्हाला काय दिसत आहे ते सांगा.",
+    pictureDesc:
+      "या चित्रात जे काही घडत आहे ते सर्व सांगा — तिथे कोण कोण आहे, ते काय करत आहेत, आणि त्यांच्या आजूबाजूला काय घडत आहे.",
 
     memoryRecall: "गाय, नदी, पुस्तक, घर, फूल",
 
@@ -1655,7 +1681,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   ta: {
     freeSpeech: "இன்று உங்கள் நாள் எப்படி சென்றது என்பதைப் பற்றி சொல்லுங்கள்.",
 
-    pictureDesc: "படத்தில் நீங்கள் என்ன பார்க்கிறீர்கள் என்று சொல்லுங்கள்.",
+    pictureDesc:
+      "இந்தப் படத்தில் நடப்பது அனைத்தையும் விவரியுங்கள் — அங்கு யார் யார் இருக்கிறார்கள், அவர்கள் என்ன செய்கிறார்கள், அவர்களைச் சுற்றி என்ன நடக்கிறது.",
 
     memoryRecall: "பசு, ஆறு, புத்தகம், வீடு, பூ",
 
@@ -1665,7 +1692,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   te: {
     freeSpeech: "ఈ రోజు మీ రోజు ఎలా గడిచిందో మాకు చెప్పండి.",
 
-    pictureDesc: "చిత్రంలో మీకు ఏమి కనిపిస్తుందో చెప్పండి.",
+    pictureDesc:
+      "ఈ చిత్రంలో జరుగుతున్నదంతా చెప్పండి — అక్కడ ఎవరెవరు ఉన్నారు, వారు ఏమి చేస్తున్నారు, వారి చుట్టూ ఏమి జరుగుతోంది.",
 
     memoryRecall: "ఆవు, నది, పుస్తకం, ఇల్లు, పువ్వు",
 
@@ -1675,7 +1703,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   gu: {
     freeSpeech: "તમારો આજનો દિવસ કેવો રહ્યો તે અમને જણાવો.",
 
-    pictureDesc: "ચિત્રમાં તમને શું દેખાય છે તે જણાવો.",
+    pictureDesc:
+      "આ ચિત્રમાં જે કંઈ થઈ રહ્યું છે તે બધું જણાવો — ત્યાં કોણ કોણ છે, તેઓ શું કરી રહ્યા છે, અને તેમની આસપાસ શું થઈ રહ્યું છે.",
 
     memoryRecall: "ગાય, નદી, પુસ્તક, ઘર, ફૂલ",
 
@@ -1685,7 +1714,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   kn: {
     freeSpeech: "ನಿಮ್ಮ ಇಂದಿನ ದಿನ ಹೇಗಿತ್ತು ಎಂಬುದನ್ನು ನಮಗೆ ತಿಳಿಸಿ.",
 
-    pictureDesc: "ಚಿತ್ರದಲ್ಲಿ ನಿಮಗೆ ಏನು ಕಾಣಿಸುತ್ತಿದೆ ಎಂದು ತಿಳಿಸಿ.",
+    pictureDesc:
+      "ಈ ಚಿತ್ರದಲ್ಲಿ ನಡೆಯುತ್ತಿರುವ ಎಲ್ಲವನ್ನೂ ವಿವರಿಸಿ — ಅಲ್ಲಿ ಯಾರು ಯಾರು ಇದ್ದಾರೆ, ಅವರು ಏನು ಮಾಡುತ್ತಿದ್ದಾರೆ, ಮತ್ತು ಅವರ ಸುತ್ತಲೂ ಏನು ನಡೆಯುತ್ತಿದೆ.",
 
     memoryRecall: "ಹಸು, ನದಿ, ಪುಸ್ತಕ, ಮನೆ, ಹೂವು",
 
@@ -1695,7 +1725,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   ml: {
     freeSpeech: "നിങ്ങളുടെ ഇന്നത്തെ ദിവസം എങ്ങനെയായിരുന്നു എന്ന് ഞങ്ങളോട് പറയൂ.",
 
-    pictureDesc: "ചിത്രത്തിൽ നിങ്ങൾ എന്താണ് കാണുന്നതെന്ന് പറയൂ.",
+    pictureDesc:
+      "ഈ ചിത്രത്തിൽ നടക്കുന്നതെല്ലാം വിവരിക്കൂ — അവിടെ ആരൊക്കെയുണ്ട്, അവർ എന്തു ചെയ്യുന്നു, അവർക്കു ചുറ്റും എന്തു സംഭവിക്കുന്നു.",
 
     memoryRecall: "പശു, നദി, പുസ്തകം, വീട്, പൂവ്",
 
@@ -1710,6 +1741,465 @@ function getTaskPrompt(lang: string, ctx: RecordingContext): string {
 }
 
 // ─── Reusable UI Components ───────────────────────────────────────────────────
+
+/**
+ * The standardized "Cookie Theft" kitchen scene used by the clinical picture
+ * description protocol. Every element here is a scorable Information Unit in the
+ * backend's canonical lexicon (boy, girl, mother, cookie, jar, stool, sink, water,
+ * window, curtain, dish, cupboard, floor), so describing it naturally produces the
+ * in-distribution vocabulary the screening model was trained on.
+ */
+function CookieTheftScene() {
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 360 210"
+      fill="none"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="A kitchen scene: a boy on a tipping stool reaches into a cookie jar in an open cupboard while a girl reaches up beside him; a woman washes dishes at a sink where the water is overflowing onto the floor, next to a window with curtains."
+    >
+      <rect width="360" height="210" fill="#fdfaf3" />
+
+      {/* Back wall and floor */}
+      <rect x="0" y="150" width="360" height="60" fill="#e7d9c3" />
+      <line
+        x1="0"
+        y1="150"
+        x2="360"
+        y2="150"
+        stroke="#c9bda4"
+        strokeWidth="2"
+      />
+
+      {/* Window with curtains and garden view */}
+      <rect
+        x="238"
+        y="26"
+        width="92"
+        height="66"
+        rx="3"
+        fill="#d6eefb"
+        stroke="#8a7f6d"
+        strokeWidth="2.5"
+      />
+      <line
+        x1="284"
+        y1="26"
+        x2="284"
+        y2="92"
+        stroke="#8a7f6d"
+        strokeWidth="2"
+      />
+      <line
+        x1="238"
+        y1="59"
+        x2="330"
+        y2="59"
+        stroke="#8a7f6d"
+        strokeWidth="2"
+      />
+      <path d="M246 92 q10 -22 22 -30 q10 12 12 30 z" fill="#9fd39f" />
+      <rect x="228" y="20" width="14" height="76" rx="5" fill="#e8a0a0" />
+      <rect x="326" y="20" width="14" height="76" rx="5" fill="#e8a0a0" />
+
+      {/* Cupboard with the cookie jar */}
+      <rect
+        x="22"
+        y="18"
+        width="104"
+        height="52"
+        rx="3"
+        fill="#e3cfae"
+        stroke="#8a7f6d"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M126 18 l30 -8 l0 52 l-30 8 z"
+        fill="#d6bd96"
+        stroke="#8a7f6d"
+        strokeWidth="2.5"
+      />
+      <rect
+        x="52"
+        y="30"
+        width="26"
+        height="30"
+        rx="3"
+        fill="#f6f1e6"
+        stroke="#8a7f6d"
+        strokeWidth="2"
+      />
+      <rect x="50" y="26" width="30" height="6" rx="2" fill="#c58f5a" />
+      <circle cx="59" cy="42" r="2.6" fill="#8a5a2b" />
+      <circle cx="70" cy="48" r="2.6" fill="#8a5a2b" />
+      <circle cx="64" cy="54" r="2.6" fill="#8a5a2b" />
+
+      {/* Counter, sink and overflowing water */}
+      <rect
+        x="196"
+        y="96"
+        width="148"
+        height="12"
+        rx="3"
+        fill="#cbb79a"
+        stroke="#8a7f6d"
+        strokeWidth="2"
+      />
+      <rect
+        x="238"
+        y="100"
+        width="60"
+        height="26"
+        rx="4"
+        fill="#dfe9ee"
+        stroke="#8a7f6d"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M268 84 q0 -14 14 -14 q10 0 10 10"
+        stroke="#8a7f6d"
+        strokeWidth="3"
+        fill="none"
+      />
+      <path
+        d="M292 80 l0 14"
+        stroke="#7fb8dd"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M238 118 q-10 14 -12 32"
+        stroke="#7fb8dd"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="220" cy="158" rx="30" ry="7" fill="#a9d5ee" />
+      <ellipse cx="248" cy="163" rx="17" ry="4.5" fill="#c2e2f5" />
+
+      {/* Dishes on the counter */}
+      <circle
+        cx="316"
+        cy="94"
+        r="9"
+        fill="#f2f5f6"
+        stroke="#8a7f6d"
+        strokeWidth="2"
+      />
+      <circle
+        cx="330"
+        cy="96"
+        r="7"
+        fill="#f2f5f6"
+        stroke="#8a7f6d"
+        strokeWidth="2"
+      />
+
+      {/* Woman washing dishes, ignoring the overflow */}
+      <circle
+        cx="204"
+        cy="74"
+        r="13"
+        fill="#f3d6bb"
+        stroke="#6b6153"
+        strokeWidth="2"
+      />
+      <path
+        d="M191 70 q13 -16 26 0 q-6 -8 -13 -8 q-8 0 -13 8 z"
+        fill="#8a6b4f"
+      />
+      <path d="M204 87 l0 42" stroke="#6b6153" strokeWidth="2.5" />
+      <path
+        d="M190 96 q14 -12 28 0 l0 34 l-28 0 z"
+        fill="#bcd9c6"
+        stroke="#6b6153"
+        strokeWidth="2"
+      />
+      <path
+        d="M218 100 q18 4 24 12"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M190 100 q-10 6 -12 14"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M196 130 l0 24 M212 130 l0 24"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+
+      {/* Tipping stool */}
+      <g transform="rotate(-13 84 132)">
+        <rect
+          x="58"
+          y="112"
+          width="52"
+          height="8"
+          rx="3"
+          fill="#c58f5a"
+          stroke="#6b6153"
+          strokeWidth="2"
+        />
+        <path
+          d="M64 120 l-6 34 M104 120 l6 34"
+          stroke="#6b6153"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <path d="M61 138 l46 0" stroke="#6b6153" strokeWidth="2.5" />
+      </g>
+
+      {/* Boy reaching into the cookie jar */}
+      <circle
+        cx="80"
+        cy="78"
+        r="12"
+        fill="#f3d6bb"
+        stroke="#6b6153"
+        strokeWidth="2"
+      />
+      <path
+        d="M69 73 q11 -14 22 -1 q-5 -7 -11 -7 q-7 0 -11 8 z"
+        fill="#6b4a2f"
+      />
+      <path d="M80 90 l0 22" stroke="#6b6153" strokeWidth="2.5" />
+      <path
+        d="M68 98 q12 -10 24 0 l0 16 l-24 0 z"
+        fill="#8fbcd8"
+        stroke="#6b6153"
+        strokeWidth="2"
+      />
+      <path
+        d="M70 98 q-8 -22 -6 -34"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M92 100 q10 6 16 2"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M74 114 l-4 18 M88 114 l4 18"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+
+      {/* Girl reaching up for a cookie */}
+      <circle
+        cx="134"
+        cy="104"
+        r="11"
+        fill="#f3d6bb"
+        stroke="#6b6153"
+        strokeWidth="2"
+      />
+      <path
+        d="M123 100 q11 -13 22 -1 q1 10 -3 14 q2 -12 -8 -13 q-9 -1 -11 0 z"
+        fill="#a8703c"
+      />
+      <path d="M134 115 l0 20" stroke="#6b6153" strokeWidth="2.5" />
+      <path
+        d="M123 122 q11 -9 22 0 l4 18 l-30 0 z"
+        fill="#f0b6c8"
+        stroke="#6b6153"
+        strokeWidth="2"
+      />
+      <path
+        d="M126 122 q-6 -16 -10 -22"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M144 124 q8 4 10 12"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M128 140 l-2 14 M140 140 l2 14"
+        stroke="#6b6153"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Which protocol the recording was actually scored under. The backend reports
+ * "canonical" when the utterance matched the standardized picture-description
+ * Information Unit lexicon, and "proxy" when it was scored as free conversation.
+ * The distinction matters clinically: the model was trained on picture
+ * descriptions, so a proxy-mode result is the weaker of the two.
+ */
+function protocolLabel(result: ScreeningApiResponse | null): string {
+  return result?.feature_calibration?.iu_scoring_mode === "canonical"
+    ? "Standardized Picture Description"
+    : "Conversational Voice Check"
+}
+
+/**
+ * Protocol provenance plus the honest uncertainty pair: the confidence the model
+ * reports, and the Monte Carlo Dropout spread behind it. Showing confidence alone
+ * would hide how unsettled the 30 stochastic passes actually were.
+ */
+function ScreeningQualityCard({
+  result,
+  tone = "neutral",
+}: {
+  result: ScreeningApiResponse | null
+  tone?: "low" | "elevated" | "neutral"
+}) {
+  const canonical = result?.feature_calibration?.iu_scoring_mode === "canonical"
+
+  const clampedCount =
+    result?.feature_calibration?.clamped_features?.length ?? 0
+
+  const accent =
+    tone === "low"
+      ? "text-emerald-700"
+      : tone === "elevated"
+        ? "text-amber-700"
+        : "text-[#02738a]"
+
+  return (
+    <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5 text-left">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          Screening Protocol
+        </span>
+        <span
+          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            canonical
+              ? "bg-[#e4f4f7] text-[#015364] border-[#cbe6ed]"
+              : "bg-slate-100 text-slate-600 border-slate-200"
+          }`}
+        >
+          {canonical ? "Canonical Mode" : "Proxy Mode"}
+        </span>
+      </div>
+
+      <div className="text-xs font-bold text-slate-800">
+        {protocolLabel(result)}
+      </div>
+
+      {!canonical && (
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          Scored as conversational speech. A standardized picture description
+          gives the model the task vocabulary it was trained on.
+        </p>
+      )}
+
+      {canonical &&
+        (result?.feature_calibration?.matched_information_units?.length ?? 0) >
+          0 && (
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            {result?.feature_calibration?.matched_information_units.length}{" "}
+            information units recognised in the description.
+          </p>
+        )}
+
+      <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+            Model Confidence
+          </div>
+          <div className={`text-sm font-bold ${accent}`}>
+            {result
+              ? `${result.screening.technical_confidence_percent.toFixed(1)}%`
+              : "—"}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+            Epistemic Uncertainty
+          </div>
+          <div className="text-sm font-bold text-slate-700">
+            {result ? `±${result.screening.uncertainty_std.toFixed(2)}` : "—"}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-slate-400 leading-relaxed">
+        Uncertainty is the spread across{" "}
+        {result?.screening.quantum_specs?.mc_dropout_passes ?? 30} Monte Carlo
+        Dropout passes. A wider spread means the model is less settled on this
+        recording.
+      </p>
+
+      {clampedCount > 0 && (
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-relaxed">
+          <span className="font-bold">
+            {clampedCount} of 22 biomarkers fell outside the training range
+          </span>{" "}
+          and were held at the boundary before scoring. Treat this result as
+          lower quality than the confidence figure alone suggests.
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Clinical picture-description task card. Shown wherever the patient needs the
+ * scene in front of them: the instruction screen, the live recording screen, and
+ * the dedicated picture task screen.
+ */
+function PictureTaskCard({
+  lang,
+  compact = false,
+}: {
+  lang: LanguageCode
+  compact?: boolean
+}) {
+  return (
+    <div className="w-full space-y-2">
+      <div className="flex items-center justify-center gap-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#015364] bg-[#e4f4f7] px-2.5 py-1 rounded-full border border-[#cbe6ed]">
+          {t(lang, "clinicalProtocolTag")}
+        </span>
+      </div>
+
+      <div
+        className={`w-full ${
+          compact ? "h-32" : "h-48"
+        } rounded-3xl bg-white border border-[#d7eaef] overflow-hidden shadow-inner`}
+      >
+        <CookieTheftScene />
+      </div>
+
+      {!compact && (
+        <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs">
+          <p
+            className="text-sm font-medium text-[#0c1e27] leading-relaxed text-center"
+            style={{ fontFamily: F.body }}
+          >
+            {getTaskPrompt(lang, "pictureDesc")}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function StatusBar({ light = false }: { light?: boolean }) {
   const col = light ? "rgba(255,255,255,0.88)" : "#0c1e27"
@@ -2092,8 +2582,11 @@ export default function App() {
 
   const [isOffline, setIsOffline] = useState<boolean>(false)
 
+  // Picture description is the primary clinical protocol: it is the task the
+  // screening model was trained on, and it elicits the canonical Information Unit
+  // vocabulary the backend scores against.
   const [recordingContext, setRecordingContext] =
-    useState<RecordingContext>("freeSpeech")
+    useState<RecordingContext>("pictureDesc")
 
   const [lastResult, setLastResult] = useState<ScreeningRisk | null>("elevated")
 
@@ -2592,13 +3085,14 @@ export default function App() {
                   },
 
                   {
-                    feature: "Keyword TTR",
+                    feature: "Keyword-to-Filler Ratio",
 
                     impact: "positive",
 
                     weight: Number(
                       (
-                        apiResult.live_features?.["CTP_ keyword_TTR"] || 0
+                        apiResult.live_features
+                          ?.CTP_keyword_to_non_keyword_ratio || 0
                       ).toFixed(2),
                     ),
                   },
@@ -3232,7 +3726,7 @@ export default function App() {
                 {/* Big Inviting CTA Button */}
                 <button
                   onClick={() => {
-                    setRecordingContext("freeSpeech")
+                    setRecordingContext("pictureDesc")
                     navigate("voiceIntro")
                   }}
                   className="w-full py-3.5 sm:py-4 px-4 rounded-2xl bg-white hover:bg-cyan-50 text-[#014f5f] font-bold text-base sm:text-lg shadow-lg shadow-black/15 transition-all active:scale-[0.98] flex items-center justify-between relative z-10 group"
@@ -3480,25 +3974,35 @@ export default function App() {
               onExit={() => navigate("home")}
             />
 
-            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
-                <Volume2 className="w-10 h-10" />
-              </div>
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-5 animate-fade-in-up">
+              {recordingContext === "pictureDesc" ? (
+                <PictureTaskCard lang={lang} />
+              ) : (
+                <>
+                  <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
+                    <Volume2 className="w-10 h-10" />
+                  </div>
 
-              <div className="text-center w-full space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5e7380]">
-                  {t(lang, "listenToQuestion")}
-                </p>
+                  <div className="text-center w-full space-y-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#5e7380]">
+                      {t(lang, "listenToQuestion")}
+                    </p>
 
-                <div className="p-6 rounded-3xl bg-white border border-[#d7eaef] shadow-md">
-                  <p
-                    className="text-xl font-medium text-[#0c1e27] leading-relaxed"
-                    style={{ fontFamily: F.body }}
-                  >
-                    {getTaskPrompt(lang, recordingContext)}
-                  </p>
-                </div>
-              </div>
+                    <div className="p-6 rounded-3xl bg-white border border-[#d7eaef] shadow-md">
+                      <p
+                        className="text-xl font-medium text-[#0c1e27] leading-relaxed"
+                        style={{ fontFamily: F.body }}
+                      >
+                        {getTaskPrompt(lang, recordingContext)}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <p className="text-xs text-[#5e7380] text-center">
+                {t(lang, "describeSceneHint")}
+              </p>
 
               <AudioBtn
                 label={t(lang, "playAgain")}
@@ -3528,7 +4032,13 @@ export default function App() {
               onExit={() => navigate("home")}
             />
 
-            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-8">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6">
+              {/* The scene stays on screen while recording so the patient can keep
+                  describing it rather than speaking from memory. */}
+              {recordingContext === "pictureDesc" && (
+                <PictureTaskCard lang={lang} compact />
+              )}
+
               {/* Interactive Big Mic Button */}
               <div className="relative flex items-center justify-center">
                 {isRecording && (
@@ -3717,83 +4227,7 @@ export default function App() {
               </div>
 
               {/* Picture description task illustration */}
-              <div className="w-full h-48 rounded-3xl bg-gradient-to-tr from-sky-200 via-amber-100 to-emerald-100 border border-[#d7eaef] flex items-center justify-center overflow-hidden relative shadow-inner">
-                <svg
-                  width="100%"
-                  height="100%"
-                  viewBox="0 0 360 200"
-                  fill="none"
-                  preserveAspectRatio="xMidYMid meet"
-                >
-                  <rect width="360" height="200" fill="#e0f2fe" />
-                  <circle cx="300" cy="40" r="24" fill="#fde68a" />
-                  <ellipse
-                    cx="90"
-                    cy="30"
-                    rx="40"
-                    ry="16"
-                    fill="white"
-                    opacity="0.9"
-                  />
-                  <rect x="0" y="140" width="360" height="60" fill="#86efac" />
-                  <rect
-                    x="36"
-                    y="90"
-                    width="90"
-                    height="55"
-                    rx="6"
-                    fill="#fed7aa"
-                  />
-                  <polygon points="36,90 81,54 126,90" fill="#f97316" />
-                  <rect
-                    x="68"
-                    y="112"
-                    width="26"
-                    height="33"
-                    rx="4"
-                    fill="#6d28d9"
-                    opacity="0.6"
-                  />
-                  <rect
-                    x="190"
-                    y="100"
-                    width="10"
-                    height="45"
-                    rx="3"
-                    fill="#a8a29e"
-                  />
-                  <ellipse
-                    cx="195"
-                    cy="85"
-                    rx="26"
-                    ry="28"
-                    fill="#22c55e"
-                    opacity="0.8"
-                  />
-                  <circle
-                    cx="260"
-                    cy="155"
-                    r="12"
-                    stroke="#374151"
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <circle
-                    cx="286"
-                    cy="155"
-                    r="12"
-                    stroke="#374151"
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <path
-                    d="M260 155 L273 135 L286 155"
-                    stroke="#374151"
-                    strokeWidth="2"
-                    fill="none"
-                  />
-                </svg>
-              </div>
+              <PictureTaskCard lang={lang} />
 
               <div className="flex justify-center">
                 <AudioBtn textToSpeak={t(lang, "pictureDescSub")} lang={lang} />
@@ -4066,7 +4500,9 @@ export default function App() {
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Validated 20-feature XGBoost screening engine</span>
+                    <span>
+                      Validated 22-feature Quantum-Hybrid VQC screening engine
+                    </span>
                   </div>
                 </div>
               </>
@@ -4106,13 +4542,18 @@ export default function App() {
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-emerald-700">
                   <Check className="w-4 h-4" />
                   <span>
-                    Decision Confidence:{" "}
+                    Model Confidence:{" "}
                     {screeningApiResult
                       ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
                       : "94%"}
+                    {screeningApiResult
+                      ? ` · Uncertainty ±${screeningApiResult.screening.uncertainty_std.toFixed(2)}`
+                      : ""}
                   </span>
                 </div>
               </div>
+
+              <ScreeningQualityCard result={screeningApiResult} tone="low" />
 
               {/* Real ASR Transcript */}
               {screeningApiResult?.transcript && (
@@ -4240,16 +4681,21 @@ export default function App() {
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-amber-700">
                   <Info className="w-4 h-4" />
                   <span>
-                    Decision Confidence:{" "}
+                    Model Confidence:{" "}
                     {screeningApiResult
                       ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
                       : "88%"}
-                    {screeningApiResult?.live_features
-                      ? ` · Word Rate: ${screeningApiResult.live_features["CTP_Word Rate(-/s)"].toFixed(2)}/s`
+                    {screeningApiResult
+                      ? ` · Uncertainty ±${screeningApiResult.screening.uncertainty_std.toFixed(2)}`
                       : " · Acoustic Pause Indicators"}
                   </span>
                 </div>
               </div>
+
+              <ScreeningQualityCard
+                result={screeningApiResult}
+                tone="elevated"
+              />
 
               {/* Real ASR Transcript */}
               {screeningApiResult?.transcript && (
@@ -4379,9 +4825,13 @@ export default function App() {
           ? `${screeningApiResult.live_features.CTP_unique_IU_efficiency.toFixed(3)}`
           : "0.412"
 
-        const displayTTR = screeningApiResult?.live_features
-          ? `${screeningApiResult.live_features["CTP_ keyword_TTR"].toFixed(3)}`
-          : "0.933"
+        const displayKeywordRatio = screeningApiResult?.live_features
+          ? `${screeningApiResult.live_features.CTP_keyword_to_non_keyword_ratio.toFixed(3)}`
+          : "0.112"
+
+        const displayUncertainty = screeningApiResult
+          ? `±${screeningApiResult.screening.uncertainty_std.toFixed(3)}`
+          : "±0.070"
 
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
@@ -4415,10 +4865,26 @@ export default function App() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500">
-                    Technical Decision Confidence
+                    Screening Protocol
+                  </span>
+                  <span className="text-xs font-bold text-[#02738a] text-right">
+                    {protocolLabel(screeningApiResult)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">
+                    Model Confidence
                   </span>
                   <span className="text-xs font-bold text-slate-900">
                     {displayConfidence}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">
+                    Epistemic Uncertainty (MC Dropout)
+                  </span>
+                  <span className="text-xs font-bold text-slate-900">
+                    {displayUncertainty}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -4465,9 +4931,9 @@ export default function App() {
                   },
 
                   {
-                    label: "Keyword Type-Token Ratio",
-                    val: displayTTR,
-                    sub: "Lexical keyword vocabulary diversity",
+                    label: "Keyword-to-Filler Ratio",
+                    val: displayKeywordRatio,
+                    sub: "Information units against non-content words",
                   },
                 ].map((b) => (
                   <div

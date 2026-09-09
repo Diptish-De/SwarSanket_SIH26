@@ -41,7 +41,7 @@ It consists of:
 - **Components**: Export components as default exports.
 
 ### Backend & Quantum ML
-- **Quantum Hybrid**: 8-qubit PennyLane VQC with Angle Embedding and Strong Entangling layers (`backend/model_loader.py`).
+- **Quantum Hybrid**: 8-qubit PennyLane VQC with `AngleEmbedding` (rotation="Y") and `BasicEntanglerLayers` — 3 layers x 8 qubits, weight tensor shape `(3, 8)` (`backend/model_loader.py`). It is NOT `StronglyEntanglingLayers`, which would require a `(3, 8, 3)` weight tensor and will fail to load the checkpoint.
 - **Audio Decoding**: Use PyAV container decoding with explicit casting (see `backend/audio_analyzer.py` and `backend/speech_features.py`).
 - **Speech-to-Text**: Faster-Whisper with CPU fallback (`backend/screening_engine.py`).
 
