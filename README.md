@@ -108,6 +108,25 @@ Cognitive decline associated with Alzheimer's disease frequently manifests in su
 
 ---
 
+## 📱 Mobile App Preview
+
+SwarSanket includes a Flutter-based mobile experience for guided voice-based cognitive impairment screening. The mobile application provides an accessible interface with multilingual audio prompts, seamless microphone capture, and physician-oriented screening signal monitoring.
+
+| Language Selection | Voice Screening Home | Doctor Clinical Hub |
+|---|---|---|
+| ![Language Selection](docs/screenshots/language-selection.png) | ![Voice Screening Home](docs/screenshots/homepage.png.jpeg) | ![Doctor Clinical Hub](docs/screenshots/doctor-clinical-hub.png) |
+
+### Language Selection
+Multilingual screening-language selection and onboarding experience.
+
+### Voice Screening Home
+Patient-facing home screen for starting a voice screening and accessing screening-related information.
+
+### Doctor Clinical Hub
+Clinician-facing overview of recent patient screening results and screening signals.
+
+---
+
 ## Key Features
 
 ### 1. Robust Speech & Linguistic Feature Extraction
