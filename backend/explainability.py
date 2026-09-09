@@ -113,11 +113,19 @@ def explain_single_prediction(
     else:
         grad = np.zeros_like(scaled_arr.ravel())
     scaled_vals = scaled_arr.ravel()
-    attributions = grad * scaled_vals
+    raw_attributions = grad * scaled_vals
+
+    # Compute normalized relative attributions so that clinical factors reflect meaningful proportions
+    # rather than saturating to +0.000 when output sigmoid approaches boundary (1.0 or 0.0)
+    abs_sum = float(np.sum(np.abs(raw_attributions)))
+    if abs_sum > 1e-12:
+        normalized_attributions = raw_attributions / abs_sum
+    else:
+        normalized_attributions = raw_attributions
 
     shap_contributions = {}
     for idx, col in enumerate(production_features):
-        shap_contributions[col] = round(float(attributions[idx]), 6)
+        shap_contributions[col] = round(float(normalized_attributions[idx]), 4)
 
     # Rank top positive (pushing toward elevated risk) and negative (pushing toward low risk)
     sorted_features = sorted(
@@ -129,11 +137,14 @@ def explain_single_prediction(
     top_pos = []
     top_neg = []
     for col, contrib in sorted_features:
+        impact_pct = round(float(contrib * 100.0), 1)
         item_entry = {
             "feature": col,
             "value": round(float(row_dict[col]), 4),
             "contribution": contrib,
             "shap_value": contrib,
+            "impact_percent": impact_pct,
+            "formatted_impact": f"+{impact_pct:.1f}%" if contrib > 0 else f"{impact_pct:.1f}%",
             "description": FEATURE_DESCRIPTIONS.get(col, col),
         }
         if contrib > 0 and len(top_pos) < top_k:
@@ -162,8 +173,10 @@ def explain_single_prediction(
 
     return {
         "base_value": 0.5,
-        "shap_margin_sum": round(float(np.sum(attributions)), 6),
-        "reconstructed_probability": round(reconstructed_prob, 6),
+        "method": "PennyLane 8-Qubit Variational Quantum Circuit Gradient Sensitivity",
+        "attribution_type": "quantum_gradient_attribution",
+        "shap_margin_sum": round(float(np.sum(normalized_attributions)), 4),
+        "reconstructed_probability": round(reconstructed_prob, 4),
         "reconstruction_error": 0.0,
         "shap_contributions": shap_contributions,
         "top_positive_contributions": top_pos,

@@ -342,17 +342,25 @@ export interface ShapFactorContribution {
 
   shap_value: number
 
-  feature_value: number
+  feature_value?: number
 
   abs_shap?: number
 
-  direction: "positive_signal" | "negative_signal" | string
+  direction?: "positive_signal" | "negative_signal" | string
+
+  impact_percent?: number
+
+  formatted_impact?: string
 
   description?: string
 }
 
 export interface ExplainabilityData {
   base_value: number
+
+  method?: string
+
+  attribution_type?: string
 
   shap_margin_sum: number
 

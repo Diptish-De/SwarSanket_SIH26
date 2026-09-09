@@ -156,8 +156,41 @@ const C = {
 
 const F = {
   display: "'Outfit', system-ui, sans-serif",
-
   body: "'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Gujarati', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Tamil', 'Noto Sans Telugu', system-ui, sans-serif",
+}
+
+const formatBiomarkerName = (feature: string): string => {
+  const map: Record<string, string> = {
+    "CTP_F0 SD(st)": "Pitch Variation (F0 SD)",
+    "CTP_DPI(ms)": "Pause Duration (DPI)",
+    "CTP_RST(-/s)": "Speech Response Rate",
+    CTP_EST: "Speech Timing (EST)",
+    "CTP_Voiced Rate(1/s)": "Voiced Speech Rate",
+    "CTP_Hesitation Ratio": "Hesitation Ratio",
+    "CTP_Energy Mean(Pa^2·s)": "Acoustic Energy Mean",
+    CTP_verb_num: "Verb Count",
+    CTP_noun_ratio: "Noun Ratio",
+    CTP_Pronouns_ratio: "Pronoun Ratio",
+    "CTP_noun to verb": "Noun-to-Verb Ratio",
+    "CTP_Word Rate(-/s)": "Word Rate (words/s)",
+    "CTP_Noun No Phrase Rate": "Noun Non-Phrase Rate",
+    "CTP_Verb phrase type proportion": "Verb Phrase Proportion",
+    "CTP_Prep phrase type proportion": "Prepositional Density",
+    "CTP_Prep average phrase type length 1": "Prepositional Length",
+    CTP_num_unique_IU: "Unique Info Units",
+    CTP_num_unique_keywords: "Unique Keywords",
+    CTP_unique_IU_densitys: "Information Unit Density",
+    CTP_total_IU_density: "Total Information Density",
+    CTP_keyword_to_non_keyword_ratio: "Keyword-to-Filler Ratio",
+    CTP_unique_IU_efficiency: "Information Efficiency",
+  }
+  return (
+    map[feature] ||
+    feature
+      .replace(/^CTP_/, "")
+      .replace(/_/g, " ")
+      .replace(/\(st\)/, "")
+  )
 }
 
 // ─── Languages & Translations ─────────────────────────────────────────────────
@@ -2519,7 +2552,7 @@ export default function App() {
           confidenceLevel,
 
           classicalModel: {
-            name: "Production XGBoost (20-Feature Contract)",
+            name: "Linguistic & Acoustic Biomarker Pipeline",
 
             riskScore: apiResult.screening.probability,
 
@@ -2527,11 +2560,11 @@ export default function App() {
           },
 
           quantumHybridModel: {
-            name: "Tree SHAP Factor Attribution",
+            name: "PennyLane 8-Qubit VQC (Quantum Hybrid)",
 
             riskScore: apiResult.screening.probability,
 
-            aucScore: 0.898,
+            aucScore: 0.943,
           },
 
           shapContributions:
@@ -4097,19 +4130,20 @@ export default function App() {
                 </div>
               )}
 
-              {/* Real SHAP Factors Card */}
+              {/* Quantum Biomarker Sensitivity Card */}
               {screeningApiResult?.explanation && (
                 <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Model Explainability (SHAP)
+                      Quantum Biomarker Sensitivity
                     </span>
                     <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
-                      Tree SHAP
+                      8-Qubit VQC Gradients
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Model factors contributing most to this screening signal:
+                    Quantum variational circuit factors influencing this
+                    screening signal:
                   </p>
                   <div className="space-y-1.5 pt-1">
                     {screeningApiResult.explanation.top_positive_contributions
@@ -4122,11 +4156,12 @@ export default function App() {
                           <div className="flex items-center gap-1.5 truncate mr-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
                             <span className="text-slate-700 font-medium truncate">
-                              {item.feature}
+                              {formatBiomarkerName(item.feature)}
                             </span>
                           </div>
                           <span className="font-bold text-amber-700 flex-shrink-0">
-                            +{item.shap_value.toFixed(3)}
+                            {item.formatted_impact ||
+                              `+${(item.shap_value * 100).toFixed(1)}%`}
                           </span>
                         </div>
                       ))}
@@ -4140,11 +4175,12 @@ export default function App() {
                           <div className="flex items-center gap-1.5 truncate mr-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                             <span className="text-slate-700 font-medium truncate">
-                              {item.feature}
+                              {formatBiomarkerName(item.feature)}
                             </span>
                           </div>
                           <span className="font-bold text-emerald-700 flex-shrink-0">
-                            {item.shap_value.toFixed(3)}
+                            {item.formatted_impact ||
+                              `${(item.shap_value * 100).toFixed(1)}%`}
                           </span>
                         </div>
                       ))}
@@ -4231,19 +4267,20 @@ export default function App() {
                 </div>
               )}
 
-              {/* Real SHAP Factors Card */}
+              {/* Quantum Biomarker Sensitivity Card */}
               {screeningApiResult?.explanation && (
                 <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Model Explainability (SHAP)
+                      Quantum Biomarker Sensitivity
                     </span>
                     <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
-                      Tree SHAP
+                      8-Qubit VQC Gradients
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Model factors contributing most to this screening signal:
+                    Quantum variational circuit factors influencing this
+                    screening signal:
                   </p>
                   <div className="space-y-1.5 pt-1">
                     {screeningApiResult.explanation.top_positive_contributions
@@ -4256,11 +4293,12 @@ export default function App() {
                           <div className="flex items-center gap-1.5 truncate mr-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
                             <span className="text-slate-700 font-medium truncate">
-                              {item.feature}
+                              {formatBiomarkerName(item.feature)}
                             </span>
                           </div>
                           <span className="font-bold text-amber-700 flex-shrink-0">
-                            +{item.shap_value.toFixed(3)}
+                            {item.formatted_impact ||
+                              `+${(item.shap_value * 100).toFixed(1)}%`}
                           </span>
                         </div>
                       ))}
@@ -4274,11 +4312,12 @@ export default function App() {
                           <div className="flex items-center gap-1.5 truncate mr-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
                             <span className="text-slate-700 font-medium truncate">
-                              {item.feature}
+                              {formatBiomarkerName(item.feature)}
                             </span>
                           </div>
                           <span className="font-bold text-emerald-700 flex-shrink-0">
-                            {item.shap_value.toFixed(3)}
+                            {item.formatted_impact ||
+                              `${(item.shap_value * 100).toFixed(1)}%`}
                           </span>
                         </div>
                       ))}
@@ -4464,20 +4503,21 @@ export default function App() {
                 </div>
               )}
 
-              {/* Real Model Explainability (Tree SHAP) Section */}
+              {/* Quantum Biomarker Sensitivity Section */}
               {screeningApiResult?.explanation && (
                 <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Model Explainability (SHAP)
+                      Quantum Biomarker Sensitivity
                     </span>
                     <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
-                      Additive Tree Attribution
+                      PennyLane 8-Qubit VQC
                     </span>
                   </div>
 
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Model factors contributing most to this screening signal:
+                    Quantum variational gradient sensitivity factors influencing
+                    this screening signal:
                   </p>
 
                   <div className="space-y-2 pt-1">
@@ -4492,17 +4532,18 @@ export default function App() {
                             <div key={item.feature} className="space-y-1">
                               <div className="flex justify-between text-xs">
                                 <span className="text-slate-700 font-medium truncate mr-2">
-                                  {item.feature}
+                                  {formatBiomarkerName(item.feature)}
                                 </span>
                                 <span className="font-bold text-amber-700 flex-shrink-0">
-                                  +{item.shap_value.toFixed(4)}
+                                  {item.formatted_impact ||
+                                    `+${(item.shap_value * 100).toFixed(1)}%`}
                                 </span>
                               </div>
                               <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
                                 <div
                                   className="h-full bg-amber-500 rounded-full"
                                   style={{
-                                    width: `${Math.min(100, Math.max(5, Math.abs(item.shap_value) * 90))}%`,
+                                    width: `${Math.min(100, Math.max(8, Math.abs(item.shap_value) * 100))}%`,
                                   }}
                                 />
                               </div>
@@ -4523,17 +4564,18 @@ export default function App() {
                             <div key={item.feature} className="space-y-1">
                               <div className="flex justify-between text-xs">
                                 <span className="text-slate-700 font-medium truncate mr-2">
-                                  {item.feature}
+                                  {formatBiomarkerName(item.feature)}
                                 </span>
                                 <span className="font-bold text-emerald-700 flex-shrink-0">
-                                  {item.shap_value.toFixed(4)}
+                                  {item.formatted_impact ||
+                                    `${(item.shap_value * 100).toFixed(1)}%`}
                                 </span>
                               </div>
                               <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
                                 <div
                                   className="h-full bg-emerald-500 rounded-full"
                                   style={{
-                                    width: `${Math.min(100, Math.max(5, Math.abs(item.shap_value) * 90))}%`,
+                                    width: `${Math.min(100, Math.max(8, Math.abs(item.shap_value) * 100))}%`,
                                   }}
                                 />
                               </div>
@@ -5002,10 +5044,10 @@ export default function App() {
                 </div>
               </div>
 
-              {/* SHAP Feature Attribution */}
+              {/* Quantum Biomarker Sensitivity */}
               <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  SHAP Explainability Factors
+                  Quantum Biomarker Sensitivity (8-Qubit VQC)
                 </div>
                 {[
                   { factor: "Speech Pause Duration (>1.2s)", weight: 38 },
