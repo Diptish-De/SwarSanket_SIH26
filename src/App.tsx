@@ -2568,7 +2568,7 @@ function DynamicWaveformBars({
 
 // ─── Main Application Component ───────────────────────────────────────────────
 
-function SwarSanketApp({ authenticatedName }: { authenticatedName: string }) {
+function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: string; onLogout: () => void }) {
   const [screen, setScreen] = useState<Screen>("splash")
 
   const [lang, setLang] = useState<LanguageCode>("en")
@@ -3552,19 +3552,6 @@ function SwarSanketApp({ authenticatedName }: { authenticatedName: string }) {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
-                    {t(lang, "yourName")}
-                  </label>
-                  <input
-                    type="text"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder={t(lang, "enterName")}
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-[#d7eaef] focus:border-[#02738a] outline-hidden font-medium text-[#0c1e27] text-base"
-                  />
-                </div>
-
                 <div>
                   <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
                     {t(lang, "age")}
@@ -6388,6 +6375,14 @@ function SwarSanketApp({ authenticatedName }: { authenticatedName: string }) {
                   stored on your device under DPDP guidelines.
                 </p>
               </div>
+
+              <button
+                onClick={onLogout}
+                className="w-full rounded-2xl border-2 border-rose-200 bg-rose-50 px-4 py-3.5 text-sm font-bold text-rose-700 transition-colors hover:bg-rose-100 active:scale-[0.98]"
+                style={{ fontFamily: F.display }}
+              >
+                Logout
+              </button>
             </div>
 
             {/* Edit Profile Modal */}
@@ -6713,6 +6708,11 @@ export default function App() {
   })
   const [authenticatedName, setAuthenticatedName] = useState<string>(() => readDemoUser()?.fullName || "Participant")
 
+  const handleLogout = () => {
+    localStorage.removeItem("swarsanket-demo-session")
+    setIsAuthenticated(false)
+  }
+
   if (!isAuthenticated) {
     return (
       <DemoAuth
@@ -6724,5 +6724,5 @@ export default function App() {
     )
   }
 
-  return <SwarSanketApp authenticatedName={authenticatedName} />
+  return <SwarSanketApp authenticatedName={authenticatedName} onLogout={handleLogout} />
 }
