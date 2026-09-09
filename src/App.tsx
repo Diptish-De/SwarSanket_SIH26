@@ -109,6 +109,7 @@ import {
   APK_DOWNLOAD_URL,
   GITHUB_RELEASES_URL,
 } from "./components/ApkDownloadModal"
+import DemoAuth, { readDemoUser } from "./components/DemoAuth"
 
 // ─── Design Tokens & Theme (Aligned with Official Logo Palette) ───────────────
 
@@ -2567,12 +2568,12 @@ function DynamicWaveformBars({
 
 // ─── Main Application Component ───────────────────────────────────────────────
 
-export default function App() {
+function SwarSanketApp({ authenticatedName }: { authenticatedName: string }) {
   const [screen, setScreen] = useState<Screen>("splash")
 
   const [lang, setLang] = useState<LanguageCode>("en")
 
-  const [userName, setUserName] = useState<string>("Rama Devi")
+  const [userName, setUserName] = useState<string>(authenticatedName || "Rama Devi")
 
   const [userAge, setUserAge] = useState<number>(72)
 
@@ -6700,4 +6701,28 @@ export default function App() {
       />
     </div>
   )
+}
+
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("swarsanket-demo-session") === "active"
+    } catch {
+      return false
+    }
+  })
+  const [authenticatedName, setAuthenticatedName] = useState<string>(() => readDemoUser()?.fullName || "Participant")
+
+  if (!isAuthenticated) {
+    return (
+      <DemoAuth
+        onAuthenticated={(fullName) => {
+          setAuthenticatedName(fullName || readDemoUser()?.fullName || "Participant")
+          setIsAuthenticated(true)
+        }}
+      />
+    )
+  }
+
+  return <SwarSanketApp authenticatedName={authenticatedName} />
 }
