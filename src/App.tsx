@@ -78,6 +78,8 @@ import {
   setDemoOutcome,
 } from "./services/demoOverride"
 
+import { loadSession, saveSession, clearSession } from "./services/sessionState"
+
 import {
   getDB,
   saveScreeningSession,
@@ -3550,19 +3552,31 @@ function SwarSanketApp({
 
   onLogout: () => void
 }) {
-  const [screen, setScreen] = useState<Screen>("splash")
+  // Restored once, synchronously, so the very first render is already the right
 
-  const [lang, setLang] = useState<LanguageCode>("en")
+  // screen and the splash never flashes past on a reload.
 
-  const [userName, setUserName] = useState<string>(
-    authenticatedName || "Rama Devi",
+  const restoredSession = useRef(loadSession()).current
+
+  const [screen, setScreen] = useState<Screen>(
+    restoredSession?.screen ?? "splash",
   )
 
-  const [userAge, setUserAge] = useState<number>(72)
+  const [lang, setLang] = useState<LanguageCode>(restoredSession?.lang ?? "en")
 
-  const [ageInput, setAgeInput] = useState<string>("72")
+  const [userName, setUserName] = useState<string>(
+    restoredSession?.userName || authenticatedName || "Rama Devi",
+  )
 
-  const [assistedMode, setAssistedMode] = useState<boolean>(false)
+  const [userAge, setUserAge] = useState<number>(restoredSession?.userAge || 72)
+
+  const [ageInput, setAgeInput] = useState<string>(
+    String(restoredSession?.userAge || 72),
+  )
+
+  const [assistedMode, setAssistedMode] = useState<boolean>(
+    restoredSession?.assistedMode ?? false,
+  )
 
   const [isOffline, setIsOffline] = useState<boolean>(false)
 
@@ -3572,10 +3586,13 @@ function SwarSanketApp({
 
   // vocabulary the backend scores against.
 
-  const [recordingContext, setRecordingContext] =
-    useState<RecordingContext>("pictureDesc")
+  const [recordingContext, setRecordingContext] = useState<RecordingContext>(
+    restoredSession?.recordingContext ?? "pictureDesc",
+  )
 
-  const [lastResult, setLastResult] = useState<ScreeningRisk | null>("elevated")
+  const [lastResult, setLastResult] = useState<ScreeningRisk | null>(
+    restoredSession?.lastResult ?? "elevated",
+  )
 
   const [fullScreenMode, setFullScreenMode] = useState<boolean>(false)
 
@@ -3628,11 +3645,16 @@ function SwarSanketApp({
   // Real ML Screening state
 
   const [screeningApiResult, setScreeningApiResult] =
-    useState<ScreeningApiResponse | null>(null)
+    useState<ScreeningApiResponse | null>(
+      restoredSession?.screeningApiResult ?? null,
+    )
 
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
 
   const [analysisError, setAnalysisError] = useState<string | null>(null)
+
+  const [detailedReportFocus, setDetailedReportFocus] =
+    useState<"doctor" | "clinical">("clinical")
 
   const [analysisStep, setAnalysisStep] =
     useState<"idle" | "uploading" | "analyzing" | "complete">("idle")
@@ -3750,6 +3772,48 @@ function SwarSanketApp({
 
     setScreen(s)
   }
+
+  // Mirror the screen and the state it needs into storage on every change, so a
+
+  // reload - including Vite reloading the page mid-demo - resumes where the user
+
+  // was instead of dropping them back at the splash screen.
+
+  useEffect(() => {
+    saveSession({
+      screen,
+
+      lang,
+
+      recordingContext,
+
+      lastResult,
+
+      screeningApiResult,
+
+      userName,
+
+      userAge,
+
+      assistedMode,
+    })
+  }, [
+    screen,
+
+    lang,
+
+    recordingContext,
+
+    lastResult,
+
+    screeningApiResult,
+
+    userName,
+
+    userAge,
+
+    assistedMode,
+  ])
 
   const handleStartRecording = async () => {
     setIsRecording(true)
@@ -5508,18 +5572,29 @@ function SwarSanketApp({
           </div>
         )
 
-      case "resultLow":
+      case "resultLow": {
+        const probPercent =
+          screeningApiResult?.screening.probability_percent !== undefined &&
+          screeningApiResult?.screening.probability_percent !== null
+            ? screeningApiResult.screening.probability_percent
+            : screeningApiResult?.screening.probability !== null &&
+                screeningApiResult?.screening.probability !== undefined
+              ? screeningApiResult.screening.probability * 100
+              : 7.1
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-4 animate-fade-in">
+              {/* Patient Status Hero */}
               <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center shadow-xs">
                   <CheckCircle2 className="w-9 h-9" />
                 </div>
 
                 <div className="space-y-1">
-                  <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     {screeningApiResult?.screening.status ||
                       t(lang, "noConcern")}
                   </span>
@@ -5532,152 +5607,146 @@ function SwarSanketApp({
                 </div>
               </div>
 
-              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
-                <p className="text-xs text-slate-600 leading-relaxed text-center">
-                  {screeningApiResult?.screening.interpretation ||
-                    t(lang, "noConcernSub")}
-                </p>
-                <div className="pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-xs text-emerald-700">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    <span>
-                      Alzheimer's Risk Chance:{" "}
-                      {screeningApiResult?.screening.probability_percent !==
-                        undefined &&
-                      screeningApiResult?.screening.probability_percent !== null
-                        ? `${screeningApiResult.screening.probability_percent.toFixed(1)}%`
-                        : screeningApiResult?.screening.probability !== null &&
-                            screeningApiResult?.screening.probability !==
-                              undefined
-                          ? `${(screeningApiResult.screening.probability * 100).toFixed(1)}%`
-                          : "7.1%"}
+              {/* Patient-Friendly Summary Card */}
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-4">
+                <div className="text-center space-y-2">
+                  <div className="inline-block px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-900 font-bold text-xs">
+                    Screening Likelihood: {probPercent.toFixed(1)}% (Low
+                    Concern)
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {screeningApiResult?.screening.interpretation ||
+                      t(lang, "noConcernSub")}
+                  </p>
+                </div>
+
+                {/* Simple Patient-Friendly Visual Bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                    <span>Speech Fluency Check</span>
+                    <span className="text-emerald-700 font-bold">
+                      Normal Patterns
                     </span>
                   </div>
-                  <span className="text-slate-300 hidden sm:inline">•</span>
-                  <span className="text-slate-500 font-medium text-[11px]">
-                    Model Confidence:{" "}
-                    {screeningApiResult
-                      ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
-                      : "94%"}
-                    {screeningApiResult
-                      ? ` (±${screeningApiResult.screening.uncertainty_std.toFixed(2)})`
-                      : ""}
-                  </span>
+                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/80">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-[#02738a] transition-all duration-700"
+                      style={{
+                        width: `${Math.min(100, Math.max(10, probPercent))}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <ScreeningQualityCard result={screeningApiResult} tone="low" />
-
-              {/* Real ASR Transcript */}
-              {screeningApiResult?.transcript && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    <span>Voice Transcript</span>
-                    <span>
-                      {screeningApiResult.word_count} words (
-                      {screeningApiResult.audio?.duration_seconds.toFixed(1)}s)
-                    </span>
-                  </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
-                    "{screeningApiResult.transcript}"
-                  </p>
+              {/* Keeping Your Mind Healthy Card */}
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  What This Means For You
                 </div>
-              )}
 
-              {/* Quantum Biomarker Sensitivity Card */}
-              {screeningApiResult?.explanation && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Quantum Biomarker Sensitivity
-                    </span>
-                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
-                      8-Qubit VQC Gradients
-                    </span>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Healthy Speech Markers
+                      </strong>
+                      Good vocabulary variety, natural pauses, and
+                      conversational fluency were observed.
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Quantum variational circuit factors influencing this
-                    screening signal:
-                  </p>
-                  <div className="space-y-1.5 pt-1">
-                    {screeningApiResult.explanation.top_positive_contributions
 
-                      ?.slice(0, 2)
-
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-amber-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `+${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
-                    {screeningApiResult.explanation.top_negative_contributions
-
-                      ?.slice(0, 2)
-
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-emerald-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 text-[#02738a] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Routine Tracking
+                      </strong>
+                      Repeating this voice check every 3–6 months helps maintain
+                      a continuous record of cognitive wellness.
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100">
-                    {screeningApiResult.explanation.disclaimer}
-                  </p>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <FileText className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Full Clinical Report Ready
+                      </strong>
+                      You can view or share your detailed acoustic indicators,
+                      biomarkers, and transcript.
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
+              {/* Gentle Notice */}
               <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
+              {/* Patient Action Buttons */}
               <div className="w-full space-y-2.5 pt-1 pb-4">
-                <Btn label={t(lang, "done")} onClick={() => navigate("home")} />
                 <Btn
-                  label={t(lang, "viewDetails")}
-                  onClick={() => navigate("screeningDetails")}
+                  label="View Detailed Clinical Report"
+                  onClick={() => {
+                    setDetailedReportFocus("clinical")
+
+                    navigate("screeningDetails")
+                  }}
+                />
+                <Btn
+                  label={t(lang, "talkToPro")}
+                  onClick={() => {
+                    setDetailedReportFocus("doctor")
+
+                    navigate("screeningDetails")
+                  }}
+                  variant="secondary"
+                />
+                <Btn
+                  label={t(lang, "done")}
+                  onClick={() => navigate("home")}
                   variant="ghost"
+                  size="sm"
                 />
               </div>
             </div>
             <HomeIndicator />
           </div>
         )
+      }
 
-      case "resultElevated":
+      case "resultElevated": {
+        const probPercent =
+          screeningApiResult?.screening.probability_percent !== undefined &&
+          screeningApiResult?.screening.probability_percent !== null
+            ? screeningApiResult.screening.probability_percent
+            : screeningApiResult?.screening.probability !== null &&
+                screeningApiResult?.screening.probability !== undefined
+              ? screeningApiResult.screening.probability * 100
+              : 78.4
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-4 animate-fade-in">
+              {/* Patient Status Hero */}
               <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
-                  <AlertTriangle className="w-9 h-9" />
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-700 flex items-center justify-center shadow-xs">
+                  <AlertCircle className="w-9 h-9" />
                 </div>
 
                 <div className="space-y-1">
-                  <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     {screeningApiResult?.screening.status ||
                       t(lang, "furtherEval")}
                   </span>
@@ -5690,144 +5759,114 @@ function SwarSanketApp({
                 </div>
               </div>
 
-              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
-                <p className="text-xs text-slate-600 leading-relaxed text-center">
-                  {screeningApiResult?.screening.interpretation ||
-                    t(lang, "furtherEvalSub")}
-                </p>
-                <div className="pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-xs text-amber-800">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    <span>
-                      Alzheimer's Risk Chance:{" "}
-                      {screeningApiResult?.screening.probability_percent !==
-                        undefined &&
-                      screeningApiResult?.screening.probability_percent !== null
-                        ? `${screeningApiResult.screening.probability_percent.toFixed(1)}%`
-                        : screeningApiResult?.screening.probability !== null &&
-                            screeningApiResult?.screening.probability !==
-                              undefined
-                          ? `${(screeningApiResult.screening.probability * 100).toFixed(1)}%`
-                          : "78.4%"}
+              {/* Patient-Friendly Summary Card */}
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-4">
+                <div className="text-center space-y-2">
+                  <div className="inline-block px-3 py-1 rounded-xl bg-[#fef6ee] border border-amber-200/60 text-amber-900 font-bold text-xs">
+                    Screening Likelihood: {probPercent.toFixed(1)}% (Review
+                    Suggested)
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {screeningApiResult?.screening.interpretation ||
+                      t(lang, "furtherEvalSub")}
+                  </p>
+                </div>
+
+                {/* Simple Patient-Friendly Visual Bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                    <span>Speech Rhythm Check</span>
+                    <span className="text-amber-800 font-bold">
+                      Review Suggested
                     </span>
                   </div>
-                  <span className="text-slate-300 hidden sm:inline">•</span>
-                  <span className="text-slate-600 font-medium text-[11px]">
-                    Model Confidence:{" "}
-                    {screeningApiResult
-                      ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
-                      : "88%"}
-                    {screeningApiResult
-                      ? ` (±${screeningApiResult.screening.uncertainty_std.toFixed(2)})`
-                      : ""}
-                  </span>
+                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/80">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-700"
+                      style={{
+                        width: `${Math.min(100, Math.max(15, probPercent))}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <ScreeningQualityCard
-                result={screeningApiResult}
-                tone="elevated"
-              />
-
-              {/* Real ASR Transcript */}
-              {screeningApiResult?.transcript && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    <span>Voice Transcript</span>
-                    <span>
-                      {screeningApiResult.word_count} words (
-                      {screeningApiResult.audio?.duration_seconds.toFixed(1)}s)
-                    </span>
-                  </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
-                    "{screeningApiResult.transcript}"
-                  </p>
+              {/* What Does This Mean for You? (Empathetic Patient Advice) */}
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  What This Means For You
                 </div>
-              )}
 
-              {/* Quantum Biomarker Sensitivity Card */}
-              {screeningApiResult?.explanation && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Quantum Biomarker Sensitivity
-                    </span>
-                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
-                      8-Qubit VQC Gradients
-                    </span>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 text-[#02738a] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Preliminary screening, not a diagnosis
+                      </strong>
+                      This automated test observes speech indicators. It does
+                      not replace a clinical medical examination.
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Quantum variational circuit factors influencing this
-                    screening signal:
-                  </p>
-                  <div className="space-y-1.5 pt-1">
-                    {screeningApiResult.explanation.top_positive_contributions
 
-                      ?.slice(0, 3)
-
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-amber-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `+${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
-                    {screeningApiResult.explanation.top_negative_contributions
-
-                      ?.slice(0, 3)
-
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-emerald-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-amber-50 border border-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Activity className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Everyday factors affect speech
+                      </strong>
+                      Tiredness, stress, lack of sleep, or mild illness can
+                      temporarily alter your speech flow and pauses.
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100">
-                    {screeningApiResult.explanation.disclaimer}
-                  </p>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Stethoscope className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Next Step: Share with a doctor
+                      </strong>
+                      We have prepared a comprehensive clinical report with
+                      acoustic and quantum metrics for your physician.
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
+              {/* Gentle Notice */}
               <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
+              {/* Patient Action Buttons */}
               <div className="w-full space-y-2.5 pt-1 pb-4">
                 <Btn
                   label={t(lang, "talkToPro")}
-                  onClick={() => navigate("referral")}
+                  onClick={() => {
+                    setDetailedReportFocus("doctor")
+
+                    navigate("screeningDetails")
+                  }}
                 />
                 <Btn
-                  label={t(lang, "viewDetails")}
-                  onClick={() => navigate("screeningDetails")}
-                  variant="ghost"
+                  label="View Detailed Clinical Report"
+                  onClick={() => {
+                    setDetailedReportFocus("clinical")
+
+                    navigate("screeningDetails")
+                  }}
+                  variant="secondary"
                 />
                 <Btn
                   label="Notify Caregiver"
                   onClick={() => navigate("caregiverAlert")}
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                 />
               </div>
@@ -5835,19 +5874,10 @@ function SwarSanketApp({
             <HomeIndicator />
           </div>
         )
+      }
 
       case "screeningDetails": {
         const activeScreening = screeningsList[0]
-
-        const displayStatus =
-          screeningApiResult?.screening.status ||
-          (lastResult === "elevated"
-            ? "Elevated Screening Signal"
-            : "Low Risk Screening Signal")
-
-        const displayConfidence = screeningApiResult
-          ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
-          : "88% (High)"
 
         const displayWordRate = screeningApiResult?.live_features
           ? `${(screeningApiResult.live_features["CTP_Word Rate(-/s)"] * 60).toFixed(0)} WPM (${screeningApiResult.live_features["CTP_Word Rate(-/s)"].toFixed(2)} words/s)`
@@ -5865,113 +5895,112 @@ function SwarSanketApp({
           ? `${screeningApiResult.live_features.CTP_keyword_to_non_keyword_ratio.toFixed(3)}`
           : "0.112"
 
-        const displayUncertainty = screeningApiResult
-          ? `±${screeningApiResult.screening.uncertainty_std.toFixed(3)}`
-          : "±0.070"
-
-        const displayProbability =
-          screeningApiResult?.screening.probability_percent !== undefined &&
-          screeningApiResult?.screening.probability_percent !== null
-            ? `${screeningApiResult.screening.probability_percent.toFixed(1)}%`
-            : screeningApiResult?.screening.probability !== null &&
-                screeningApiResult?.screening.probability !== undefined
-              ? `${(screeningApiResult.screening.probability * 100).toFixed(1)}%`
-              : lastResult === "elevated"
-                ? "78.4%"
-                : "7.1%"
-
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="px-6 pt-3 pb-2 flex items-center gap-3">
-              <BackBtn onBack={() => navigate("home")} />
-              <h1
-                className="text-xl font-bold text-slate-900"
-                style={{ fontFamily: F.display }}
-              >
-                Screening Details
-              </h1>
-            </div>
-
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
-              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Overall Screening Signal
-                  </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      screeningApiResult?.screening.predicted_class === 1 ||
+            <div className="px-6 pt-3 pb-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BackBtn
+                  onBack={() =>
+                    navigate(
                       lastResult === "elevated"
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-emerald-100 text-emerald-800"
-                    }`}
+                        ? "resultElevated"
+                        : "resultLow",
+                    )
+                  }
+                />
+                <div>
+                  <h1
+                    className="text-lg font-bold text-slate-900 leading-tight"
+                    style={{ fontFamily: F.display }}
                   >
-                    {displayStatus}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Alzheimer's Screening Risk Chance
-                  </span>
-                  <span
-                    className={`text-xs font-bold ${
-                      screeningApiResult?.screening.predicted_class === 1 ||
-                      lastResult === "elevated"
-                        ? "text-amber-800"
-                        : "text-emerald-700"
-                    }`}
-                  >
-                    {displayProbability}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Screening Protocol
-                  </span>
-                  <span className="text-xs font-bold text-[#02738a] text-right">
-                    {protocolLabel(screeningApiResult)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Model Confidence
-                  </span>
-                  <span className="text-xs font-bold text-slate-900">
-                    {displayConfidence}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Epistemic Uncertainty (MC Dropout)
-                  </span>
-                  <span className="text-xs font-bold text-slate-900">
-                    {displayUncertainty}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Audio Quality</span>
-                  <span className="text-xs font-bold text-emerald-600">
-                    {vqState.toUpperCase()}{" "}
-                    {screeningApiResult?.audio
-                      ? `(${screeningApiResult.audio.duration_seconds.toFixed(1)}s)`
-                      : "(SNR 25.4 dB)"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Screening Date</span>
-                  <span className="text-xs font-bold text-slate-900">
+                    Detailed Clinical Report
+                  </h1>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {selectedPatient || userName} ({userAge}y) ·{" "}
                     {activeScreening
                       ? new Date(activeScreening.createdAt).toLocaleDateString()
                       : "Today"}
-                  </span>
+                  </p>
                 </div>
               </div>
 
-              {/* Biomarkers list */}
-              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
+              <button
+                onClick={() => {
+                  if (screeningsList.length > 0)
+                    generateAndDownloadReport(screeningsList[0])
+                }}
+                className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-[#02738a] hover:bg-[#e4f4f7] active:scale-95 transition-all shadow-xs"
+                title="Download PDF"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
+              {/* Doctor Consultation Card - highlighted when opened via "Talk to a Healthcare Professional" */}
+              {detailedReportFocus === "doctor" && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#e4f4f7] to-[#d8f0f5] border-2 border-[#02738a]/30 shadow-xs space-y-3 animate-fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#02738a] text-white flex items-center justify-center shadow-xs">
+                      <Stethoscope className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#013a46]">
+                        Consult with a Healthcare Professional
+                      </div>
+                      <div className="text-[11px] text-[#02738a] font-medium">
+                        Share this clinical analysis with our specialist network
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white border border-[#cbe6ed] flex items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">
+                        Dr. Priya Sharma
+                      </div>
+                      <div className="text-[11px] text-[#02738a] font-medium">
+                        Neurologist · Cognitive & Memory Health
+                      </div>
+                      <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Available Today · Video & Audio
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate("teleconsult")}
+                      className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-xs flex-shrink-0"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      Consult Now
+                    </button>
+                  </div>
+
+                  <div className="flex justify-between items-center text-[11px] px-1 pt-0.5">
+                    <span className="text-slate-500">
+                      Need another specialist?
+                    </span>
+                    <button
+                      onClick={() => navigate("referral")}
+                      className="font-bold text-[#02738a] hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Browse all doctors <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Comprehensive Clinical Quality & Risk Assessment Card */}
+              <ScreeningQualityCard
+                result={screeningApiResult}
+                tone={lastResult === "elevated" ? "elevated" : "low"}
+              />
+
+              {/* Acoustic Biomarkers Breakdown */}
+              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs text-left">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Speech & Language Indicators
+                  Speech & Language Acoustic Indicators
                 </div>
                 {[
                   {
@@ -5991,7 +6020,7 @@ function SwarSanketApp({
                   },
 
                   {
-                    label: "Unique IU Efficiency",
+                    label: "Unique Information Efficiency",
 
                     val: displayIU,
 
@@ -6023,14 +6052,15 @@ function SwarSanketApp({
                 ))}
               </div>
 
-              {/* Real ASR Transcription */}
+              {/* Real Whisper Voice Transcript */}
               {screeningApiResult?.transcript && (
-                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-2 shadow-xs">
+                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-2 shadow-xs text-left">
                   <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
                     <span>Voice Transcript (Whisper ASR)</span>
                     <span className="text-[10px] text-slate-400 font-medium">
                       {screeningApiResult.word_count} words ·{" "}
-                      {screeningApiResult.detected_language?.toUpperCase()}
+                      {screeningApiResult.detected_language?.toUpperCase() ||
+                        "EN"}
                     </span>
                   </div>
                   <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
@@ -6039,9 +6069,9 @@ function SwarSanketApp({
                 </div>
               )}
 
-              {/* Quantum Biomarker Sensitivity Section */}
+              {/* Quantum Biomarker Sensitivity (PennyLane 8-Qubit VQC) */}
               {screeningApiResult?.explanation && (
-                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
+                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs text-left">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       Quantum Biomarker Sensitivity
@@ -6128,10 +6158,12 @@ function SwarSanketApp({
                 </div>
               )}
 
+              {/* Disclaimer */}
               <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
+              {/* Action Buttons */}
               <div className="space-y-2 pt-1 pb-4">
                 <Btn
                   label="Download Clinical Summary (PDF)"
@@ -6141,9 +6173,23 @@ function SwarSanketApp({
                   }}
                   size="sm"
                 />
+                {detailedReportFocus !== "doctor" && (
+                  <Btn
+                    label="Talk to a Healthcare Professional"
+                    onClick={() => navigate("referral")}
+                    variant="secondary"
+                    size="sm"
+                  />
+                )}
                 <Btn
-                  label="Consult Healthcare Professional"
-                  onClick={() => navigate("referral")}
+                  label="Return to Screening Summary"
+                  onClick={() =>
+                    navigate(
+                      lastResult === "elevated"
+                        ? "resultElevated"
+                        : "resultLow",
+                    )
+                  }
                   variant="ghost"
                   size="sm"
                 />
@@ -7979,6 +8025,12 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("swarsanket-demo-session")
+
+    // Signing out should return to the start of the flow, not resume someone
+
+    // else mid-screening.
+
+    clearSession()
 
     setIsAuthenticated(false)
   }
