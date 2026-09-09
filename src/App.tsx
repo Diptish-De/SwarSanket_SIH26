@@ -7700,11 +7700,15 @@ function SwarSanketApp({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowApkModal(true)}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+            onClick={() => navigate("home")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
+              screen !== "doctorDash"
+                ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
+                : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
+            }`}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download APK</span>
+            <User className="w-3.5 h-3.5" />
+            <span>Patient View</span>
           </button>
 
           <button
@@ -7725,18 +7729,14 @@ function SwarSanketApp({
 
           <button
             onClick={() => navigate("doctorDash")}
-            className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200 text-xs font-bold flex items-center gap-1"
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
+              screen === "doctorDash"
+                ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
+                : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
+            }`}
           >
             <Stethoscope className="w-3.5 h-3.5 text-[#38bdf8]" />
             <span>Doctor View</span>
-          </button>
-
-          <button
-            onClick={() => navigate("processing")}
-            className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-[#38bdf8] hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
-          >
-            <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-            <span>Processing View</span>
           </button>
 
           <button
