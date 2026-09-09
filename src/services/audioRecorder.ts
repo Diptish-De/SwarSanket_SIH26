@@ -468,6 +468,7 @@ export interface ScreeningApiResponse {
    * picture-description Information Unit lexicon; "proxy" means it was scored
    * as conversational speech.
    */
+
   feature_calibration?: {
     iu_scoring_mode: "canonical" | "proxy" | "empty"
 
@@ -502,6 +503,7 @@ export interface ScreeningApiResponse {
     technical_confidence_percent: number
 
     /** Monte Carlo Dropout predictive standard deviation (epistemic uncertainty). */
+
     uncertainty_std: number
 
     predictive_entropy?: number

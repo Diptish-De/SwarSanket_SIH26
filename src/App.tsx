@@ -3060,6 +3060,16 @@ export default function App() {
             aucScore: 0.943,
           },
 
+          uncertaintyStd: apiResult.screening.uncertainty_std,
+
+          iuScoringMode: apiResult.feature_calibration?.iu_scoring_mode,
+
+          matchedInformationUnits:
+            apiResult.feature_calibration?.matched_information_units?.length,
+
+          clampedFeatureCount:
+            apiResult.feature_calibration?.clamped_features?.length,
+
           shapContributions:
             realShapContributions.length > 0
               ? realShapContributions
