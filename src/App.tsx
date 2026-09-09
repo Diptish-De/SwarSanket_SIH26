@@ -69,6 +69,15 @@ import {
   OfflineSyncItem,
 } from "./types"
 
+// TEMPORARY DEMO OVERRIDE - remove with: git apply -R demo-override.patch
+
+import {
+  consumeDemoOutcome,
+  applyDemoOverride,
+  outcomeFromClick,
+  setDemoOutcome,
+} from "./services/demoOverride"
+
 import {
   getDB,
   saveScreeningSession,
@@ -111,6 +120,7 @@ import {
 } from "./components/ApkDownloadModal"
 
 import DemoAuth, { readDemoUser } from "./components/DemoAuth"
+
 import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
 
 // ─── Design Tokens & Theme (Aligned with Official Logo Palette) ───────────────
@@ -3451,9 +3461,11 @@ function DynamicWaveformBars({
 
 function SwarSanketApp({
   authenticatedName,
+
   onLogout,
 }: {
   authenticatedName: string
+
   onLogout: () => void
 }) {
   const [screen, setScreen] = useState<Screen>("splash")
@@ -3802,7 +3814,7 @@ function SwarSanketApp({
     try {
       setAnalysisStep("analyzing")
 
-      const apiResult = await analyzeAudioWithBackend(
+      let apiResult = await analyzeAudioWithBackend(
         audioBlob,
 
         "voice_check.webm",
@@ -3842,21 +3854,38 @@ function SwarSanketApp({
         )
       }
 
+      // TEMPORARY DEMO OVERRIDE - rewrites the outcome when a side of the CTA armed
+
+      // one. Leaves the real result untouched when nothing is armed.
+
+      const demoOutcome = consumeDemoOutcome()
+
+      if (demoOutcome) {
+        apiResult = applyDemoOverride(demoOutcome, apiResult)
+      }
+
       setScreeningApiResult(apiResult)
 
       setAnalysisStep("complete")
 
       // Too little speech to estimate the ratio features from. Ask for more rather
+
       // than presenting a number built on a sample that cannot support one.
+
       if (apiResult.sample_sufficient === false) {
         setIsAnalyzing(false)
+
         navigate("needMoreSpeech")
+
         return
       }
 
       // Past the sample-sufficiency return above, the backend always supplies a
+
       // probability; the fallback keeps the persisted record well-formed rather
+
       // than writing null into a stored session.
+
       const probability = apiResult.screening.probability ?? 0
 
       const risk: ScreeningRisk =
@@ -4676,7 +4705,11 @@ function SwarSanketApp({
 
                 {/* Big Inviting CTA Button */}
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    // TEMPORARY DEMO OVERRIDE
+
+                    setDemoOutcome(outcomeFromClick(e, e.currentTarget))
+
                     setRecordingContext("pictureDesc")
 
                     navigate("voiceIntro")
@@ -5369,19 +5402,24 @@ function SwarSanketApp({
               F={F}
               onRetry={() => {
                 setAnalysisError(null)
+
                 handleRunRealScreening()
               }}
               onSaveOffline={() => {
                 setAnalysisError(null)
+
                 handleSaveCompletedSession("uncertain")
+
                 navigate("offlineSaved")
               }}
               onRecordAgain={() => {
                 setAnalysisError(null)
+
                 navigate("recording")
               }}
               onServerSettings={() => {
                 setAnalysisError(null)
+
                 navigate("settings")
               }}
             />
@@ -7527,6 +7565,7 @@ function SwarSanketApp({
 
       case "needMoreSpeech": {
         const req = screeningApiResult?.sample_requirements
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
@@ -7595,6 +7634,7 @@ function SwarSanketApp({
                   label="Try Again"
                   onClick={() => {
                     setRecordingContext("pictureDesc")
+
                     navigate("instruction")
                   }}
                 />
