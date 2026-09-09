@@ -9,8 +9,6 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from screening_engine import run_screening_pipeline
-
 # Configure backend logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("swarsanket.backend")
@@ -145,7 +143,8 @@ async def analyze_audio(audio: UploadFile = File(...)):
             saved_path.unlink(missing_ok=True)
             raise HTTPException(status_code=400, detail="Uploaded audio file is empty (0 bytes).")
 
-        # Run complete live screening engine pipeline
+        # Run complete live screening engine pipeline (lazy-loaded on demand to ensure <50MB boot RAM)
+        from screening_engine import run_screening_pipeline
         result = run_screening_pipeline(str(saved_path))
 
         if not result.get("success"):

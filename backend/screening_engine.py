@@ -38,7 +38,8 @@ from audio_analyzer import decode_and_inspect_audio
 from explainability import explain_single_prediction, SCIENTIFIC_FRAMING_DISCLAIMER
 
 # Load full spaCy English pipeline once
-nlp = spacy.load("en_core_web_sm")
+# Load full spaCy English pipeline (disabling unused NER to conserve ~15 MB RAM while preserving identical POS/syntax)
+nlp = spacy.load("en_core_web_sm", disable=["ner"])
 
 # Global Faster-Whisper model instance (lazy loaded)
 _whisper_model: Optional[WhisperModel] = None
@@ -48,7 +49,7 @@ def get_whisper_model() -> WhisperModel:
     """Returns a cached instance of Faster-Whisper (tiny model, CPU int8)."""
     global _whisper_model
     if _whisper_model is None:
-        _whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
+        _whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=1, num_workers=1)
     return _whisper_model
 
 
@@ -201,6 +202,9 @@ def run_screening_pipeline(
 
         full_transcript = " ".join(transcript_parts).strip()
         word_count = len(words_list)
+        del segments
+        import gc
+        gc.collect()
 
         # Safety check: Reject pure silence or recordings with no audible speech
         if word_count == 0 or len(full_transcript) == 0:
