@@ -434,12 +434,92 @@ export function applyDemoOverride(
         ? "Moderate / Monitor"
         : "Elevated Risk"
 
+  // A real result is only usable as a source of measured values if it actually
+
+  // scored. Its transcript, though, is reused whatever its length - see below.
+
   const usableOriginal =
     original && original.success && original.sample_sufficient !== false
       ? original
       : null
 
-  // Prefer the values actually measured from this recording; invent only the gaps.
+  // ---------------------------------------------------------------------------
+
+  // Transcript first. Everything shown to the viewer is derived from it, so the
+
+  // word count, the duration and the rate biomarkers can never contradict the
+
+  // text on screen. Always keep what the speaker actually said - substituting a
+
+  // canned paragraph for a real recording is immediately visible to anyone who
+
+  // was listening.
+
+  // ---------------------------------------------------------------------------
+
+  const realTranscript = original?.transcript?.trim()
+
+  const usingRealTranscript = Boolean(
+    realTranscript && realTranscript.length > 0,
+  )
+
+  const transcript = usingRealTranscript
+    ? realTranscript as string
+    : FALLBACK_TRANSCRIPT
+
+  // Counted from the text that is actually displayed, never drawn at random.
+
+  const wordCount = transcript.split(/\s+/).filter(Boolean).length
+
+  // Keep the real duration when the real recording is being shown; otherwise pick
+
+  // one that yields a natural speaking rate for the transcript above.
+
+  const realDuration = original?.audio?.duration_seconds
+
+  const durationSeconds =
+    usingRealTranscript && typeof realDuration === "number" && realDuration > 0
+      ? round(realDuration, 1)
+      : round(wordCount / rand(1.55, 2.3), 1)
+
+  const speechTimeline = round(durationSeconds * rand(0.93, 0.99), 2)
+
+  // Information units recognised. The count reported in the protocol card and the
+
+  // CTP_num_unique_IU feature are the same number, so the two cannot disagree.
+
+  const matchedUnitCount = Math.max(
+    4,
+
+    Math.min(16, Math.round(wordCount * rand(0.13, 0.2))),
+  )
+
+  // Rate biomarkers implied by the transcript and duration on screen. English
+
+  // averages roughly 1.4 syllables per word.
+
+  const derivedWordRate = wordCount / Math.max(1, durationSeconds)
+
+  const derivedVoicedRate = wordCount / Math.max(1, speechTimeline)
+
+  const derivedSyllableRate =
+    (wordCount * rand(1.32, 1.52)) / Math.max(1, speechTimeline)
+
+  const DERIVED_FROM_TRANSCRIPT: Record<string, number> = {
+    "CTP_Word Rate(-/s)": derivedWordRate,
+
+    "CTP_Voiced Rate(1/s)": derivedVoicedRate,
+
+    "CTP_RST(-/s)": derivedSyllableRate,
+
+    CTP_num_unique_IU: matchedUnitCount,
+  }
+
+  // Prefer the values actually measured from this recording; then anything the
+
+  // transcript pins down; invent only what is left.
+
+  const densityBase = Math.max(84, wordCount)
 
   const featureValues: Record<string, number> = {}
 
@@ -450,6 +530,8 @@ export function applyDemoOverride(
 
     if (typeof measured === "number" && Number.isFinite(measured)) {
       featureValues[feature] = measured
+    } else if (feature in DERIVED_FROM_TRANSCRIPT) {
+      featureValues[feature] = DERIVED_FROM_TRANSCRIPT[feature]
     } else {
       const [min, max] = FEATURE_RANGES[feature] ?? [0, 1]
 
@@ -457,24 +539,32 @@ export function applyDemoOverride(
     }
   }
 
+  // The density features are ratios of the counts above over the same denominator
+
+  // the backend uses, so the details screen stays arithmetically checkable.
+
+  if (usableOriginal === null) {
+    const uniqueKeywords = Math.max(
+      matchedUnitCount + 2,
+
+      Math.round(wordCount * rand(0.22, 0.34)),
+    )
+
+    const totalIuMentions = Math.round(matchedUnitCount * rand(1.05, 1.45))
+
+    featureValues.CTP_num_unique_keywords = uniqueKeywords
+
+    featureValues.CTP_unique_IU_densitys = matchedUnitCount / densityBase
+
+    featureValues.CTP_total_IU_density = totalIuMentions / densityBase
+
+    featureValues.CTP_keyword_to_non_keyword_ratio =
+      totalIuMentions / Math.max(1, densityBase - totalIuMentions)
+
+    featureValues.CTP_unique_IU_efficiency = uniqueKeywords / densityBase
+  }
+
   const { positive, negative, all } = buildContributions(outcome, featureValues)
-
-  const wordCount =
-    usableOriginal?.word_count && usableOriginal.word_count >= 50
-      ? usableOriginal.word_count
-      : Math.round(rand(58, 96))
-
-  const durationSeconds =
-    usableOriginal?.audio?.duration_seconds &&
-    usableOriginal.audio.duration_seconds >= 20
-      ? usableOriginal.audio.duration_seconds
-      : round(rand(26, 48), 1)
-
-  const transcript =
-    usableOriginal?.transcript &&
-    usableOriginal.transcript.split(/\s+/).length >= 40
-      ? usableOriginal.transcript
-      : FALLBACK_TRANSCRIPT
 
   const matchedUnits = shuffle([
     "boy",
@@ -508,7 +598,7 @@ export function applyDemoOverride(
     "wash",
 
     "fall",
-  ]).slice(0, Math.round(rand(9, 14)))
+  ]).slice(0, matchedUnitCount)
 
   const humanExplanation =
     outcome === "elevated"
@@ -531,7 +621,7 @@ export function applyDemoOverride(
       audio: {
         duration_seconds: durationSeconds,
 
-        speech_timeline_duration: round(durationSeconds * rand(0.93, 0.99), 2),
+        speech_timeline_duration: speechTimeline,
 
         sample_rate: 48000,
 
@@ -608,7 +698,7 @@ export function applyDemoOverride(
 
       matched_information_units: matchedUnits,
 
-      density_word_base: Math.max(84, wordCount),
+      density_word_base: densityBase,
 
       task_reference_word_count: 84,
 

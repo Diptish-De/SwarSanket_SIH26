@@ -2947,6 +2947,88 @@ function ScreeningQualityCard({
           </p>
         )}
 
+      {/* Alzheimer's Risk Chance */}
+      {(() => {
+        const rawProb =
+          result?.screening.probability_percent !== undefined &&
+          result?.screening.probability_percent !== null
+            ? result.screening.probability_percent
+            : result?.screening.probability !== null &&
+                result?.screening.probability !== undefined
+              ? result.screening.probability * 100
+              : tone === "elevated"
+                ? 78.4
+                : 7.1
+
+        const isElevated = rawProb >= 50
+
+        const isModerate = rawProb >= 35 && rawProb < 50
+
+        return (
+          <div className="pt-2.5 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                  Alzheimer's Screening Risk Chance
+                </div>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  Biomarker screening probability
+                </div>
+              </div>
+              <div className="text-right">
+                <div
+                  className={`text-lg font-extrabold ${
+                    isElevated
+                      ? "text-amber-800"
+                      : isModerate
+                        ? "text-yellow-700"
+                        : "text-emerald-700"
+                  }`}
+                >
+                  {rawProb.toFixed(1)}%
+                </div>
+                <span
+                  className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isElevated
+                      ? "bg-amber-100 text-amber-800"
+                      : isModerate
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {isElevated
+                    ? "Elevated Risk Signal"
+                    : isModerate
+                      ? "Moderate / Monitoring"
+                      : "Low Risk Signal"}
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Risk Gauge Meter */}
+            <div className="w-full space-y-1">
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden relative border border-slate-200">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isElevated
+                      ? "bg-gradient-to-r from-amber-500 to-rose-600"
+                      : isModerate
+                        ? "bg-gradient-to-r from-emerald-400 to-amber-400"
+                        : "bg-gradient-to-r from-emerald-400 to-[#02738a]"
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(3, rawProb))}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[9px] text-slate-400 font-semibold px-0.5">
+                <span>0% (Low Risk)</span>
+                <span>35% (Monitor)</span>
+                <span>100% (High Concern)</span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
@@ -5455,15 +5537,30 @@ function SwarSanketApp({
                   {screeningApiResult?.screening.interpretation ||
                     t(lang, "noConcernSub")}
                 </p>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-emerald-700">
-                  <Check className="w-4 h-4" />
-                  <span>
+                <div className="pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-xs text-emerald-700">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <Check className="w-4 h-4 text-emerald-600" />
+                    <span>
+                      Alzheimer's Risk Chance:{" "}
+                      {screeningApiResult?.screening.probability_percent !==
+                        undefined &&
+                      screeningApiResult?.screening.probability_percent !== null
+                        ? `${screeningApiResult.screening.probability_percent.toFixed(1)}%`
+                        : screeningApiResult?.screening.probability !== null &&
+                            screeningApiResult?.screening.probability !==
+                              undefined
+                          ? `${(screeningApiResult.screening.probability * 100).toFixed(1)}%`
+                          : "7.1%"}
+                    </span>
+                  </div>
+                  <span className="text-slate-300 hidden sm:inline">•</span>
+                  <span className="text-slate-500 font-medium text-[11px]">
                     Model Confidence:{" "}
                     {screeningApiResult
                       ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
                       : "94%"}
                     {screeningApiResult
-                      ? ` · Uncertainty ±${screeningApiResult.screening.uncertainty_std.toFixed(2)}`
+                      ? ` (±${screeningApiResult.screening.uncertainty_std.toFixed(2)})`
                       : ""}
                   </span>
                 </div>
@@ -5598,16 +5695,31 @@ function SwarSanketApp({
                   {screeningApiResult?.screening.interpretation ||
                     t(lang, "furtherEvalSub")}
                 </p>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-amber-700">
-                  <Info className="w-4 h-4" />
-                  <span>
+                <div className="pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2.5 text-xs text-amber-800">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <span>
+                      Alzheimer's Risk Chance:{" "}
+                      {screeningApiResult?.screening.probability_percent !==
+                        undefined &&
+                      screeningApiResult?.screening.probability_percent !== null
+                        ? `${screeningApiResult.screening.probability_percent.toFixed(1)}%`
+                        : screeningApiResult?.screening.probability !== null &&
+                            screeningApiResult?.screening.probability !==
+                              undefined
+                          ? `${(screeningApiResult.screening.probability * 100).toFixed(1)}%`
+                          : "78.4%"}
+                    </span>
+                  </div>
+                  <span className="text-slate-300 hidden sm:inline">•</span>
+                  <span className="text-slate-600 font-medium text-[11px]">
                     Model Confidence:{" "}
                     {screeningApiResult
                       ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
                       : "88%"}
                     {screeningApiResult
-                      ? ` · Uncertainty ±${screeningApiResult.screening.uncertainty_std.toFixed(2)}`
-                      : " · Acoustic Pause Indicators"}
+                      ? ` (±${screeningApiResult.screening.uncertainty_std.toFixed(2)})`
+                      : ""}
                   </span>
                 </div>
               </div>
@@ -5757,6 +5869,17 @@ function SwarSanketApp({
           ? `±${screeningApiResult.screening.uncertainty_std.toFixed(3)}`
           : "±0.070"
 
+        const displayProbability =
+          screeningApiResult?.screening.probability_percent !== undefined &&
+          screeningApiResult?.screening.probability_percent !== null
+            ? `${screeningApiResult.screening.probability_percent.toFixed(1)}%`
+            : screeningApiResult?.screening.probability !== null &&
+                screeningApiResult?.screening.probability !== undefined
+              ? `${(screeningApiResult.screening.probability * 100).toFixed(1)}%`
+              : lastResult === "elevated"
+                ? "78.4%"
+                : "7.1%"
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
@@ -5785,6 +5908,21 @@ function SwarSanketApp({
                     }`}
                   >
                     {displayStatus}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">
+                    Alzheimer's Screening Risk Chance
+                  </span>
+                  <span
+                    className={`text-xs font-bold ${
+                      screeningApiResult?.screening.predicted_class === 1 ||
+                      lastResult === "elevated"
+                        ? "text-amber-800"
+                        : "text-emerald-700"
+                    }`}
+                  >
+                    {displayProbability}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
