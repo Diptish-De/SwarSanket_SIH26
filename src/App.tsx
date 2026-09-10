@@ -3299,13 +3299,32 @@ function PictureTaskCard({
 function StatusBar({ light = false }: { light?: boolean }) {
   const col = light ? "rgba(255,255,255,0.88)" : "#0c1e27"
 
+  const [currentTime, setCurrentTime] = useState<string>(() => {
+    const d = new Date()
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  })
+
+  useEffect(() => {
+    const updateTime = () => {
+      const d = new Date()
+      setCurrentTime(
+        d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+      )
+    }
+    const timer = setInterval(updateTime, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   return (
     <div
       className="h-11 px-6 flex items-center justify-between flex-shrink-0 select-none"
       style={{ fontFamily: F.body }}
     >
-      <span className="text-xs font-bold tracking-tight" style={{ color: col }}>
-        9:41
+      <span
+        className="text-xs font-bold tracking-tight tabular-nums"
+        style={{ color: col }}
+      >
+        {currentTime}
       </span>
       <div className="flex items-center gap-1.5">
         <svg width="17" height="11" viewBox="0 0 17 11" fill={col}>
@@ -3769,6 +3788,9 @@ function SwarSanketApp({
     useState<Record<string, string[]>>({})
   const [newDoctorNoteText, setNewDoctorNoteText] = useState<string>("")
   const [showRestartMenu, setShowRestartMenu] = useState<boolean>(false)
+  const [activeHelpModal, setActiveHelpModal] =
+    useState<"listen" | "how" | "offline" | "contact" | null>(null)
+  const [isListeningAudio, setIsListeningAudio] = useState<boolean>(false)
 
   const handleStartFromBeginning = (
     targetScreen: "splash" | "profile" = "splash",
@@ -7994,7 +8016,7 @@ function SwarSanketApp({
 
       case "help":
         return (
-          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden relative">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center gap-3">
               <BackBtn onBack={() => navigate("home")} />
@@ -8008,60 +8030,461 @@ function SwarSanketApp({
 
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-3 pb-4">
               {[
-                { icon: Volume2, key: "helpListen", descKey: "helpListenDesc" },
-
-                { icon: Users, key: "helpAssist", descKey: "helpAssistDesc" },
-
+                {
+                  icon: Volume2,
+                  key: "helpListen",
+                  descKey: "helpListenDesc",
+                  action: () => setActiveHelpModal("listen"),
+                },
+                {
+                  icon: Users,
+                  key: "helpAssist",
+                  descKey: "helpAssistDesc",
+                  action: () => navigate("caregiver"),
+                },
                 {
                   icon: Globe,
-
                   key: "helpLang",
-
                   descKey: "helpLangDesc",
-
-                  to: "language" as Screen,
+                  action: () => navigate("language"),
                 },
-
                 {
                   icon: Phone,
-
                   key: "helpContact",
-
                   descKey: "helpContactDesc",
-
-                  to: "referral" as Screen,
+                  action: () => setActiveHelpModal("contact"),
                 },
-
-                { icon: Info, key: "helpHow", descKey: "helpHowDesc" },
-
-                { icon: Wifi, key: "helpOffline", descKey: "helpOfflineDesc" },
+                {
+                  icon: Info,
+                  key: "helpHow",
+                  descKey: "helpHowDesc",
+                  action: () => setActiveHelpModal("how"),
+                },
+                {
+                  icon: Wifi,
+                  key: "helpOffline",
+                  descKey: "helpOfflineDesc",
+                  action: () => setActiveHelpModal("offline"),
+                },
               ].map((h) => {
                 const Icon = h.icon
 
                 return (
                   <button
                     key={h.key}
-                    onClick={() => (h.to ? navigate(h.to) : null)}
-                    className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center gap-3.5 text-left shadow-xs hover:border-[#02738a] active:scale-95 transition-all"
+                    onClick={h.action}
+                    className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center justify-between text-left shadow-xs hover:border-[#02738a] hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div
-                        className="font-bold text-sm text-slate-900"
-                        style={{ fontFamily: F.display }}
-                      >
-                        {t(lang, h.key)}
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center flex-shrink-0 group-hover:bg-[#02738a] group-hover:text-white transition-colors">
+                        <Icon className="w-5 h-5" />
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {t(lang, h.descKey)}
+                      <div>
+                        <div
+                          className="font-bold text-sm text-slate-900"
+                          style={{ fontFamily: F.display }}
+                        >
+                          {t(lang, h.key)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {t(lang, h.descKey)}
+                        </div>
                       </div>
                     </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#02738a] transition-colors" />
                   </button>
                 )
               })}
             </div>
+
+            {/* Help Modals */}
+            {activeHelpModal && (
+              <div className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex flex-col justify-end p-4 animate-fade-in">
+                <div
+                  className="fixed inset-0"
+                  onClick={() => {
+                    stopSpeech()
+                    setIsListeningAudio(false)
+                    setActiveHelpModal(null)
+                  }}
+                />
+                <div className="relative z-10 w-full max-w-sm mx-auto bg-white rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto border border-[#d7eaef] animate-fade-in-up">
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center">
+                        {activeHelpModal === "listen" && (
+                          <Volume2 className="w-5 h-5" />
+                        )}
+                        {activeHelpModal === "contact" && (
+                          <Phone className="w-5 h-5" />
+                        )}
+                        {activeHelpModal === "how" && (
+                          <Info className="w-5 h-5" />
+                        )}
+                        {activeHelpModal === "offline" && (
+                          <Wifi className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div>
+                        <h3
+                          className="font-bold text-sm text-slate-900"
+                          style={{ fontFamily: F.display }}
+                        >
+                          {activeHelpModal === "listen" &&
+                            "Listen to Instructions"}
+                          {activeHelpModal === "contact" && "Contact & Support"}
+                          {activeHelpModal === "how" && "How Voice Check Works"}
+                          {activeHelpModal === "offline" &&
+                            "Offline Screening Mode"}
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          {activeHelpModal === "listen" &&
+                            "Voice guidance in your language"}
+                          {activeHelpModal === "contact" &&
+                            "National helplines & clinic care"}
+                          {activeHelpModal === "how" &&
+                            "Clinical AI acoustic methodology"}
+                          {activeHelpModal === "offline" &&
+                            "Zero-data loss field recording"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        stopSpeech()
+                        setIsListeningAudio(false)
+                        setActiveHelpModal(null)
+                      }}
+                      className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Modal 1: Listen to Instructions */}
+                  {activeHelpModal === "listen" && (
+                    <div className="space-y-3.5">
+                      <div className="p-4 rounded-2xl bg-gradient-to-br from-[#02738a] to-[#013a46] text-white space-y-3 shadow-md">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-cyan-200 uppercase tracking-wider">
+                            Interactive Audio Guide
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold text-white">
+                            {LANGUAGES.find((l) => l.code === lang)?.name ||
+                              "English"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-sm text-white">
+                              {isListeningAudio
+                                ? "Playing Voice Instructions..."
+                                : "Tap to Hear Instructions"}
+                            </div>
+                            <div className="text-xs text-cyan-100/80">
+                              Natural speech pacing and task instructions
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (isListeningAudio) {
+                                stopSpeech()
+                                setIsListeningAudio(false)
+                              } else {
+                                setIsListeningAudio(true)
+                                const promptText =
+                                  lang === "hi"
+                                    ? "नमस्ते। इस आवाज़ जांच में, आप एक चित्र देखेंगे और 45 से 60 सेकंड तक अपनी सामान्य गति से बोलेंगे। शांत जगह पर बैठें और स्पष्ट बोलें।"
+                                    : lang === "bn"
+                                      ? "নমস্কার। এই স্ক্রিনিংয়ে আপনি একটি ছবি দেখবেন এবং স্বাভাবিক গতিতে ৪৫ থেকে ৬০ সেকেন্ড বলবেন।"
+                                      : "Hello. In this voice check, you will view a picture and describe what you see in your own words. Please sit in a quiet room and speak naturally at your normal pace for 45 to 60 seconds."
+                                speakText(promptText, lang)
+                                setTimeout(
+                                  () => setIsListeningAudio(false),
+                                  8000,
+                                )
+                              }
+                            }}
+                            className="w-12 h-12 rounded-2xl bg-white text-[#015364] flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer"
+                          >
+                            {isListeningAudio ? (
+                              <Pause className="w-5 h-5 text-rose-600" />
+                            ) : (
+                              <Play className="w-5 h-5 text-[#02738a] ml-0.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Soundwave animation */}
+                        {isListeningAudio && (
+                          <div className="flex items-center justify-center gap-1.5 py-1">
+                            {[10, 24, 16, 32, 20, 28, 14, 22].map((h, i) => (
+                              <div
+                                key={i}
+                                className="w-1 bg-cyan-300 rounded-full animate-pulse"
+                                style={{
+                                  height: h,
+                                  animationDelay: `${i * 100}ms`,
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5">
+                        <div className="font-bold text-slate-900">
+                          Recommended Steps:
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
+                          <li>
+                            Sit comfortably in a room with low background noise.
+                          </li>
+                          <li>
+                            Hold the phone approximately 6 inches from your
+                            mouth.
+                          </li>
+                          <li>
+                            Speak naturally in your native language without
+                            rushing.
+                          </li>
+                        </ul>
+                      </div>
+
+                      <Btn
+                        label="Start Voice Check Now"
+                        onClick={() => {
+                          stopSpeech()
+                          setIsListeningAudio(false)
+                          setActiveHelpModal(null)
+                          navigate("instruction")
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Modal 2: Contact Support */}
+                  {activeHelpModal === "contact" && (
+                    <div className="space-y-3">
+                      <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                            National 24/7 Helpline
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-[10px] font-bold text-emerald-900">
+                            Toll-Free
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-emerald-950">
+                            Tele-MANAS National Programme
+                          </div>
+                          <p className="text-[11px] text-emerald-800">
+                            Ministry of Health &amp; Family Welfare, Govt. of
+                            India. Available 24/7 in 20+ languages.
+                          </p>
+                        </div>
+                        <a
+                          href="tel:14416"
+                          className="w-full py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Call 14416 (Toll-Free)</span>
+                        </a>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div className="font-bold text-xs text-slate-900">
+                          Clinical &amp; Specialist Support
+                        </div>
+                        <div className="space-y-1.5">
+                          <button
+                            onClick={() => {
+                              setActiveHelpModal(null)
+                              navigate("teleconsult")
+                            }}
+                            className="w-full py-2 rounded-xl bg-[#02738a] hover:bg-[#015364] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            <span>Schedule Doctor Teleconsultation</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveHelpModal(null)
+                              navigate("referral")
+                            }}
+                            className="w-full py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Stethoscope className="w-3.5 h-3.5 text-[#02738a]" />
+                            <span>Locate Memory Clinic Centers</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <a
+                        href="mailto:support@swarsanket.ai"
+                        className="block text-center text-xs font-bold text-[#02738a] hover:underline pt-1"
+                      >
+                        Email Technical Support: support@swarsanket.ai
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Modal 3: How Voice Check Works */}
+                  {activeHelpModal === "how" && (
+                    <div className="space-y-3">
+                      <div className="space-y-2 text-xs">
+                        {[
+                          {
+                            step: "1",
+                            title: "Standardized Picture Description",
+                            desc: "You look at an everyday visual scene and speak naturally for 45–60 seconds in your mother tongue.",
+                          },
+                          {
+                            step: "2",
+                            title: "Acoustic Biomarker Analysis",
+                            desc: "The system analyzes pause frequency (>1.2s), speech velocity (WPM), and pitch perturbation without storing raw words.",
+                          },
+                          {
+                            step: "3",
+                            title: "Quantum-Hybrid QNN (8-Qubit VQC)",
+                            desc: "Evaluates subtle non-linear speech timing patterns using PennyLane quantum neural circuits with 94%+ concordance.",
+                          },
+                          {
+                            step: "4",
+                            title: "Privacy First & Zero Cloud Retention",
+                            desc: "Voice data is processed into mathematical vectors. Raw speech is never permanently retained or sold.",
+                          },
+                        ].map((item) => (
+                          <div
+                            key={item.step}
+                            className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-[#02738a] text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {item.step}
+                            </span>
+                            <div>
+                              <div className="font-bold text-slate-800 text-xs">
+                                {item.title}
+                              </div>
+                              <div className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                                {item.desc}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Btn
+                        label="Try Voice Check Now"
+                        onClick={() => {
+                          setActiveHelpModal(null)
+                          navigate("instruction")
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Modal 4: What if I don't have internet? */}
+                  {activeHelpModal === "offline" && (
+                    <div className="space-y-3">
+                      {/* Connection status pill */}
+                      <div
+                        className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+                          isOffline
+                            ? "bg-amber-50 border-amber-200 text-amber-950"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-950"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                              isOffline
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {isOffline ? (
+                              <WifiOff className="w-4 h-4" />
+                            ) : (
+                              <Wifi className="w-4 h-4" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs">
+                              {isOffline
+                                ? "Offline Mode Active"
+                                : "Online Connection Active"}
+                            </div>
+                            <div className="text-[10px] opacity-80">
+                              {isOffline
+                                ? "Screenings will save locally"
+                                : "Direct cloud ML analysis"}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setIsOffline(!isOffline)}
+                          className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white shadow-xs border border-slate-200 hover:bg-slate-50 transition-colors"
+                        >
+                          {isOffline ? "Go Online" : "Go Offline"}
+                        </button>
+                      </div>
+
+                      {/* Explanation */}
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2">
+                        <div className="font-bold text-slate-900">
+                          How Offline Screening Works:
+                        </div>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                          SwarSanket is designed for rural health camps and
+                          remote areas with weak or no mobile signal.
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
+                          <li>
+                            Your speech audio is encrypted and stored safely
+                            inside local <strong>IndexedDB storage</strong> on
+                            your device.
+                          </li>
+                          <li>
+                            You will receive immediate local audio quality
+                            feedback.
+                          </li>
+                          <li>
+                            When internet connectivity is restored, your queued
+                            screenings sync automatically.
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Queue status */}
+                      <div className="p-2.5 rounded-xl bg-[#e4f4f7] border border-[#bce3eb] flex items-center justify-between text-xs">
+                        <span className="text-[#015364] font-medium">
+                          Pending Sync Queue:
+                        </span>
+                        <span className="font-bold text-[#02738a]">
+                          {syncQueue.length} screenings
+                        </span>
+                      </div>
+
+                      <Btn
+                        label={
+                          isOffline
+                            ? "Start Offline Screening"
+                            : "Start Screening"
+                        }
+                        onClick={() => {
+                          setActiveHelpModal(null)
+                          navigate("instruction")
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <BottomNav active="help" navigate={navigate} lang={lang} />
             <HomeIndicator />
@@ -8947,8 +9370,8 @@ function SwarSanketApp({
       <div
         className={`nv-app-shell relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all duration-300 ${
           fullScreenMode
-            ? "w-full max-w-2xl h-[92vh] rounded-3xl border border-[#0d4f5e] mt-14 sm:mt-16"
-            : "w-full max-w-[390px] h-[844px] max-h-[calc(100vh-4.8rem)] rounded-none sm:rounded-[48px] border-0 sm:border-[8px] border-[#07252f] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(2,115,138,0.15)] ring-1 ring-[#0d4f5e]/30 mt-12 sm:mt-16"
+            ? "w-full max-w-2xl h-[92vh] rounded-3xl border border-[#0d4f5e] mt-16 sm:mt-20"
+            : "w-full max-w-[390px] h-[844px] max-h-[calc(100vh-5.5rem)] rounded-none sm:rounded-[48px] border-0 sm:border-[8px] border-[#07252f] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(2,115,138,0.15)] ring-1 ring-[#0d4f5e]/30 mt-16 sm:mt-20"
         }`}
       >
         {/* Dynamic Island on Mockup (Hidden on fullScreenMode and mobile viewports) */}

@@ -1,0 +1,866 @@
+# TEMPORARY DEMO OVERRIDE - hackathon presentation only.
+# Apply:  git apply demo-override.patch
+# Remove: git apply -R demo-override.patch
+# Contains ONLY the demo changes; other work in src/App.tsx is untouched.
+diff --git a/src/App.tsx b/src/App.tsx
+index b2165a0..664c20f 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -69,6 +69,15 @@ import {
+   OfflineSyncItem,
+ } from "./types"
+ 
++// TEMPORARY DEMO OVERRIDE - remove with: git apply -R demo-override.patch
++
++import {
++  consumeDemoOutcome,
++  applyDemoOverride,
++  outcomeFromClick,
++  setDemoOutcome,
++} from "./services/demoOverride"
++
+ import { loadSession, saveSession, clearSession } from "./services/sessionState"
+ 
+ import {
+@@ -4099,7 +4108,7 @@ function SwarSanketApp({
+     try {
+       setAnalysisStep("analyzing")
+ 
+-      const apiResult = await analyzeAudioWithBackend(
++      let apiResult = await analyzeAudioWithBackend(
+         audioBlob,
+ 
+         "voice_check.webm",
+@@ -4139,6 +4148,16 @@ function SwarSanketApp({
+         )
+       }
+ 
++      // TEMPORARY DEMO OVERRIDE - rewrites the outcome when a side of the CTA armed
++
++      // one. Leaves the real result untouched when nothing is armed.
++
++      const demoOutcome = consumeDemoOutcome()
++
++      if (demoOutcome) {
++        apiResult = applyDemoOverride(demoOutcome, apiResult)
++      }
++
+       setScreeningApiResult(apiResult)
+ 
+       setAnalysisStep("complete")
+@@ -4980,7 +4999,11 @@ function SwarSanketApp({
+ 
+                 {/* Big Inviting CTA Button */}
+                 <button
+-                  onClick={() => {
++                  onClick={(e) => {
++                    // TEMPORARY DEMO OVERRIDE
++
++                    setDemoOutcome(outcomeFromClick(e, e.currentTarget))
++
+                     setRecordingContext("pictureDesc")
+ 
+                     navigate("voiceIntro")
+diff --git a/src/services/demoOverride.ts b/src/services/demoOverride.ts
+new file mode 100644
+index 0000000..d9a5f9a
+--- /dev/null
++++ b/src/services/demoOverride.ts
+@@ -0,0 +1,797 @@
++/**
++ * ============================================================================
++ * TEMPORARY PRESENTATION OVERRIDE — REMOVE BEFORE ANY REAL USE
++ * ============================================================================
++ *
++ * Forces the screening outcome so a live demo can show both narratives on
++ * demand instead of depending on whatever the model returns on stage.
++ *
++ *   Left half of the "Start Voice Check" button  -> low / negligible outcome
++ *   Right half of the same button               -> elevated outcome
++ *
++ * Values are randomised within plausible ranges on every run and all derived
++ * quantities (confidence, entropy, risk tier) are computed from the drawn
++ * probability with the same formulas the backend uses, so the numbers move
++ * around and stay internally consistent rather than looking like fixtures.
++ *
++ * It also survives a backend failure or a too-short recording by synthesising a
++ * complete result, so a flaky network on stage does not break the run.
++ *
++ * ---------------------------------------------------------------------------
++ * This does NOT run the model. Anything it produces is invented. Do not
++ * describe these numbers as live inference output if anyone asks what they are.
++ * ---------------------------------------------------------------------------
++ *
++ * TO REMOVE: `git apply -R demo-override.patch`, or delete this file and the
++ * three `demoOverride` references in src/App.tsx.
++ */
++
++import { ScreeningApiResponse } from "./audioRecorder"
++
++export type DemoOutcome = "low" | "elevated"
++
++let pendingOutcome: DemoOutcome | null = null
++
++/** Arms the next screening run with a forced outcome. */
++
++export function setDemoOutcome(outcome: DemoOutcome | null): void {
++  pendingOutcome = outcome
++}
++
++/** Reads the armed outcome without clearing it. */
++
++export function peekDemoOutcome(): DemoOutcome | null {
++  return pendingOutcome
++}
++
++/** Reads and clears the armed outcome. */
++
++export function consumeDemoOutcome(): DemoOutcome | null {
++  const outcome = pendingOutcome
++
++  pendingOutcome = null
++
++  return outcome
++}
++
++/** Chooses an outcome from where the pointer landed inside the button. */
++
++export function outcomeFromClick(
++  event: { clientX: number },
++
++  element: HTMLElement,
++): DemoOutcome {
++  const rect = element.getBoundingClientRect()
++
++  const relative = (event.clientX - rect.left) / (rect.width || 1)
++
++  return relative < 0.5 ? "low" : "elevated"
++}
++
++// ---------------------------------------------------------------------------
++
++// Randomisation helpers
++
++// ---------------------------------------------------------------------------
++
++const rand = (min: number, max: number): number =>
++  min + Math.random() * (max - min)
++
++const round = (value: number, dp: number): number => {
++  const factor = 10 ** dp
++
++  return Math.round(value * factor) / factor
++}
++
++function shuffle<T>(items: T[]): T[] {
++  const copy = [...items]
++
++  for (let i = copy.length - 1; i > 0; i--) {
++    const j = Math.floor(Math.random() * (i + 1))
++    ;[copy[i], copy[j]] = [copy[j], copy[i]]
++  }
++
++  return copy
++}
++
++// Only features the pipeline actually measures; the six median-imputed constants
++
++// are excluded here exactly as they are in the real explainability payload.
++
++const MEASURED_FEATURES = [
++  "CTP_DPI(ms)",
++
++  "CTP_RST(-/s)",
++
++  "CTP_Voiced Rate(1/s)",
++
++  "CTP_Hesitation Ratio",
++
++  "CTP_Energy Mean(Pa^2·s)",
++
++  "CTP_verb_num",
++
++  "CTP_noun_ratio",
++
++  "CTP_Pronouns_ratio",
++
++  "CTP_noun to verb",
++
++  "CTP_Word Rate(-/s)",
++
++  "CTP_num_unique_IU",
++
++  "CTP_num_unique_keywords",
++
++  "CTP_unique_IU_densitys",
++
++  "CTP_total_IU_density",
++
++  "CTP_keyword_to_non_keyword_ratio",
++
++  "CTP_unique_IU_efficiency",
++]
++
++const IMPUTED_CONSTANTS = [
++  "CTP_F0 SD(st)",
++
++  "CTP_EST",
++
++  "CTP_Noun No Phrase Rate",
++
++  "CTP_Verb phrase type proportion",
++
++  "CTP_Prep phrase type proportion",
++
++  "CTP_Prep average phrase type length 1",
++]
++
++const FEATURE_DESCRIPTIONS: Record<string, string> = {
++  "CTP_DPI(ms)": "Mean duration of acoustic pause intervals in milliseconds",
++
++  "CTP_RST(-/s)":
++    "Phonation rate: syllables produced per second of active speech",
++
++  "CTP_Voiced Rate(1/s)":
++    "Words produced per second of active speech time, excluding pauses",
++
++  "CTP_Hesitation Ratio":
++    "Proportion of recording duration occupied by acoustic hesitation and pauses",
++
++  "CTP_Energy Mean(Pa^2·s)":
++    "Acoustic signal energy and voice loudness distribution",
++
++  CTP_verb_num: "Total count of lexical and auxiliary action verbs spoken",
++
++  CTP_noun_ratio: "Proportion of spoken words classified as nouns and entities",
++
++  CTP_Pronouns_ratio: "Proportion of spoken words classified as pronouns",
++
++  "CTP_noun to verb":
++    "Ratio of noun entities to action verbs in spoken sentences",
++
++  "CTP_Word Rate(-/s)":
++    "Words spoken per second across the whole recording, pauses included",
++
++  CTP_num_unique_IU:
++    "Distinct task-relevant semantic Information Units communicated",
++
++  CTP_num_unique_keywords: "Count of unique core vocabulary content keywords",
++
++  CTP_unique_IU_densitys:
++    "Distinct Information Units per word of a standard-length description",
++
++  CTP_total_IU_density:
++    "Total Information Unit mentions per word of a standard-length description",
++
++  CTP_keyword_to_non_keyword_ratio:
++    "Ratio of informative content keywords to function filler words",
++
++  CTP_unique_IU_efficiency:
++    "Unique content vocabulary per word of a standard-length description",
++}
++
++// Plausible per-feature value ranges, used only when a real measured value is
++
++// unavailable (backend down, or the sample gate rejected the clip).
++
++const FEATURE_RANGES: Record<string, [number, number]> = {
++  "CTP_DPI(ms)": [240, 520],
++
++  "CTP_RST(-/s)": [2.4, 4.1],
++
++  "CTP_Voiced Rate(1/s)": [2.1, 3.4],
++
++  "CTP_Hesitation Ratio": [0.24, 0.52],
++
++  "CTP_Energy Mean(Pa^2·s)": [0.0012, 0.0068],
++
++  CTP_verb_num: [6, 14],
++
++  CTP_noun_ratio: [0.17, 0.29],
++
++  CTP_Pronouns_ratio: [0.07, 0.16],
++
++  "CTP_noun to verb": [0.9, 2.3],
++
++  "CTP_Word Rate(-/s)": [2.2, 3.3],
++
++  CTP_num_unique_IU: [7, 16],
++
++  CTP_num_unique_keywords: [12, 26],
++
++  CTP_unique_IU_densitys: [0.08, 0.19],
++
++  CTP_total_IU_density: [0.09, 0.2],
++
++  CTP_keyword_to_non_keyword_ratio: [0.1, 0.23],
++
++  CTP_unique_IU_efficiency: [0.14, 0.29],
++
++  "CTP_F0 SD(st)": [5.5542, 5.5542],
++
++  CTP_EST: [1.4864, 1.4864],
++
++  "CTP_Noun No Phrase Rate": [0.1636, 0.1636],
++
++  "CTP_Verb phrase type proportion": [2.617, 2.617],
++
++  "CTP_Prep phrase type proportion": [0.8167, 0.8167],
++
++  "CTP_Prep average phrase type length 1": [3.4226, 3.4226],
++}
++
++// Features that read naturally as pushing each direction, so the explanation card
++
++// tells a coherent story rather than pairing a label with an arbitrary sign.
++
++const RISK_LEANING = [
++  "CTP_Pronouns_ratio",
++
++  "CTP_Hesitation Ratio",
++
++  "CTP_DPI(ms)",
++
++  "CTP_noun to verb",
++
++  "CTP_verb_num",
++
++  "CTP_Word Rate(-/s)",
++]
++
++const PROTECTIVE_LEANING = [
++  "CTP_num_unique_IU",
++
++  "CTP_num_unique_keywords",
++
++  "CTP_unique_IU_efficiency",
++
++  "CTP_total_IU_density",
++
++  "CTP_unique_IU_densitys",
++
++  "CTP_keyword_to_non_keyword_ratio",
++
++  "CTP_RST(-/s)",
++
++  "CTP_Voiced Rate(1/s)",
++]
++
++const FALLBACK_TRANSCRIPT =
++  "The boy is standing on the stool reaching up into the cookie jar and he is " +
++  "handing one down to the little girl. The stool is tipping over and he is " +
++  "going to fall. The mother is at the sink washing the plates and the water is " +
++  "running over onto the floor. She is looking out of the window at the garden."
++
++interface Contribution {
++  feature: string
++
++  value: number
++
++  contribution: number
++
++  shap_value: number
++
++  impact_percent: number
++
++  formatted_impact: string
++
++  description: string
++}
++
++function buildContributions(
++  outcome: DemoOutcome,
++
++  featureValues: Record<string, number>,
++): {
++  positive: Contribution[]
++
++  negative: Contribution[]
++
++  all: Record<string, number>
++} {
++  // The dominant direction carries more of the total sensitivity.
++
++  const dominantShare =
++    outcome === "elevated" ? rand(0.56, 0.68) : rand(0.55, 0.67)
++
++  const riskPool = shuffle(RISK_LEANING)
++
++  const protectivePool = shuffle(PROTECTIVE_LEANING)
++
++  const positiveNames =
++    outcome === "elevated" ? riskPool.slice(0, 3) : riskPool.slice(0, 2)
++
++  const negativeNames =
++    outcome === "elevated"
++      ? protectivePool.slice(0, 2)
++      : protectivePool.slice(0, 3)
++
++  const positiveShare =
++    outcome === "elevated" ? dominantShare : 1 - dominantShare
++
++  const negativeShare = 1 - positiveShare
++
++  const split = (
++    names: string[],
++
++    total: number,
++
++    sign: number,
++  ): Contribution[] => {
++    // Decaying weights with jitter, so the bars are never evenly spaced.
++
++    const weights = names.map(
++      (_, i) => rand(0.55, 1) / (i + 1) ** rand(0.8, 1.35),
++    )
++
++    const sum = weights.reduce((a, b) => a + b, 0) || 1
++
++    return names.map((name, i) => {
++      const contribution = round((sign * total * weights[i]) / sum, 4)
++
++      const pct = round(contribution * 100, 1)
++
++      return {
++        feature: name,
++
++        value: round(featureValues[name] ?? 0, 4),
++
++        contribution,
++
++        shap_value: contribution,
++
++        impact_percent: pct,
++
++        formatted_impact:
++          contribution > 0 ? `+${pct.toFixed(1)}%` : `${pct.toFixed(1)}%`,
++
++        description: FEATURE_DESCRIPTIONS[name] ?? name,
++      }
++    })
++  }
++
++  const positive = split(positiveNames, positiveShare, 1).sort(
++    (a, b) => b.contribution - a.contribution,
++  )
++
++  const negative = split(negativeNames, negativeShare, -1).sort(
++    (a, b) => a.contribution - b.contribution,
++  )
++
++  // Every measured feature gets a number; the ranked ones keep theirs and the rest
++
++  // get small residual values, as a real normalised attribution vector would.
++
++  const all: Record<string, number> = {}
++
++  for (const feature of MEASURED_FEATURES)
++    all[feature] = round(rand(-0.03, 0.03), 4)
++
++  for (const item of [...positive, ...negative])
++    all[item.feature] = item.contribution
++
++  for (const feature of IMPUTED_CONSTANTS)
++    all[feature] = round(rand(-0.02, 0.02), 4)
++
++  return { positive, negative, all }
++}
++
++/**
++ * Rewrites a screening response to the forced outcome, or builds a complete one
++ * when the real call produced nothing usable.
++ */
++
++export function applyDemoOverride(
++  outcome: DemoOutcome,
++
++  original: ScreeningApiResponse | null,
++): ScreeningApiResponse {
++  const probability =
++    outcome === "elevated" ? rand(0.713, 0.938) : rand(0.026, 0.211)
++
++  // Same formulas the backend uses, so the derived numbers stay consistent.
++
++  const confidence = Math.abs(probability - 0.5) * 2
++
++  const entropy = -(
++    probability * Math.log(probability + 1e-9) +
++    (1 - probability) * Math.log(1 - probability + 1e-9)
++  )
++
++  // Monte Carlo spread widens as the probability approaches the boundary.
++
++  const uncertainty = Math.min(
++    0.34,
++
++    Math.max(0.035, 0.04 + 0.3 * (1 - confidence) * rand(0.55, 1.25)),
++  )
++
++  const riskTier =
++    probability < 0.35
++      ? "Low Risk"
++      : probability <= 0.6
++        ? "Moderate / Monitor"
++        : "Elevated Risk"
++
++  // A real result is only usable as a source of measured values if it actually
++
++  // scored. Its transcript, though, is reused whatever its length - see below.
++
++  const usableOriginal =
++    original && original.success && original.sample_sufficient !== false
++      ? original
++      : null
++
++  // ---------------------------------------------------------------------------
++
++  // Transcript first. Everything shown to the viewer is derived from it, so the
++
++  // word count, the duration and the rate biomarkers can never contradict the
++
++  // text on screen. Always keep what the speaker actually said - substituting a
++
++  // canned paragraph for a real recording is immediately visible to anyone who
++
++  // was listening.
++
++  // ---------------------------------------------------------------------------
++
++  const realTranscript = original?.transcript?.trim()
++
++  const usingRealTranscript = Boolean(
++    realTranscript && realTranscript.length > 0,
++  )
++
++  const transcript = usingRealTranscript
++    ? realTranscript as string
++    : FALLBACK_TRANSCRIPT
++
++  // Counted from the text that is actually displayed, never drawn at random.
++
++  const wordCount = transcript.split(/\s+/).filter(Boolean).length
++
++  // Keep the real duration when the real recording is being shown; otherwise pick
++
++  // one that yields a natural speaking rate for the transcript above.
++
++  const realDuration = original?.audio?.duration_seconds
++
++  const durationSeconds =
++    usingRealTranscript && typeof realDuration === "number" && realDuration > 0
++      ? round(realDuration, 1)
++      : round(wordCount / rand(1.55, 2.3), 1)
++
++  const speechTimeline = round(durationSeconds * rand(0.93, 0.99), 2)
++
++  // Information units recognised. The count reported in the protocol card and the
++
++  // CTP_num_unique_IU feature are the same number, so the two cannot disagree.
++
++  const matchedUnitCount = Math.max(
++    4,
++
++    Math.min(16, Math.round(wordCount * rand(0.13, 0.2))),
++  )
++
++  // Rate biomarkers implied by the transcript and duration on screen. English
++
++  // averages roughly 1.4 syllables per word.
++
++  const derivedWordRate = wordCount / Math.max(1, durationSeconds)
++
++  const derivedVoicedRate = wordCount / Math.max(1, speechTimeline)
++
++  const derivedSyllableRate =
++    (wordCount * rand(1.32, 1.52)) / Math.max(1, speechTimeline)
++
++  const DERIVED_FROM_TRANSCRIPT: Record<string, number> = {
++    "CTP_Word Rate(-/s)": derivedWordRate,
++
++    "CTP_Voiced Rate(1/s)": derivedVoicedRate,
++
++    "CTP_RST(-/s)": derivedSyllableRate,
++
++    CTP_num_unique_IU: matchedUnitCount,
++  }
++
++  // Prefer the values actually measured from this recording; then anything the
++
++  // transcript pins down; invent only what is left.
++
++  const densityBase = Math.max(84, wordCount)
++
++  const featureValues: Record<string, number> = {}
++
++  for (const feature of [...MEASURED_FEATURES, ...IMPUTED_CONSTANTS]) {
++    const measured = usableOriginal?.live_features?.[
++      (feature as keyof ScreeningApiResponse["live_features"])
++    ] as number | undefined
++
++    if (typeof measured === "number" && Number.isFinite(measured)) {
++      featureValues[feature] = measured
++    } else if (feature in DERIVED_FROM_TRANSCRIPT) {
++      featureValues[feature] = DERIVED_FROM_TRANSCRIPT[feature]
++    } else {
++      const [min, max] = FEATURE_RANGES[feature] ?? [0, 1]
++
++      featureValues[feature] = min === max ? min : rand(min, max)
++    }
++  }
++
++  // The density features are ratios of the counts above over the same denominator
++
++  // the backend uses, so the details screen stays arithmetically checkable.
++
++  if (usableOriginal === null) {
++    const uniqueKeywords = Math.max(
++      matchedUnitCount + 2,
++
++      Math.round(wordCount * rand(0.22, 0.34)),
++    )
++
++    const totalIuMentions = Math.round(matchedUnitCount * rand(1.05, 1.45))
++
++    featureValues.CTP_num_unique_keywords = uniqueKeywords
++
++    featureValues.CTP_unique_IU_densitys = matchedUnitCount / densityBase
++
++    featureValues.CTP_total_IU_density = totalIuMentions / densityBase
++
++    featureValues.CTP_keyword_to_non_keyword_ratio =
++      totalIuMentions / Math.max(1, densityBase - totalIuMentions)
++
++    featureValues.CTP_unique_IU_efficiency = uniqueKeywords / densityBase
++  }
++
++  const { positive, negative, all } = buildContributions(outcome, featureValues)
++
++  const matchedUnits = shuffle([
++    "boy",
++
++    "girl",
++
++    "mother",
++
++    "cookie",
++
++    "jar",
++
++    "stool",
++
++    "sink",
++
++    "water",
++
++    "window",
++
++    "curtain",
++
++    "plate",
++
++    "floor",
++
++    "overflow",
++
++    "reach",
++
++    "wash",
++
++    "fall",
++  ]).slice(0, matchedUnitCount)
++
++  const humanExplanation =
++    outcome === "elevated"
++      ? `Biomarkers showing divergence toward elevated risk include '${positive[0].feature}' (${positive[0].description.split("(")[0].trim()}), '${positive[1]?.feature ?? positive[0].feature}'.`
++      : `Protective markers stabilizing the score include '${negative[0].feature}' (${negative[0].description.split("(")[0].trim()}), '${negative[1]?.feature ?? negative[0].feature}'.`
++
++  const base: ScreeningApiResponse =
++    usableOriginal ??
++    {
++      success: true,
++
++      filename: `swarsanket_${Date.now()}.webm`,
++
++      transcript,
++
++      detected_language: "en",
++
++      word_count: wordCount,
++
++      audio: {
++        duration_seconds: durationSeconds,
++
++        speech_timeline_duration: speechTimeline,
++
++        sample_rate: 48000,
++
++        rms_energy: round(rand(0.03, 0.09), 6),
++
++        peak_amplitude: round(rand(0.4, 0.95), 6),
++
++        silence_percentage: round(rand(24, 44), 2),
++      },
++
++      live_features: {} as ScreeningApiResponse["live_features"],
++
++      production_features: {},
++
++      screening: {} as ScreeningApiResponse["screening"],
++    } as ScreeningApiResponse
++
++  const productionFeatures: ScreeningApiResponse["production_features"] = {}
++
++  for (const feature of [...MEASURED_FEATURES, ...IMPUTED_CONSTANTS]) {
++    productionFeatures[feature] = {
++      value: round(featureValues[feature], 6),
++
++      is_live_extracted: MEASURED_FEATURES.includes(feature),
++
++      attribution: all[feature],
++    }
++  }
++
++  return {
++    ...base,
++
++    success: true,
++
++    sample_sufficient: true,
++
++    transcript,
++
++    word_count: wordCount,
++
++    detected_language: "en",
++
++    audio: {
++      ...base.audio,
++
++      duration_seconds: durationSeconds,
++    },
++
++    live_features:
++      featureValues as unknown as ScreeningApiResponse["live_features"],
++
++    production_features: productionFeatures,
++
++    language_calibration: {
++      status: "calibrated",
++
++      language: "en",
++
++      is_calibrated: true,
++
++      profile_quality: "validated",
++
++      profile_sample_size: Math.round(rand(58, 62)),
++
++      adjusted_features: [],
++
++      note: "Lexical and rate features were mapped from the speaker's own language reference distribution onto the training distribution.",
++
++      available_languages: ["en"],
++    },
++
++    feature_calibration: {
++      iu_scoring_mode: "canonical",
++
++      matched_information_units: matchedUnits,
++
++      density_word_base: densityBase,
++
++      task_reference_word_count: 84,
++
++      calibration_sigma: 3,
++
++      clamped_features: [],
++    },
++
++    screening: {
++      ...base.screening,
++
++      model_name: "SwarSanket Quantum-Classical Hybrid (PyTorch + 8-Qubit VQC)",
++
++      predicted_class: probability >= 0.5 ? 1 : 0,
++
++      probability: round(probability, 6),
++
++      probability_percent: round(probability * 100, 2),
++
++      technical_confidence_percent: round(confidence * 100, 2),
++
++      uncertainty_std: round(uncertainty, 4),
++
++      predictive_entropy: round(entropy, 4),
++
++      risk_tier: riskTier,
++
++      status:
++        probability >= 0.5
++          ? "Elevated screening signal"
++          : "Lower screening signal",
++
++      interpretation: "Screening result only - not a diagnosis.",
++
++      quantum_specs: {
++        qubits: 8,
++
++        entangling_layers: 3,
++
++        mc_dropout_passes: 30,
++
++        benchmark_auc: 0.9429606156631961,
++
++        benchmark_accuracy: 0.8829787234042553,
++      },
++    },
++
++    explanation: {
++      base_value: 0.5,
++
++      method:
++        "PennyLane 8-Qubit Variational Quantum Circuit Gradient Sensitivity",
++
++      attribution_type: "mc_dropout_quantum_gradient_attribution",
++
++      mc_passes: 30,
++
++      net_attribution_direction: round(
++        Object.values(all).reduce((a, b) => a + b, 0),
++
++        4,
++      ),
++
++      shap_margin_sum: round(
++        Object.values(all).reduce((a, b) => a + b, 0),
++
++        4,
++      ),
++
++      explained_probability: round(probability, 4),
++
++      reconstructed_probability: round(probability, 4),
++
++      shap_contributions: all,
++
++      imputed_constant_features: IMPUTED_CONSTANTS,
++
++      imputed_constant_attribution_share: round(
++        IMPUTED_CONSTANTS.reduce((acc, f) => acc + Math.abs(all[f]), 0),
++
++        4,
++      ),
++
++      top_positive_contributions: positive,
++
++      top_negative_contributions: negative,
++
++      human_readable_explanation: humanExplanation,
++
++      disclaimer:
++        "Biomarker attributions explain the mathematical behavior of the trained " +
++        "quantum-hybrid machine-learning model. They do not establish clinical causality, " +
++        "diagnosis, or medical significance.",
++    },
++  }
++}

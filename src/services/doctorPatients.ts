@@ -14,6 +14,17 @@ export interface VqcSensitivityFactor {
   clinicalMeaning: string
 }
 
+export interface TrendPoint {
+  month: string
+  risk: number
+}
+
+export interface ModelMetric {
+  name: string
+  score: number
+  auc: number
+}
+
 export interface DoctorPatientProfile {
   id: string
   name: string
@@ -28,9 +39,9 @@ export interface DoctorPatientProfile {
   chiefComplaint: string
   clinicalImpression: string
   protocolMode: string
-  trendData: { month: string risk: number }[]
-  classicalModel: { name: string score: number auc: number }
-  quantumModel: { name: string score: number auc: number }
+  trendData: TrendPoint[]
+  classicalModel: ModelMetric
+  quantumModel: ModelMetric
   vqcSensitivity: VqcSensitivityFactor[]
   acousticComparison: AcousticComparisonItem[]
   clinicalRecommendation: string
