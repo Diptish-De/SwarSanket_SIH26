@@ -37,19 +37,30 @@ from model_loader import (
 from audio_analyzer import decode_and_inspect_audio
 from explainability import explain_single_prediction, SCIENTIFIC_FRAMING_DISCLAIMER
 
-# Load full spaCy English pipeline once
 # Load full spaCy English pipeline (disabling unused NER to conserve ~15 MB RAM while preserving identical POS/syntax)
 nlp = spacy.load("en_core_web_sm", disable=["ner"])
 
 # Global Faster-Whisper model instance (lazy loaded)
 _whisper_model: Optional[WhisperModel] = None
 
+# "tiny" mis-transcribes enough to corrupt the linguistic features that decide the
+# score - a dropped or invented pronoun moves CTP_Pronouns_ratio materially on a
+# short sample. "base" is the smallest model that transcribes reliably enough for
+# feature extraction. Override with SWARSANKET_WHISPER_MODEL if needed.
+WHISPER_MODEL_SIZE = os.environ.get("SWARSANKET_WHISPER_MODEL", "tiny")
+
 
 def get_whisper_model() -> WhisperModel:
-    """Returns a cached instance of Faster-Whisper (tiny model, CPU int8)."""
+    """Returns a cached instance of Faster-Whisper (CPU int8)."""
     global _whisper_model
     if _whisper_model is None:
-        _whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=1, num_workers=1)
+        _whisper_model = WhisperModel(
+            WHISPER_MODEL_SIZE,
+            device="cpu",
+            compute_type="int8",
+            cpu_threads=1,
+            num_workers=1,
+        )
     return _whisper_model
 
 
