@@ -199,6 +199,25 @@ export async function getScreeningById(
   return db.get("screenings", id)
 }
 
+export async function deleteScreeningSession(id: string): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction(
+    ["screenings", "audio_blobs", "sync_queue"],
+    "readwrite",
+  )
+  await tx.objectStore("screenings").delete(id)
+
+  const audioIndex = tx.objectStore("audio_blobs").index("by-session")
+  let cursor = await audioIndex.openCursor(id)
+  while (cursor) {
+    await cursor.delete()
+    cursor = await cursor.continue()
+  }
+
+  await tx.objectStore("sync_queue").delete(`queue_${id}`)
+  await tx.done
+}
+
 export async function getAudioBlob(blobId: string): Promise<Blob | undefined> {
   const db = await getDB()
 

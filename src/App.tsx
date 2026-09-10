@@ -90,6 +90,7 @@ import {
   addDoctorNote,
   getDoctorNotes,
   clearAllScreenings,
+  deleteScreeningSession,
 } from "./services/db"
 
 import {
@@ -2342,6 +2343,148 @@ function getTaskPrompt(lang: string, ctx: RecordingContext): string {
 // ─── Reusable UI Components ───────────────────────────────────────────────────
 
 /**
+ * Plain-language explanations of every measurement the report can show, written
+ * for the person who was recorded rather than for a clinician. Keyed by the raw
+ * backend feature name so any biomarker the model surfaces has an explanation,
+ * including the ones that only appear occasionally.
+ *
+ * Six of the twenty-two features are never measured from audio - they sit at the
+ * training median for everyone - so their entries say so plainly instead of
+ * implying the number describes the speaker.
+ */
+const PATIENT_FEATURE_HINTS: Record<string, string> = {
+  // ---- Acoustic timing and voice ----
+  "CTP_DPI(ms)":
+    "How long your silent pauses lasted on average, in thousandths of a second. Everyone pauses to breathe and think; consistently long pauses can sometimes mean finding the next word took more effort.",
+  "CTP_Hesitation Ratio":
+    "The share of your recording that was silence rather than speech. Pausing is completely normal - this simply measures how much of the time you were not speaking.",
+  "CTP_Energy Mean(Pa^2·s)":
+    "How loud and strong your voice was overall. This mostly reflects your microphone and how close you sat to it, so it carries little on its own.",
+  "CTP_RST(-/s)":
+    "How many syllables you produced per second while actually speaking. It measures the physical pace of your voice, separately from how often you paused.",
+  "CTP_Voiced Rate(1/s)":
+    "How many words you spoke per second of actual talking time, ignoring the pauses in between.",
+  "CTP_Word Rate(-/s)":
+    "How quickly you spoke across the whole recording, counting the pauses. Speaking slowly is not a problem in itself - it is only one signal among many.",
+  "CTP_F0 SD(st)":
+    "How much your pitch rose and fell while speaking. NOT MEASURED in this version - a standard reference value is used for everyone, so it says nothing about you.",
+  CTP_EST:
+    "A measure of overall speech timing and pacing. NOT MEASURED in this version - a standard reference value is used for everyone, so it says nothing about you.",
+
+  // ---- Words and grammar ----
+  CTP_verb_num:
+    "How many action words you used - words like washing, falling, reaching. Verbs carry the events in a description: who is doing what.",
+  CTP_noun_ratio:
+    'The share of your words that named people or things. Naming things specifically, rather than saying "that" or "stuff", usually means a richer description.',
+  CTP_Pronouns_ratio:
+    "The share of your words that were pronouns - he, she, it, they. Leaning heavily on pronouns instead of names is one pattern researchers watch, though it varies a lot between people and languages.",
+  "CTP_noun to verb":
+    "The balance between the things you named and the actions you described. A description usually needs both.",
+
+  // ---- Content and information ----
+  CTP_num_unique_IU:
+    "How many different key elements of the picture you mentioned - the boy, the cookie jar, the overflowing water. Mentioning more of them reflects a fuller description.",
+  CTP_num_unique_keywords:
+    "How many different meaningful words you used in total, not counting repeats.",
+  CTP_unique_IU_densitys:
+    "How many key picture elements you mentioned relative to how much you said - a measure of how much you covered per word.",
+  CTP_total_IU_density:
+    "How often you referred to the picture's key elements across your whole description, including repeats.",
+  CTP_keyword_to_non_keyword_ratio:
+    'How much of your speech carried real content - naming things and actions - compared with filler words like "thing", "stuff" or "um".',
+  CTP_unique_IU_efficiency:
+    "How much distinct information you fitted into the words you used. Higher means you conveyed more different ideas rather than repeating yourself.",
+
+  // ---- Sentence structure (not measured) ----
+  "CTP_Noun No Phrase Rate":
+    "A measure of sentence structure around the things you named. NOT MEASURED in this version - a standard reference value is used for everyone.",
+  "CTP_Verb phrase type proportion":
+    "A measure of how complex your sentences were around action words. NOT MEASURED in this version - a standard reference value is used for everyone.",
+  "CTP_Prep phrase type proportion":
+    "How often you described where things were - on, under, beside. NOT MEASURED in this version - a standard reference value is used for everyone.",
+  "CTP_Prep average phrase type length 1":
+    "How detailed your descriptions of position and place were. NOT MEASURED in this version - a standard reference value is used for everyone.",
+}
+
+/** Explanations for the summary numbers and section headings on the report. */
+const REPORT_SECTION_HINTS = {
+  protocol:
+    'Which speaking task you did. "Standardized Picture Description" means you described the standard clinical picture - the task this system was built around, which gives the most comparable reading. "Conversational" means you spoke freely, which is a weaker basis for comparison.',
+  informationUnits:
+    "The number of key things from the picture you actually mentioned - people, objects and actions such as the boy, the cookie jar, or the water overflowing. It is counted from your transcript.",
+  riskChance:
+    "How closely your speech pattern resembles the patterns this model was trained on. It is NOT a prediction that you will develop Alzheimer's, and not a diagnosis. Only a doctor can say what it means for you.",
+  riskBand:
+    "A simple band based on the percentage: below 35% is Low, 35-60% suggests keeping an eye on it, and above 60% suggests speaking to a professional.",
+  confidence:
+    "How firmly the model holds its answer - not the chance of disease. It measures how far the result sits from an undecided 50/50. A result far from the middle gives high confidence, whichever direction it points.",
+  uncertainty:
+    "The system runs itself 30 times, each time switching off random parts of its network, and checks how much the answer moves. A small number means all 30 runs agreed. A large number means the model is unsettled and the result deserves caution.",
+  transcript:
+    "What the speech recognition heard, written out. Every language measurement below is calculated from this text, so occasional transcription mistakes can shift the numbers slightly.",
+  sensitivity:
+    "How much each part of your speech pushed the score up or down. The percentages are shares of the total influence on this one result - they are not probabilities and do not add up to your risk.",
+  wordRate:
+    "How quickly you spoke, in words per minute across the whole recording. Typical conversation sits roughly between 100 and 160 words per minute.",
+  pauseRatio:
+    "The share of the recording that was silence rather than speech, measured from the sound itself rather than from the words.",
+}
+
+/**
+ * A label with an attached plain-language explanation.
+ *
+ * Opens on hover for a mouse and on tap for touch, because the phone view has no
+ * hover at all and an explanation only reachable by hovering would be invisible to
+ * exactly the people it is written for.
+ */
+function Hint({
+  text,
+  children,
+  align = "left",
+}: {
+  text: string
+  children: React.ReactNode
+  align?: "left" | "right"
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <span
+      className="relative inline-flex items-start gap-1"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        aria-expanded={open}
+        aria-label="What does this mean?"
+        className="inline-flex items-start gap-1 text-left cursor-help"
+      >
+        <span className="underline decoration-dotted decoration-slate-300 underline-offset-2">
+          {children}
+        </span>
+        <Info className="w-3 h-3 mt-[1px] text-slate-400 flex-shrink-0" />
+      </button>
+
+      {open && (
+        <span
+          role="tooltip"
+          className={`absolute z-50 top-full mt-1.5 w-60 max-w-[15rem] p-2.5 rounded-xl bg-slate-900 text-white text-[11px] font-normal leading-relaxed shadow-xl normal-case tracking-normal ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
  * The standardized "Cookie Theft" kitchen scene used by the clinical picture
  * description protocol. Every element here is a scorable Information Unit in the
  * backend's canonical lexicon (boy, girl, mother, cookie, jar, stool, sink, water,
@@ -2916,7 +3059,7 @@ function ScreeningQualityCard({
     <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5 text-left">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Screening Protocol
+          <Hint text={REPORT_SECTION_HINTS.protocol}>Screening Protocol</Hint>
         </span>
         <span
           className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
@@ -2944,8 +3087,10 @@ function ScreeningQualityCard({
         (result?.feature_calibration?.matched_information_units?.length ?? 0) >
           0 && (
           <p className="text-[11px] text-slate-500 leading-relaxed">
-            {result?.feature_calibration?.matched_information_units.length}{" "}
-            information units recognised in the description.
+            <Hint text={REPORT_SECTION_HINTS.informationUnits}>
+              {result?.feature_calibration?.matched_information_units.length}{" "}
+              information units recognised in the description.
+            </Hint>
           </p>
         )}
 
@@ -2971,7 +3116,9 @@ function ScreeningQualityCard({
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
-                  Alzheimer's Screening Risk Chance
+                  <Hint text={REPORT_SECTION_HINTS.riskChance}>
+                    Alzheimer's Screening Risk Chance
+                  </Hint>
                 </div>
                 <div className="text-[11px] text-slate-500 font-medium">
                   Biomarker screening probability
@@ -3034,7 +3181,7 @@ function ScreeningQualityCard({
       <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-            Model Confidence
+            <Hint text={REPORT_SECTION_HINTS.confidence}>Model Confidence</Hint>
           </div>
           <div className={`text-sm font-bold ${accent}`}>
             {result
@@ -3044,7 +3191,9 @@ function ScreeningQualityCard({
         </div>
         <div>
           <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-            Epistemic Uncertainty
+            <Hint text={REPORT_SECTION_HINTS.uncertainty} align="right">
+              Epistemic Uncertainty
+            </Hint>
           </div>
           <div className="text-sm font-bold text-slate-700">
             {result ? `±${result.screening.uncertainty_std.toFixed(2)}` : "—"}
@@ -3656,6 +3805,17 @@ function SwarSanketApp({
   const [detailedReportFocus, setDetailedReportFocus] =
     useState<"doctor" | "clinical">("clinical")
 
+  const [sessionToDelete, setSessionToDelete] =
+    useState<ScreeningSession | null>(null)
+
+  const [isDeletingSession, setIsDeletingSession] = useState<boolean>(false)
+
+  const [historyToast, setHistoryToast] = useState<string | null>(null)
+
+  const [selectedScreeningId, setSelectedScreeningId] = useState<string | null>(
+    null,
+  )
+
   const [analysisStep, setAnalysisStep] =
     useState<"idle" | "uploading" | "analyzing" | "complete">("idle")
 
@@ -3765,6 +3925,26 @@ function SwarSanketApp({
     setCustomApiUrlInput(def)
 
     handleTestApi(def)
+  }
+
+  const handleDeleteSession = async (session: ScreeningSession) => {
+    setIsDeletingSession(true)
+    try {
+      await deleteScreeningSession(session.id)
+      setScreeningsList((prev) => prev.filter((s) => s.id !== session.id))
+      setSessionToDelete(null)
+      setHistoryToast("Report deleted successfully")
+      setTimeout(() => setHistoryToast(null), 3000)
+      if (screen === "screeningDetails") {
+        navigate("history")
+      }
+    } catch (err) {
+      console.error("Failed to delete screening session:", err)
+      setHistoryToast("Failed to delete report")
+      setTimeout(() => setHistoryToast(null), 3000)
+    } finally {
+      setIsDeletingSession(false)
+    }
   }
 
   const navigate = (s: Screen) => {
@@ -5877,7 +6057,10 @@ function SwarSanketApp({
       }
 
       case "screeningDetails": {
-        const activeScreening = screeningsList[0]
+        const activeScreening =
+          (selectedScreeningId
+            ? screeningsList.find((s) => s.id === selectedScreeningId)
+            : null) || screeningsList[0]
 
         const displayWordRate = screeningApiResult?.live_features
           ? `${(screeningApiResult.live_features["CTP_Word Rate(-/s)"] * 60).toFixed(0)} WPM (${screeningApiResult.live_features["CTP_Word Rate(-/s)"].toFixed(2)} words/s)`
@@ -5925,16 +6108,27 @@ function SwarSanketApp({
                 </div>
               </div>
 
-              <button
-                onClick={() => {
-                  if (screeningsList.length > 0)
-                    generateAndDownloadReport(screeningsList[0])
-                }}
-                className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-[#02738a] hover:bg-[#e4f4f7] active:scale-95 transition-all shadow-xs"
-                title="Download PDF"
-              >
-                <Download className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {activeScreening && (
+                  <button
+                    onClick={() => setSessionToDelete(activeScreening)}
+                    className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-all shadow-xs"
+                    title="Delete report"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (activeScreening)
+                      generateAndDownloadReport(activeScreening)
+                  }}
+                  className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-[#02738a] hover:bg-[#e4f4f7] active:scale-95 transition-all shadow-xs"
+                  title="Download PDF"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
@@ -6009,6 +6203,8 @@ function SwarSanketApp({
                     val: displayWordRate,
 
                     sub: "Faster-Whisper temporal speech rate",
+
+                    hint: REPORT_SECTION_HINTS.wordRate,
                   },
 
                   {
@@ -6017,6 +6213,8 @@ function SwarSanketApp({
                     val: displayPauseRatio,
 
                     sub: "Energy-based silence detection",
+
+                    hint: REPORT_SECTION_HINTS.pauseRatio,
                   },
 
                   {
@@ -6025,6 +6223,8 @@ function SwarSanketApp({
                     val: displayIU,
 
                     sub: "Information unit lexical density",
+
+                    hint: PATIENT_FEATURE_HINTS.CTP_unique_IU_efficiency,
                   },
 
                   {
@@ -6033,6 +6233,8 @@ function SwarSanketApp({
                     val: displayKeywordRatio,
 
                     sub: "Information units against non-content words",
+
+                    hint: PATIENT_FEATURE_HINTS.CTP_keyword_to_non_keyword_ratio,
                   },
                 ].map((b) => (
                   <div
@@ -6041,7 +6243,7 @@ function SwarSanketApp({
                   >
                     <div>
                       <div className="text-xs font-bold text-slate-800">
-                        {b.label}
+                        <Hint text={b.hint}>{b.label}</Hint>
                       </div>
                       <div className="text-[11px] text-slate-400">{b.sub}</div>
                     </div>
@@ -6056,7 +6258,11 @@ function SwarSanketApp({
               {screeningApiResult?.transcript && (
                 <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-2 shadow-xs text-left">
                   <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-                    <span>Voice Transcript (Whisper ASR)</span>
+                    <span>
+                      <Hint text={REPORT_SECTION_HINTS.transcript}>
+                        Voice Transcript (Whisper ASR)
+                      </Hint>
+                    </span>
                     <span className="text-[10px] text-slate-400 font-medium">
                       {screeningApiResult.word_count} words ·{" "}
                       {screeningApiResult.detected_language?.toUpperCase() ||
@@ -6074,7 +6280,9 @@ function SwarSanketApp({
                 <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs text-left">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Quantum Biomarker Sensitivity
+                      <Hint text={REPORT_SECTION_HINTS.sensitivity}>
+                        Quantum Biomarker Sensitivity
+                      </Hint>
                     </span>
                     <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
                       PennyLane 8-Qubit VQC
@@ -6097,8 +6305,16 @@ function SwarSanketApp({
                           (item) => (
                             <div key={item.feature} className="space-y-1">
                               <div className="flex justify-between text-xs">
-                                <span className="text-slate-700 font-medium truncate mr-2">
-                                  {formatBiomarkerName(item.feature)}
+                                <span className="text-slate-700 font-medium mr-2">
+                                  <Hint
+                                    text={
+                                      PATIENT_FEATURE_HINTS[item.feature] ||
+                                      item.description ||
+                                      formatBiomarkerName(item.feature)
+                                    }
+                                  >
+                                    {formatBiomarkerName(item.feature)}
+                                  </Hint>
                                 </span>
                                 <span className="font-bold text-amber-700 flex-shrink-0">
                                   {item.formatted_impact ||
@@ -6129,8 +6345,16 @@ function SwarSanketApp({
                           (item) => (
                             <div key={item.feature} className="space-y-1">
                               <div className="flex justify-between text-xs">
-                                <span className="text-slate-700 font-medium truncate mr-2">
-                                  {formatBiomarkerName(item.feature)}
+                                <span className="text-slate-700 font-medium mr-2">
+                                  <Hint
+                                    text={
+                                      PATIENT_FEATURE_HINTS[item.feature] ||
+                                      item.description ||
+                                      formatBiomarkerName(item.feature)
+                                    }
+                                  >
+                                    {formatBiomarkerName(item.feature)}
+                                  </Hint>
                                 </span>
                                 <span className="font-bold text-emerald-700 flex-shrink-0">
                                   {item.formatted_impact ||
@@ -6168,8 +6392,8 @@ function SwarSanketApp({
                 <Btn
                   label="Download Clinical Summary (PDF)"
                   onClick={() => {
-                    if (screeningsList.length > 0)
-                      generateAndDownloadReport(screeningsList[0])
+                    if (activeScreening)
+                      generateAndDownloadReport(activeScreening)
                   }}
                   size="sm"
                 />
@@ -6195,6 +6419,87 @@ function SwarSanketApp({
                 />
               </div>
             </div>
+            {/* Delete Confirmation Modal */}
+            {sessionToDelete && (
+              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
+                <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-[#d7eaef] space-y-4 animate-scale-up text-left">
+                  <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-2 mb-2 sm:hidden" />
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3
+                        className="text-lg font-bold text-slate-900 leading-tight"
+                        style={{ fontFamily: F.display }}
+                      >
+                        Delete Report?
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        This report will be permanently removed.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">
+                        {sessionToDelete.patientName}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {new Date(sessionToDelete.createdAt).toLocaleDateString(
+                          "en-IN",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}{" "}
+                        · {sessionToDelete.durationSeconds}s recording
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        sessionToDelete.mlResult.screeningRisk === "elevated"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {sessionToDelete.mlResult.screeningRisk.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Are you sure you want to delete this screening session?
+                    Audio recordings and AI biomarker data for this session will
+                    be permanently erased.
+                  </p>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => handleDeleteSession(sessionToDelete)}
+                      className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>
+                        {isDeletingSession
+                          ? "Deleting..."
+                          : "Yes, Delete Report"}
+                      </span>
+                    </button>
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => setSessionToDelete(null)}
+                      className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm active:scale-[0.98] transition-all cursor-pointer"
+                    >
+                      Cancel / Keep Report
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <HomeIndicator />
           </div>
         )
@@ -6710,7 +7015,7 @@ function SwarSanketApp({
 
       case "history":
         return (
-          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden relative">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center justify-between">
               <h1
@@ -6726,6 +7031,14 @@ function SwarSanketApp({
                 View Trends →
               </button>
             </div>
+
+            {/* Notification Toast */}
+            {historyToast && (
+              <div className="mx-6 mb-2 p-2.5 rounded-xl bg-slate-900 text-white text-xs font-medium text-center shadow-lg animate-fade-in flex items-center justify-center gap-2">
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{historyToast}</span>
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-3 pb-4">
               {screeningsList.length === 0 ? (
@@ -6744,12 +7057,15 @@ function SwarSanketApp({
                 screeningsList.map((s) => (
                   <div
                     key={s.id}
-                    onClick={() => navigate("screeningDetails")}
-                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all"
+                    onClick={() => {
+                      setSelectedScreeningId(s.id)
+                      navigate("screeningDetails")
+                    }}
+                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all group"
                   >
-                    <div>
+                    <div className="min-w-0 flex-1 pr-2">
                       <div
-                        className="font-bold text-sm text-slate-900"
+                        className="font-bold text-sm text-slate-900 truncate"
                         style={{ fontFamily: F.display }}
                       >
                         {s.patientName} · {s.durationSeconds}s
@@ -6757,14 +7073,12 @@ function SwarSanketApp({
                       <div className="text-xs text-slate-500 mt-0.5">
                         {new Date(s.createdAt).toLocaleDateString("en-IN", {
                           day: "numeric",
-
                           month: "short",
-
                           year: "numeric",
                         })}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                           s.mlResult.screeningRisk === "elevated"
@@ -6774,12 +7088,106 @@ function SwarSanketApp({
                       >
                         {s.mlResult.screeningRisk.toUpperCase()}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSessionToDelete(s)
+                        }}
+                        className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors active:scale-90"
+                        title="Delete this report"
+                        aria-label={`Delete report for ${s.patientName}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
                 ))
               )}
             </div>
+
+            {/* Delete Confirmation Modal / Bottom Sheet */}
+            {sessionToDelete && (
+              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
+                <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-[#d7eaef] space-y-4 animate-scale-up text-left">
+                  <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-2 mb-2 sm:hidden" />
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3
+                        className="text-lg font-bold text-slate-900 leading-tight"
+                        style={{ fontFamily: F.display }}
+                      >
+                        Delete Report?
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        This report will be permanently removed.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Target Report Details Card */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">
+                        {sessionToDelete.patientName}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {new Date(sessionToDelete.createdAt).toLocaleDateString(
+                          "en-IN",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}{" "}
+                        · {sessionToDelete.durationSeconds}s recording
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        sessionToDelete.mlResult.screeningRisk === "elevated"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {sessionToDelete.mlResult.screeningRisk.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Are you sure you want to delete this screening session?
+                    Audio recordings and AI biomarker data for this session will
+                    be permanently erased.
+                  </p>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => handleDeleteSession(sessionToDelete)}
+                      className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>
+                        {isDeletingSession
+                          ? "Deleting..."
+                          : "Yes, Delete Report"}
+                      </span>
+                    </button>
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => setSessionToDelete(null)}
+                      className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm active:scale-[0.98] transition-all"
+                    >
+                      Cancel / Keep Report
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <BottomNav active="history" navigate={navigate} lang={lang} />
             <HomeIndicator />
