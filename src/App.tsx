@@ -46,6 +46,7 @@ import {
   Server,
   Bell,
   Edit3,
+  Search,
 } from "lucide-react"
 
 import {
@@ -125,6 +126,12 @@ import {
 import DemoAuth, { readDemoUser } from "./components/DemoAuth"
 
 import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
+import {
+  DOCTOR_PATIENT_PROFILES,
+  DoctorPatientProfile,
+  getDoctorPatient,
+  getDoctorStats,
+} from "./services/doctorPatients"
 
 // ─── Design Tokens & Theme (Aligned with Official Logo Palette) ───────────────
 
@@ -3754,6 +3761,12 @@ function SwarSanketApp({
   const [vqState, setVqState] = useState<VoiceQualityGrade>("good")
 
   const [selectedPatient, setSelectedPatient] = useState<string>("Rama Devi")
+  const [doctorFilterTab, setDoctorFilterTab] =
+    useState<"all" | "elevated" | "moderate" | "low">("all")
+  const [doctorSearchQuery, setDoctorSearchQuery] = useState<string>("")
+  const [doctorPatientNotes, setDoctorPatientNotes] =
+    useState<Record<string, string[]>>({})
+  const [newDoctorNoteText, setNewDoctorNoteText] = useState<string>("")
 
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string>("")
 
@@ -6682,237 +6695,438 @@ function SwarSanketApp({
           </div>
         )
 
-      case "doctorDash":
+      case "doctorDash": {
+        const stats = getDoctorStats()
+        const filteredPatients = DOCTOR_PATIENT_PROFILES.filter((p) => {
+          if (doctorFilterTab !== "all" && p.risk !== doctorFilterTab)
+            return false
+          if (!doctorSearchQuery.trim()) return true
+          const q = doctorSearchQuery.toLowerCase()
+          return (
+            p.name.toLowerCase().includes(q) ||
+            p.lang.toLowerCase().includes(q) ||
+            p.chiefComplaint.toLowerCase().includes(q) ||
+            p.clinicalImpression.toLowerCase().includes(q) ||
+            p.protocolMode.toLowerCase().includes(q) ||
+            String(p.age).includes(q)
+          )
+        })
+
         return (
           <div className="h-full flex flex-col bg-[#021820] text-white min-h-0 overflow-hidden">
             <StatusBar light />
-            <div className="px-6 pt-3 pb-3 space-y-3">
+
+            {/* Clinical Hub Top Header */}
+            <div className="px-5 pt-3 pb-3 space-y-3 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <img
-                    src="/logo.jpeg"
-                    alt="SwarSanket Logo"
-                    className="w-8 h-8 rounded-xl object-contain border border-[#02738a]/40"
-                  />
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#02738a] to-[#013a46] p-0.5 border border-[#38bdf8]/40 shadow-sm flex items-center justify-center">
+                    <Stethoscope className="w-5 h-5 text-[#38bdf8]" />
+                  </div>
                   <div>
-                    <h1
-                      className="text-xl font-bold text-white"
-                      style={{ fontFamily: F.display }}
-                    >
-                      Doctor Clinical Hub
-                    </h1>
-                    <p className="text-[11px] text-[#38bdf8]">
-                      SwarSanket AI Diagnostics
+                    <div className="flex items-center gap-1.5">
+                      <h1
+                        className="text-lg font-bold text-white tracking-tight"
+                        style={{ fontFamily: F.display }}
+                      >
+                        Doctor Clinical Hub
+                      </h1>
+                      <span className="px-1.5 py-0.5 rounded-full bg-[#02738a]/40 border border-[#02738a] text-[10px] font-semibold text-[#7dd3fc]">
+                        v2.4 Pro
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Dr. Sunita Sharma, MD · SwarSanket AI Diagnostics
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => navigate("home")}
-                  className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] text-xs font-semibold text-slate-200 hover:bg-[#073c4b] transition-colors"
+                  className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] text-xs font-semibold text-slate-200 hover:bg-[#073c4b] active:scale-95 transition-all"
                 >
-                  Exit
+                  Exit Hub
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { l: "Patients", v: "4" },
-
-                  { l: "Elevated", v: "2", c: "text-amber-400" },
-
-                  { l: "Accuracy", v: "93%", c: "text-[#38bdf8]" },
-                ].map((s) => (
+              {/* Key Clinical Metric Stat Cards */}
+              <div className="grid grid-cols-4 gap-2">
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-[#094250] text-center">
                   <div
-                    key={s.l}
-                    className="p-3 rounded-2xl bg-[#03232c] border border-[#094250] text-center"
+                    className="text-lg font-bold text-white"
+                    style={{ fontFamily: F.display }}
                   >
-                    <div
-                      className={`text-xl font-bold ${s.c || "text-white"}`}
-                      style={{ fontFamily: F.display }}
-                    >
-                      {s.v}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      {s.l}
-                    </div>
+                    {stats.total}
                   </div>
-                ))}
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
+                    Patients
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-rose-500/30 text-center">
+                  <div
+                    className="text-lg font-bold text-rose-400"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {stats.elevated}
+                  </div>
+                  <div className="text-[10px] text-rose-300/80 uppercase tracking-wider mt-0.5">
+                    Priority
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-sky-500/30 text-center">
+                  <div
+                    className="text-lg font-bold text-sky-400"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {stats.moderate}
+                  </div>
+                  <div className="text-[10px] text-sky-300/80 uppercase tracking-wider mt-0.5">
+                    Monitor
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-emerald-500/30 text-center">
+                  <div
+                    className="text-lg font-bold text-emerald-400"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {stats.low}
+                  </div>
+                  <div className="text-[10px] text-emerald-300/80 uppercase tracking-wider mt-0.5">
+                    Stable
+                  </div>
+                </div>
+              </div>
+
+              {/* Patient Search Input */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search patient, language, or clinical case..."
+                  value={doctorSearchQuery}
+                  onChange={(e) => setDoctorSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl bg-[#042833] border border-[#0d4f5e] text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#38bdf8] transition-colors"
+                />
+                {doctorSearchQuery && (
+                  <button
+                    onClick={() => setDoctorSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Case Classification Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
+                <button
+                  onClick={() => setDoctorFilterTab("all")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap ${
+                    doctorFilterTab === "all"
+                      ? "bg-[#02738a] text-white shadow-xs"
+                      : "bg-[#042a35] text-slate-300 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  All ({DOCTOR_PATIENT_PROFILES.length})
+                </button>
+                <button
+                  onClick={() => setDoctorFilterTab("elevated")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    doctorFilterTab === "elevated"
+                      ? "bg-rose-500/25 text-rose-300 border border-rose-500/50"
+                      : "bg-[#042a35] text-rose-300/80 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                  Priority / High ({stats.elevated})
+                </button>
+                <button
+                  onClick={() => setDoctorFilterTab("moderate")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    doctorFilterTab === "moderate"
+                      ? "bg-sky-500/25 text-sky-300 border border-sky-500/50"
+                      : "bg-[#042a35] text-sky-300/80 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                  Monitoring ({stats.moderate})
+                </button>
+                <button
+                  onClick={() => setDoctorFilterTab("low")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    doctorFilterTab === "low"
+                      ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                      : "bg-[#042a35] text-emerald-300/80 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  Stable Control ({stats.low})
+                </button>
               </div>
             </div>
 
-            <div className="flex-1 rounded-t-3xl bg-[#f3f9fb] text-slate-900 flex flex-col min-h-0 overflow-hidden">
-              <div className="px-6 pt-4 pb-2 flex items-center justify-between">
-                <h2
-                  className="text-xs font-bold uppercase tracking-wider text-slate-600"
-                  style={{ fontFamily: F.display }}
-                >
-                  Recent Patient Screenings
-                </h2>
+            {/* Patient Registry List Container */}
+            <div className="flex-1 rounded-t-3xl bg-[#f3f9fb] text-slate-900 flex flex-col min-h-0 overflow-hidden shadow-inner">
+              <div className="px-5 pt-3.5 pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2
+                    className="text-xs font-bold uppercase tracking-wider text-slate-600"
+                    style={{ fontFamily: F.display }}
+                  >
+                    Clinical Case Registry
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                    {filteredPatients.length} of{" "}
+                    {DOCTOR_PATIENT_PROFILES.length} Cases
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Tap card for deep analysis
+                </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-4 space-y-3">
-                {[
-                  {
-                    name: "Rama Devi",
-
-                    age: 72,
-
-                    risk: "elevated",
-
-                    date: "28 Aug 2026",
-
-                    lang: "Hindi",
-
-                    wpm: 68,
-                  },
-
-                  {
-                    name: "Suresh Kumar",
-
-                    age: 68,
-
-                    risk: "low",
-
-                    date: "15 Aug 2026",
-
-                    lang: "Hindi",
-
-                    wpm: 92,
-                  },
-
-                  {
-                    name: "Meera Bai",
-
-                    age: 80,
-
-                    risk: "elevated",
-
-                    date: "12 Aug 2026",
-
-                    lang: "Bengali",
-
-                    wpm: 60,
-                  },
-
-                  {
-                    name: "Lakshmi Devi",
-
-                    age: 75,
-
-                    risk: "low",
-
-                    date: "09 Aug 2026",
-
-                    lang: "Hindi",
-
-                    wpm: 88,
-                  },
-                ].map((p) => (
-                  <div
-                    key={p.name}
-                    onClick={() => {
-                      setSelectedPatient(p.name)
-
-                      navigate("doctorPatient")
-                    }}
-                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all"
-                  >
-                    <div>
-                      <div
-                        className="font-bold text-sm text-slate-900"
-                        style={{ fontFamily: F.display }}
-                      >
-                        {p.name}, {p.age}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {p.lang} · {p.date} · {p.wpm} WPM
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                          p.risk === "elevated"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-emerald-100 text-emerald-800"
-                        }`}
-                      >
-                        {p.risk.toUpperCase()}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </div>
+              <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-5 space-y-2.5">
+                {filteredPatients.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 space-y-2">
+                    <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
+                    <p className="text-sm font-medium">
+                      No patient records match the selected filter.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setDoctorFilterTab("all")
+                        setDoctorSearchQuery("")
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#02738a] text-white text-xs font-bold hover:bg-[#015364]"
+                    >
+                      Reset Filters
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  filteredPatients.map((p) => {
+                    const isElevated = p.risk === "elevated"
+                    const isModerate = p.risk === "moderate"
+
+                    const badgeStyle = isElevated
+                      ? "bg-rose-100 text-rose-800 border-rose-200"
+                      : isModerate
+                        ? "bg-sky-100 text-sky-800 border-sky-200"
+                        : "bg-emerald-100 text-emerald-800 border-emerald-200"
+
+                    const borderAccent = isElevated
+                      ? "border-l-4 border-l-rose-500"
+                      : isModerate
+                        ? "border-l-4 border-l-sky-500"
+                        : "border-l-4 border-l-emerald-500"
+
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedPatient(p.name)
+                          navigate("doctorPatient")
+                        }}
+                        className={`p-3.5 rounded-2xl bg-white border border-[#d7eaef] ${borderAccent} hover:border-[#02738a] hover:shadow-md cursor-pointer transition-all active:scale-[0.99] space-y-2`}
+                      >
+                        {/* Top row: Name, age, gender & risk badge */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="font-bold text-sm text-slate-900"
+                                style={{ fontFamily: F.display }}
+                              >
+                                {p.name}, {p.age}y
+                              </span>
+                              <span className="text-[11px] font-medium text-slate-500">
+                                ({p.gender.charAt(0)})
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                {p.lang}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                              {p.chiefComplaint}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${badgeStyle}`}
+                            >
+                              {p.riskScore}%{" "}
+                              {p.risk === "elevated"
+                                ? "HIGH"
+                                : p.risk === "moderate"
+                                  ? "MOD"
+                                  : "LOW"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bottom metrics row */}
+                        <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
+                          <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1 font-medium">
+                              <Activity className="w-3.5 h-3.5 text-[#02738a]" />
+                              {p.wpm} WPM
+                            </span>
+                            <span className="text-slate-300">·</span>
+                            <span className="text-slate-500">{p.date}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[#02738a] font-bold hover:underline text-[11px]">
+                            <span>View Deep Analysis</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
             <HomeIndicator />
           </div>
         )
+      }
 
-      case "doctorPatient":
+      case "doctorPatient": {
+        const patient = getDoctorPatient(selectedPatient)
+        const patientNotes = [
+          ...patient.initialNotes,
+          ...(doctorPatientNotes[patient.id] || []),
+        ]
+
+        const isElevated = patient.risk === "elevated"
+        const isModerate = patient.risk === "moderate"
+
+        const bannerBg = isElevated
+          ? "bg-gradient-to-r from-rose-50 to-amber-50 border-rose-200 text-rose-950"
+          : isModerate
+            ? "bg-gradient-to-r from-sky-50 to-indigo-50 border-sky-200 text-sky-950"
+            : "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-950"
+
+        const bannerIcon = isElevated ? (
+          <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0" />
+        ) : isModerate ? (
+          <Activity className="w-6 h-6 text-sky-600 shrink-0" />
+        ) : (
+          <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+        )
+
+        const chartStrokeColor = isElevated
+          ? "#e11d48"
+          : isModerate
+            ? "#0284c7"
+            : "#059669"
+        const chartGradientId = `grad_${patient.id}`
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="px-6 pt-3 pb-2 flex items-center justify-between">
+
+            {/* Header */}
+            <div className="px-5 pt-3 pb-2 flex items-center justify-between border-b border-[#d7eaef]/60 bg-white/70 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-3">
                 <BackBtn onBack={() => navigate("doctorDash")} />
                 <div>
-                  <h1
-                    className="text-lg font-bold text-slate-900"
-                    style={{ fontFamily: F.display }}
-                  >
-                    {selectedPatient}, 72
-                  </h1>
-                  <p className="text-xs text-slate-500">
-                    Patient Longitudinal Report
+                  <div className="flex items-center gap-2">
+                    <h1
+                      className="text-base font-bold text-slate-900"
+                      style={{ fontFamily: F.display }}
+                    >
+                      {patient.name}, {patient.age}y
+                    </h1>
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#e4f4f7] text-[#015364]">
+                      {patient.gender} · {patient.lang}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Clinical Evaluation · {patient.date}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  if (screeningsList.length > 0)
-                    generateAndDownloadReport(screeningsList[0])
-                }}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-              >
-                Print Report
-              </button>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    if (screeningsList.length > 0) {
+                      generateAndDownloadReport(screeningsList[0])
+                    } else {
+                      window.print()
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Print Report</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
-              {/* Risk Banner */}
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+            {/* Scrollable Clinical Content */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-5 py-3 space-y-3.5">
+              {/* Screening Outcome Classification Banner */}
+              <div
+                className={`p-3.5 rounded-2xl border ${bannerBg} shadow-xs flex items-center justify-between gap-3`}
+              >
                 <div className="space-y-0.5">
-                  <div className="text-xs font-bold text-amber-800 uppercase tracking-wider">
-                    Screening Outcome
+                  <div className="text-[10px] font-bold uppercase tracking-wider opacity-75">
+                    Screening Outcome Classification
                   </div>
-                  <div className="text-base font-bold text-amber-900">
-                    Elevated Cognitive Risk (88%)
+                  <div
+                    className="text-base font-extrabold"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {patient.statusLabel}
+                  </div>
+                  <div className="text-[11px] opacity-85">
+                    Speech Rate: <strong>{patient.wpm} WPM</strong> · Protocol:{" "}
+                    {patient.protocolMode}
                   </div>
                 </div>
-                <AlertTriangle className="w-6 h-6 text-amber-600" />
+                {bannerIcon}
               </div>
 
-              {/* Recharts Longitudinal Trend */}
-              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Longitudinal Risk Score Trend (%)
+              {/* Case Presentation & Clinical Impression */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Stethoscope className="w-3.5 h-3.5 text-[#02738a]" />
+                  <span>Clinical Presentation & Impression</span>
                 </div>
-                <div className="h-36 w-full">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-700 space-y-1">
+                  <div className="font-semibold text-slate-800">
+                    Chief Presentation:
+                  </div>
+                  <p className="italic text-slate-600">
+                    "{patient.chiefComplaint}"
+                  </p>
+                </div>
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {patient.clinicalImpression}
+                </p>
+              </div>
+
+              {/* Longitudinal Risk Score Trend */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Longitudinal Risk Score Trend (%)
+                  </div>
+                  <span className="text-[11px] font-semibold text-[#02738a]">
+                    4-Month Assessment Window
+                  </span>
+                </div>
+                <div className="h-40 w-full pt-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={[
-                        { month: "Jun", risk: 22 },
-
-                        { month: "Jul", risk: 25 },
-
-                        { month: "Aug", risk: 38 },
-
-                        { month: "Sep", risk: 88 },
-                      ]}
+                      data={patient.trendData}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
-                          id="patientRiskGrad"
+                          id={chartGradientId}
                           x1="0"
                           y1="0"
                           x2="0"
@@ -6920,98 +7134,361 @@ function SwarSanketApp({
                         >
                           <stop
                             offset="5%"
-                            stopColor="#02738a"
-                            stopOpacity={0.4}
+                            stopColor={chartStrokeColor}
+                            stopOpacity={0.35}
                           />
                           <stop
                             offset="95%"
-                            stopColor="#02738a"
+                            stopColor={chartStrokeColor}
                             stopOpacity={0.02}
                           />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-                      <Tooltip />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fontSize: 11, fill: "#64748b" }}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        tick={{ fontSize: 11, fill: "#64748b" }}
+                        unit="%"
+                      />
+                      <Tooltip
+                        formatter={(val: any) => [
+                          `${val}% Risk`,
+                          "Cognitive Risk Score",
+                        ]}
+                        contentStyle={{
+                          backgroundColor: "#021820",
+                          borderColor: "#094250",
+                          borderRadius: "12px",
+                          color: "#fff",
+                          fontSize: "12px",
+                        }}
+                      />
                       <Area
                         type="monotone"
                         dataKey="risk"
-                        stroke="#02738a"
-                        fill="url(#patientRiskGrad)"
+                        stroke={chartStrokeColor}
+                        fill={`url(#${chartGradientId})`}
                         strokeWidth={2.5}
+                        isAnimationActive={false}
+                        dot={{
+                          r: 4,
+                          fill: chartStrokeColor,
+                          strokeWidth: 1.5,
+                          stroke: "#fff",
+                        }}
+                        activeDot={{ r: 6 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+                <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>
+                    Baseline: <strong>{patient.trendData[0]?.risk}%</strong> (
+                    {patient.trendData[0]?.month})
+                  </span>
+                  <span>
+                    Latest:{" "}
+                    <strong>
+                      {patient.trendData[patient.trendData.length - 1]?.risk}%
+                    </strong>{" "}
+                    ({patient.trendData[patient.trendData.length - 1]?.month})
+                  </span>
+                  <span
+                    className={`font-bold ${
+                      isElevated
+                        ? "text-rose-600"
+                        : isModerate
+                          ? "text-sky-600"
+                          : "text-emerald-600"
+                    }`}
+                  >
+                    {patient.trendData[patient.trendData.length - 1]?.risk -
+                      patient.trendData[0]?.risk >=
+                    0
+                      ? "+"
+                      : ""}
+                    {patient.trendData[patient.trendData.length - 1]?.risk -
+                      patient.trendData[0]?.risk}
+                    % Net Shift
+                  </span>
+                </div>
               </div>
 
-              {/* Dual-Engine ML Model Scores */}
-              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Dual-Engine ML Analysis
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between font-medium">
-                    <span>Classical (Xception + XGBoost):</span>
-                    <span className="font-bold text-[#02738a]">
-                      84% Risk (AUC 0.91)
-                    </span>
+              {/* Dual-Engine ML Analysis */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Dual-Engine AI Biomarker Analysis
                   </div>
-                  <div className="flex justify-between font-medium">
-                    <span>Quantum-Hybrid (PennyLane QNN):</span>
-                    <span className="font-bold text-[#02738a]">
-                      89% Risk (AUC 0.93)
-                    </span>
-                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                    Concordance: 96%
+                  </span>
                 </div>
-              </div>
 
-              {/* Quantum Biomarker Sensitivity */}
-              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Quantum Biomarker Sensitivity (8-Qubit VQC)
-                </div>
-                {[
-                  { factor: "Speech Pause Duration (>1.2s)", weight: 38 },
-
-                  { factor: "Vocal Pitch Jitter (3.2%)", weight: 30 },
-
-                  { factor: "Phonetic Latency Delay", weight: 22 },
-
-                  { factor: "Semantic Recall Variance", weight: 10 },
-                ].map((s) => (
-                  <div key={s.factor} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-700 font-medium">
-                        {s.factor}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Classical Pipeline
+                    </div>
+                    <div
+                      className="text-xs font-medium text-slate-700 truncate"
+                      title={patient.classicalModel.name}
+                    >
+                      {patient.classicalModel.name}
+                    </div>
+                    <div className="flex items-baseline gap-1.5 pt-1">
+                      <span className="text-base font-extrabold text-[#02738a]">
+                        {patient.classicalModel.score}%
                       </span>
-                      <span className="font-bold text-[#02738a]">
-                        +{s.weight}%
+                      <span className="text-[10px] text-slate-500">
+                        (AUC {patient.classicalModel.auc})
                       </span>
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#02738a] to-[#015364] rounded-full"
-                        style={{ width: `${s.weight * 2}%` }}
-                      />
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#e8f5f8] border border-[#bce3eb] space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#02738a]">
+                      Quantum QNN Pipeline
+                    </div>
+                    <div
+                      className="text-xs font-medium text-slate-800 truncate"
+                      title={patient.quantumModel.name}
+                    >
+                      {patient.quantumModel.name}
+                    </div>
+                    <div className="flex items-baseline gap-1.5 pt-1">
+                      <span className="text-base font-extrabold text-[#02738a]">
+                        {patient.quantumModel.score}%
+                      </span>
+                      <span className="text-[10px] text-slate-600">
+                        (AUC {patient.quantumModel.auc})
+                      </span>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
 
-              <div className="pt-2 pb-4">
+              {/* Quantum Biomarker Sensitivity (8-Qubit VQC) */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Quantum Biomarker Sensitivity (8-Qubit VQC)
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-500">
+                    Gradient Attribution
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {patient.vqcSensitivity.map((s) => {
+                    const isPositive = s.impact >= 0
+                    return (
+                      <div key={s.factor} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-800 font-semibold">
+                            {s.factor}
+                          </span>
+                          <span
+                            className={`font-bold ${
+                              isPositive ? "text-rose-600" : "text-emerald-600"
+                            }`}
+                          >
+                            {isPositive ? `+${s.impact}%` : `${s.impact}%`}
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              isPositive
+                                ? "bg-gradient-to-r from-amber-500 to-rose-600"
+                                : "bg-gradient-to-r from-teal-400 to-emerald-600"
+                            }`}
+                            style={{
+                              width: `${Math.min(Math.abs(s.impact) * 2.2, 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-tight">
+                          {s.clinicalMeaning}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Acoustic Biomarkers vs. Healthy Reference Range Table */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Acoustic Biomarkers vs. Reference Range
+                  </div>
+                  <span className="text-[10px] font-medium text-slate-500">
+                    Age-Matched Normal Interval
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase">
+                        <th className="pb-1.5 font-bold">Biomarker</th>
+                        <th className="pb-1.5 font-bold">Patient</th>
+                        <th className="pb-1.5 font-bold">Normal Range</th>
+                        <th className="pb-1.5 font-bold text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {patient.acousticComparison.map((row) => (
+                        <tr key={row.metric} className="hover:bg-slate-50">
+                          <td className="py-2 text-slate-800 font-medium">
+                            {row.metric}
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              {row.note}
+                            </div>
+                          </td>
+                          <td className="py-2 font-bold text-slate-900">
+                            {row.patientValue}
+                          </td>
+                          <td className="py-2 text-slate-500 text-[11px]">
+                            {row.normalRange}
+                          </td>
+                          <td className="py-2 text-right">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                row.status === "normal"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-rose-100 text-rose-800"
+                              }`}
+                            >
+                              {row.status.toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Prescribed Next Steps & Recommendations */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <FileText className="w-3.5 h-3.5 text-[#02738a]" />
+                  <span>Clinical Next Steps & Care Protocol</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-700 leading-relaxed">
+                  {patient.clinicalRecommendation}
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  {patient.prescribedNextSteps.map((step, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 text-xs text-slate-700"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#02738a] mt-0.5 shrink-0" />
+                      <span>{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Interactive Doctor's Clinical Notes */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <Edit3 className="w-3.5 h-3.5 text-[#02738a]" />
+                    <span>Doctor's Longitudinal Notes</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {patientNotes.length} Logged
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {patientNotes.map((note, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 flex items-start gap-2"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#02738a] mt-1.5 shrink-0" />
+                      <p className="flex-1">{note}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add new note input */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Append clinical observation..."
+                    value={newDoctorNoteText}
+                    onChange={(e) => setNewDoctorNoteText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newDoctorNoteText.trim()) {
+                        const note = newDoctorNoteText.trim()
+                        setDoctorPatientNotes((prev) => ({
+                          ...prev,
+                          [patient.id]: [...(prev[patient.id] || []), note],
+                        }))
+                        setNewDoctorNoteText("")
+                      }
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#02738a]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newDoctorNoteText.trim()) {
+                        const note = newDoctorNoteText.trim()
+                        setDoctorPatientNotes((prev) => ({
+                          ...prev,
+                          [patient.id]: [...(prev[patient.id] || []), note],
+                        }))
+                        setNewDoctorNoteText("")
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-[#02738a] hover:bg-[#015364] text-white text-xs font-bold active:scale-95 transition-all"
+                  >
+                    Add Note
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 pb-5 space-y-2">
                 <Btn
-                  label="Download Printable Medical Report"
+                  label="Download Printable Clinical Dossier"
                   onClick={() => {
-                    if (screeningsList.length > 0)
+                    if (screeningsList.length > 0) {
                       generateAndDownloadReport(screeningsList[0])
+                    } else {
+                      window.print()
+                    }
                   }}
                 />
+                <button
+                  onClick={() => navigate("teleconsult")}
+                  className="w-full py-3 rounded-2xl bg-white border border-[#02738a] text-[#02738a] hover:bg-[#e4f4f7] font-bold text-xs shadow-xs active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                >
+                  <Video className="w-4 h-4" />
+                  <span>Initiate Teleconsultation for {patient.name}</span>
+                </button>
+                <button
+                  onClick={() => navigate("doctorDash")}
+                  className="w-full py-2.5 rounded-2xl text-slate-500 hover:text-slate-800 font-medium text-xs text-center transition-colors"
+                >
+                  ← Return to Clinical Case Registry
+                </button>
               </div>
             </div>
+
             <HomeIndicator />
           </div>
         )
+      }
 
       case "history":
         return (
@@ -8362,7 +8839,7 @@ function SwarSanketApp({
           <button
             onClick={() => navigate("doctorDash")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
-              screen === "doctorDash"
+              screen === "doctorDash" || screen === "doctorPatient"
                 ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
                 : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
             }`}
