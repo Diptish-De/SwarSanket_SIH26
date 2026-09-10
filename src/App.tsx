@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronRight,
+  ChevronDown,
   Download,
   Share2,
   FileText,
@@ -3767,6 +3768,21 @@ function SwarSanketApp({
   const [doctorPatientNotes, setDoctorPatientNotes] =
     useState<Record<string, string[]>>({})
   const [newDoctorNoteText, setNewDoctorNoteText] = useState<string>("")
+  const [showRestartMenu, setShowRestartMenu] = useState<boolean>(false)
+
+  const handleStartFromBeginning = (
+    targetScreen: "splash" | "profile" = "splash",
+  ) => {
+    clearSession()
+    stopSpeech()
+    setCurrentAudioBlob(null)
+    setCurrentAudioUrl("")
+    setRecordingContext("pictureDesc")
+    setLastResult(null)
+    setScreeningApiResult(null)
+    setScreen(targetScreen)
+    setShowRestartMenu(false)
+  }
 
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string>("")
 
@@ -4618,13 +4634,19 @@ function SwarSanketApp({
                 />
               ))}
             </div>
-            <div className="mt-12 w-full max-w-xs">
+            <div className="mt-12 w-full max-w-xs space-y-3 text-center">
               <button
                 onClick={() => navigate("language")}
                 className="w-full py-4 rounded-2xl bg-white text-[#01586a] font-bold text-lg shadow-xl shadow-black/20 hover:bg-[#f0f9fb] transition-all active:scale-95"
                 style={{ fontFamily: F.display }}
               >
                 {t(lang, "getStarted")} →
+              </button>
+              <button
+                onClick={() => navigate("profile")}
+                className="text-xs font-semibold text-cyan-100 hover:text-white underline underline-offset-4 transition-colors cursor-pointer block mx-auto pt-1"
+              >
+                Skip to Patient Registration (Profile) →
               </button>
             </div>
           </div>
@@ -8808,10 +8830,70 @@ function SwarSanketApp({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Start from Beginning / Registration Button */}
+          <div className="relative">
+            <div className="flex items-center rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:border-[#38bdf8]/60 shadow-md transition-all">
+              <button
+                onClick={() => handleStartFromBeginning("splash")}
+                title="Start from Beginning (Splash / Registration flow)"
+                className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 text-slate-200 hover:text-white active:scale-95 transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#38bdf8]" />
+                <span>Start from Beginning</span>
+              </button>
+              <button
+                onClick={() => setShowRestartMenu(!showRestartMenu)}
+                title="Choose start point"
+                className="px-1.5 py-1.5 border-l border-[#0d4f5e] text-slate-400 hover:text-white hover:bg-[#073c4b] rounded-r-xl transition-colors"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </div>
+
+            {showRestartMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowRestartMenu(false)}
+                />
+                <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-64 rounded-2xl bg-[#03222a] border border-[#0d4f5e] shadow-2xl p-1.5 z-50 animate-fade-in text-xs space-y-1">
+                  <button
+                    onClick={() => handleStartFromBeginning("splash")}
+                    className="w-full px-3 py-2 rounded-xl text-left hover:bg-[#073c4b] text-slate-200 hover:text-white transition-colors flex items-center gap-2.5"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#38bdf8] shrink-0" />
+                    <div>
+                      <div className="font-bold text-white">
+                        Full Beginning (Splash)
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Language, Welcome &amp; Consent
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleStartFromBeginning("profile")}
+                    className="w-full px-3 py-2 rounded-xl text-left hover:bg-[#073c4b] text-slate-200 hover:text-white transition-colors flex items-center gap-2.5"
+                  >
+                    <User className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="font-bold text-white">
+                        Registration Page (Profile)
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Direct Patient Profile &amp; Age Setup
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={() => navigate("home")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
-              screen !== "doctorDash"
+              screen !== "doctorDash" && screen !== "doctorPatient"
                 ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
                 : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
             }`}

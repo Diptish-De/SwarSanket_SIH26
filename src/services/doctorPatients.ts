@@ -28,9 +28,9 @@ export interface DoctorPatientProfile {
   chiefComplaint: string
   clinicalImpression: string
   protocolMode: string
-  trendData: { month: string; risk: number }[]
-  classicalModel: { name: string; score: number; auc: number }
-  quantumModel: { name: string; score: number; auc: number }
+  trendData: { month: string risk: number }[]
+  classicalModel: { name: string score: number auc: number }
+  quantumModel: { name: string score: number auc: number }
   vqcSensitivity: VqcSensitivityFactor[]
   acousticComparison: AcousticComparisonItem[]
   clinicalRecommendation: string
