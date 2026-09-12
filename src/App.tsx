@@ -145,6 +145,8 @@ import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
 
 import NoiseCheckCard from "./components/NoiseCheckCard"
 
+import AloisContainer from "./components/alois/AloisContainer"
+
 import { NoiseReading } from "./services/noiseCheck"
 
 import { MODEL_EVAL } from "./services/modelEval"
@@ -5151,277 +5153,35 @@ function SwarSanketApp({
 
       case "home":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#f8fcfd] via-[#eff7f9] to-[#e4f1f5]">
-            {/* Top Fixed Area: Status Bar + Sticky Header */}
-            <div className="shrink-0 bg-white/85 backdrop-blur-md z-20 border-b border-[#e2eff2] shadow-2xs">
-              <StatusBar />
-              <div className="flex items-center justify-between px-5 pb-2.5 pt-0.5 gap-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative shrink-0">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#02738a] to-[#0496b5] text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white">
-                      {userName.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white flex items-center justify-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h1
-                        className="text-base sm:text-lg font-bold text-[#0c1e27] leading-tight truncate"
-                        style={{ fontFamily: F.display }}
-                      >
-                        {t(lang, "greeting")}, {userName}
-                      </h1>
-                      <span className="text-sm shrink-0">👋</span>
-                    </div>
-                    <p
-                      className="text-[11px] text-[#5e7380] font-medium mt-0.5 truncate"
-                      style={{ fontFamily: F.body }}
-                    >
-                      {t(lang, "howFeeling")}
-                    </p>
-                  </div>
-                </div>
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-slate-50">
+            <StatusBar />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AloisContainer
+                patientName={activeMember?.displayName || userName}
+                caregiverName={caregiverName}
+                isAssisted={activeMember?.isPatient}
+                selectedLanguageName={
+                  LANGUAGES.find((l) => l.code === lang)?.name || "English"
+                }
+                latestSession={screeningsList[0] || null}
+                onStartVoiceCheck={() => {
+                  setRecordingContext("pictureDesc")
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {isOffline && <OfflinePill />}
-                  <button
-                    onClick={() => navigate("help")}
-                    aria-label={t(lang, "help")}
-                    title={t(lang, "help")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#d2e7ec] hover:border-[#02738a] hover:bg-[#eaf5f8] text-[#02738a] shadow-2xs active:scale-95 transition-all"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5 text-[#02738a]" />
-                    <span
-                      className="text-xs font-bold"
-                      style={{ fontFamily: F.display }}
-                    >
-                      {t(lang, "help")}
-                    </span>
-                  </button>
-                </div>
-              </div>
+                  navigate("voiceIntro")
+                }}
+                onViewReport={() => {
+                  if (screeningsList[0]) {
+                    generateAndDownloadReport(screeningsList[0])
+                  }
+                }}
+                onSwitchProfile={onSwitchMember}
+                onLogout={onLogout}
+                onOpenLanguageModal={() => navigate("language")}
+                onOpenHistory={() => navigate("history")}
+                onOpenDoctorDash={() => navigate("doctorDash")}
+                fontFamily={F.display}
+              />
             </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto min-h-0 px-5 pt-3.5 pb-8 space-y-4 no-scrollbar">
-              {/* Main Hero Voice Check Card */}
-              <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#026b80] via-[#02738a] to-[#01424e] text-white shadow-xl shadow-[#02738a]/20 border border-white/20 p-5 sm:p-6 space-y-4">
-                {/* Decorative Ambient Radial Glow */}
-                <div className="absolute -top-12 -right-12 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-cyan-300/10 rounded-full blur-xl pointer-events-none" />
-
-                {/* Top Badge & Audio Rhythm Animation */}
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[11px] font-bold text-cyan-200 uppercase tracking-wider shadow-inner">
-                    <Sparkles className="w-3 h-3 text-cyan-300 animate-pulse" />
-                    <span>{t(lang, "readyWhen")}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/20 backdrop-blur-xs">
-                    <span className="w-1 h-2 rounded-full bg-cyan-300/60 animate-[waveform-idle_1.2s_ease-in-out_infinite]" />
-                    <span className="w-1 h-3.5 rounded-full bg-cyan-300 animate-[waveform-idle_1s_ease-in-out_infinite_0.2s]" />
-                    <span className="w-1 h-2.5 rounded-full bg-cyan-300/80 animate-[waveform-idle_1.4s_ease-in-out_infinite_0.4s]" />
-                    <span className="w-1 h-1.5 rounded-full bg-cyan-300/50 animate-[waveform-idle_1.1s_ease-in-out_infinite_0.1s]" />
-                  </div>
-                </div>
-
-                {/* Title & Microphone Focus */}
-                <div className="flex items-center gap-3.5 relative z-10">
-                  <div className="w-13 h-13 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/25 shadow-inner shrink-0">
-                    <Mic className="w-7 h-7 text-white drop-shadow-xs" />
-                  </div>
-                  <div>
-                    <h2
-                      className="text-2xl font-bold text-white tracking-tight leading-tight"
-                      style={{ fontFamily: F.display }}
-                    >
-                      {t(lang, "voiceCheckCard")}
-                    </h2>
-                    <p className="text-xs text-cyan-100/90 mt-0.5 font-medium">
-                      3–5 minute AI cognitive screening
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-xs sm:text-sm text-cyan-50/90 leading-relaxed relative z-10">
-                  {t(lang, "voiceCheckDesc")}
-                </p>
-
-                {/* Big Inviting CTA Button */}
-                <button
-                  onClick={(e) => {
-                    // TEMPORARY DEMO OVERRIDE
-
-                    setDemoOutcome(outcomeFromClick(e, e.currentTarget))
-
-                    setRecordingContext("pictureDesc")
-
-                    navigate("voiceIntro")
-                  }}
-                  className="w-full py-3.5 sm:py-4 px-4 rounded-2xl bg-white hover:bg-cyan-50 text-[#014f5f] font-bold text-base sm:text-lg shadow-lg shadow-black/15 transition-all active:scale-[0.98] flex items-center justify-between relative z-10 group"
-                  style={{ fontFamily: F.display }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-8 h-8 rounded-xl bg-[#02738a]/15 flex items-center justify-center group-hover:bg-[#02738a]/25 transition-colors">
-                      <Play className="w-4 h-4 fill-[#01586a] text-[#01586a] ml-0.5" />
-                    </span>
-                    <span>{t(lang, "startVoiceCheck")}</span>
-                  </div>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#02738a]/10 text-[#02738a]">
-                    ⏱️ 3 min
-                  </span>
-                </button>
-              </div>
-
-              {/* Latest Screening Status Card */}
-              {(() => {
-                const latest = screeningsList[0]
-
-                const dateStr = latest?.createdAt
-                  ? new Date(latest.createdAt).toLocaleDateString("en-GB", {
-                      day: "numeric",
-
-                      month: "short",
-
-                      year: "numeric",
-                    })
-                  : "8 Sep 2026"
-
-                const langLabel = latest?.language
-                  ? latest.language.toUpperCase()
-                  : "EN"
-
-                const wpmLabel = latest?.biomarkers?.speechRateWpm ?? 68
-
-                const isElevated = latest
-                  ? latest.mlResult.screeningRisk === "elevated"
-                  : lastResult === "elevated"
-
-                return (
-                  <div
-                    onClick={() => navigate("screeningDetails")}
-                    className="p-4.5 rounded-3xl bg-white/95 border border-[#d8ebef] hover:border-[#02738a]/50 shadow-xs hover:shadow-md transition-all cursor-pointer group space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#5e7380]">
-                        <Calendar className="w-3.5 h-3.5 text-[#02738a]" />
-                        <span>{t(lang, "previousCheck")}</span>
-                      </div>
-                      <span className="text-xs font-bold text-[#02738a] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                        {t(lang, "viewDetailsLabel")}
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div
-                          className="font-bold text-sm sm:text-base text-[#0c1e27] truncate"
-                          style={{ fontFamily: F.display }}
-                        >
-                          Voice Screening · {dateStr}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold">
-                            🗣️ {wpmLabel} WPM
-                          </span>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold">
-                            🌐 {langLabel}
-                          </span>
-                        </div>
-                      </div>
-
-                      {isElevated ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold shadow-2xs shrink-0 whitespace-nowrap">
-                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                          <span>Follow-up</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs shrink-0 whitespace-nowrap">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <span>Normal</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {/* Quick Actions Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Caregiver Hub Card */}
-                <button
-                  onClick={() => navigate("caregiver")}
-                  className="p-4 rounded-3xl bg-gradient-to-br from-[#f0f9fb] to-[#e2f3f6] border border-[#cbe6ec] hover:border-[#02738a]/40 shadow-xs hover:shadow-md transition-all active:scale-[0.98] flex flex-col justify-between text-left group min-h-[108px]"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="w-10 h-10 rounded-2xl bg-white text-[#02738a] flex items-center justify-center shadow-xs border border-[#d2ebf1] group-hover:scale-105 transition-transform">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[#02738a]/50 group-hover:translate-x-0.5 group-hover:text-[#02738a] transition-all" />
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm font-bold text-[#0c1e27]"
-                      style={{ fontFamily: F.display }}
-                    >
-                      Caregiver Hub
-                    </div>
-                    <p className="text-[11px] text-[#5e7380] font-medium mt-0.5">
-                      Family circle &amp; alerts
-                    </p>
-                  </div>
-                </button>
-
-                {/* Voice Trends Card */}
-                <button
-                  onClick={() => navigate("trend")}
-                  className="p-4 rounded-3xl bg-gradient-to-br from-[#f3f7fc] to-[#e6eff9] border border-[#d0deef] hover:border-[#0369a1]/40 shadow-xs hover:shadow-md transition-all active:scale-[0.98] flex flex-col justify-between text-left group min-h-[108px]"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="w-10 h-10 rounded-2xl bg-white text-[#0369a1] flex items-center justify-center shadow-xs border border-[#d7e4f5] group-hover:scale-105 transition-transform">
-                      <Activity className="w-5 h-5" />
-                    </div>
-                    {/* Mini live sparkline indicator */}
-                    <div className="flex items-end gap-1 h-4 px-1">
-                      <span className="w-1 h-2 rounded-full bg-[#0369a1]/40" />
-                      <span className="w-1 h-3.5 rounded-full bg-[#0369a1]/70" />
-                      <span className="w-1 h-4 rounded-full bg-[#0369a1]" />
-                      <span className="w-1 h-2.5 rounded-full bg-[#0369a1]/60" />
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm font-bold text-[#0c1e27]"
-                      style={{ fontFamily: F.display }}
-                    >
-                      Voice Trends
-                    </div>
-                    <p className="text-[11px] text-[#5e7380] font-medium mt-0.5">
-                      Progress over time
-                    </p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Daily Health Encouragement Tip */}
-              <div className="p-3.5 rounded-2xl bg-white/75 border border-[#dcebee] flex items-center gap-3 shadow-2xs">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200/60 text-sm">
-                  💡
-                </div>
-                <p className="text-[11px] text-[#5e7380] leading-snug">
-                  <span className="font-bold text-[#0c1e27]">
-                    Daily Wellness:
-                  </span>{" "}
-                  Speaking naturally with loved ones helps maintain cognitive
-                  vitality and clear acoustic rhythm.
-                </p>
-              </div>
-            </div>
-
-            <BottomNav active="home" navigate={navigate} lang={lang} />
             <HomeIndicator />
           </div>
         )
