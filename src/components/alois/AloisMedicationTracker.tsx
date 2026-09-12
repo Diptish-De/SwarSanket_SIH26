@@ -19,7 +19,11 @@ interface MedItem {
   id: string
   name: string
   dose: string
-  tags: { label: string bg: string fg: string }[]
+  tags: {
+    label: string
+    bg: string
+    fg: string
+  }[]
   taken: boolean
   color: string
 }
