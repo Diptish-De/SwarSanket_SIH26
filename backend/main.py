@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from supabase_service import supabase_service
+
 # Configure backend logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("swarsanket.backend")
@@ -72,20 +74,50 @@ def _generate_saved_path(original_filename: str, content_type: str = "") -> Path
 
 @app.get("/api/health")
 def health_check():
-    """Health check endpoint confirming service status and active configuration."""
-    return {
+    """Health check endpoint confirming service status, active configuration, and Supabase telemetry."""
+    res = {
         "status": "ok",
         "service": "SwarSanket Voice Biomarker Backend",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "model": "PyTorch + PennyLane 8-Qubit Quantum-Classical Hybrid (22 Features, MC Dropout)",
         "pipeline": "Faster-Whisper ASR + spaCy NLP + Quantum Variational Classifier",
     }
+    # Attach Supabase health status non-blockingly
+    try:
+        res["supabase"] = supabase_service.health_check()
+    except Exception as e:
+        logger.warning(f"Non-fatal Supabase health check error: {e}")
+        res["supabase"] = {"connected": False, "status": "error"}
+    return res
+
+
+@app.get("/api/supabase/status")
+def get_supabase_status():
+    """Returns real-time connectivity and storage telemetry for the Supabase service."""
+    try:
+        return supabase_service.health_check()
+    except Exception as e:
+        return {"connected": False, "status": "error", "error": str(e)}
+
+
+@app.get("/api/supabase/screenings")
+def list_supabase_screenings(limit: int = 50):
+    """Fetches past screening sessions stored in Supabase cloud PostgreSQL."""
+    try:
+        screenings = supabase_service.get_screening_history(limit=limit)
+        return {
+            "total": len(screenings),
+            "screenings": screenings,
+        }
+    except Exception as e:
+        return {"total": 0, "screenings": [], "error": str(e)}
 
 
 @app.post("/api/upload-audio")
 async def upload_audio(audio: UploadFile = File(...)):
     """
     Ingests and saves an audio file to backend/uploads/ with a unique identifier.
+    Synchronizes to Supabase Storage if configured.
     """
     if not audio or not audio.filename:
         raise HTTPException(status_code=400, detail="No valid audio file provided.")
@@ -101,13 +133,30 @@ async def upload_audio(audio: UploadFile = File(...)):
             saved_path.unlink(missing_ok=True)
             raise HTTPException(status_code=400, detail="Uploaded audio file is empty (0 bytes).")
 
-        return {
+        resp = {
             "success": True,
             "filename": saved_path.name,
             "content_type": audio.content_type,
             "size_bytes": size_bytes,
             "saved_path": str(saved_path),
+            "supabase_url": None,
+            "supabase_storage_path": None,
         }
+
+        # Synchronize to Supabase Storage non-blockingly
+        try:
+            supabase_upload = supabase_service.upload_audio_file(
+                saved_path,
+                saved_path.name,
+                content_type=audio.content_type or "audio/wav"
+            )
+            if supabase_upload.get("success"):
+                resp["supabase_url"] = supabase_upload.get("public_url")
+                resp["supabase_storage_path"] = supabase_upload.get("path")
+        except Exception as e:
+            logger.warning(f"Non-fatal Supabase storage upload failure: {e}")
+
+        return resp
     except HTTPException:
         raise
     except Exception as e:
@@ -126,7 +175,8 @@ async def analyze_audio(audio: UploadFile = File(...)):
       3. Performs spaCy linguistic POS and keyword extraction.
       4. Assembles the 22-feature Quantum-Hybrid contract vector.
       5. Executes 8-Qubit Variational Quantum Circuit inference with MC Dropout.
-      6. Returns structured clinical screening signal & uncertainty metadata.
+      6. Attempts non-blocking Supabase Storage upload and screening session persistence.
+      7. Returns structured clinical screening signal & uncertainty metadata.
     """
 
     if not audio or not audio.filename:
@@ -157,6 +207,51 @@ async def analyze_audio(audio: UploadFile = File(...)):
 
         # Attach saved filename metadata
         result["filename"] = saved_path.name
+        result["supabase_url"] = None
+        result["supabase_saved"] = False
+
+        # Attempt non-blocking Supabase Storage upload & session persistence
+        try:
+            supabase_upload = supabase_service.upload_audio_file(
+                saved_path,
+                saved_path.name,
+                content_type=audio.content_type or "audio/wav"
+            )
+            if supabase_upload.get("success"):
+                result["supabase_url"] = supabase_upload.get("public_url")
+
+            recording_id = uuid.uuid4().hex[:12]
+            audio_info = result.get("audio", {})
+            try:
+                supabase_service.save_recording_record({
+                    "recording_id": recording_id,
+                    "original_filename": audio.filename or saved_path.name,
+                    "stored_filename": saved_path.name,
+                    "storage_path": supabase_upload.get("path"),
+                    "supabase_storage_url": result.get("supabase_url"),
+                    "audio_format": saved_path.suffix.lstrip(".") or "wav",
+                    "duration_seconds": audio_info.get("duration_seconds"),
+                    "sample_rate": audio_info.get("sample_rate"),
+                    "number_of_channels": audio_info.get("channels"),
+                    "file_size_bytes": size_bytes,
+                    "processing_status": "completed",
+                    "prediction_status": "completed",
+                })
+            except Exception as rec_err:
+                logger.info(f"Non-fatal recording record save warning: {rec_err}")
+
+            db_record = {
+                **result,
+                "recording_id": recording_id,
+                "session_id": f"sess_{recording_id}",
+                "supabase_url": result["supabase_url"],
+            }
+            db_res = supabase_service.save_screening_record(db_record)
+            result["supabase_saved"] = db_res.get("saved", False)
+        except Exception as sb_err:
+            logger.warning(f"Non-fatal Supabase persistence failure: {sb_err}")
+            result["supabase_saved"] = False
+
         return result
 
     except HTTPException:
