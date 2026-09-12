@@ -379,6 +379,7 @@ export interface ExplainabilityData {
   shap_contributions: Record<string, number>
 
   /** Never measured from audio; identical for every patient. Not shown to users. */
+
   imputed_constant_features?: string[]
 
   imputed_constant_attribution_share?: number
@@ -411,6 +412,36 @@ export interface ScreeningApiResponse {
     peak_amplitude: number
 
     silence_percentage: number
+  }
+
+  /**
+   * Measured fundamental frequency and voice perturbation.
+   *
+   * `measured: false` means the recording held too little voiced speech to
+   * estimate these. Callers must show them as unavailable in that case - a zero
+   * here is the absence of a reading, not a reading of zero.
+   */
+
+  voice_quality?: {
+    measured: boolean
+
+    f0_mean_hz: number
+
+    f0_sd_hz: number
+
+    f0_sd_semitones: number
+
+    jitter_local_percent: number
+
+    jitter_rap_percent: number
+
+    shimmer_local_db: number
+
+    hnr_db: number
+
+    voiced_ratio: number
+
+    cycles_analyzed: number
   }
 
   live_features: {
@@ -471,6 +502,7 @@ export interface ScreeningApiResponse {
    * False when the recording was too short to estimate the ratio features from.
    * The screening block then carries no probability and no risk tier.
    */
+
   sample_sufficient?: boolean
 
   sample_requirements?: {
@@ -488,6 +520,7 @@ export interface ScreeningApiResponse {
    * Chinese ASR corpora; a language without a reference profile cannot be scored
    * comparably, and no risk tier is reported for it.
    */
+
   language_calibration?: {
     status: "calibrated" | "uncalibrated"
 
@@ -515,6 +548,7 @@ export interface ScreeningApiResponse {
   }
 
   /** Feature values before cross-lingual calibration and support clamping. */
+
   raw_features?: Record<string, number>
 
   /**
@@ -564,6 +598,7 @@ export interface ScreeningApiResponse {
     predictive_entropy?: number
 
     /** Null when the language is uncalibrated or the sample was too short. */
+
     risk_tier?: string | null
 
     status: string

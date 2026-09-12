@@ -223,20 +223,27 @@ export async function getScreeningById(
 
 export async function deleteScreeningSession(id: string): Promise<void> {
   const db = await getDB()
+
   const tx = db.transaction(
     ["screenings", "audio_blobs", "sync_queue"],
+
     "readwrite",
   )
+
   await tx.objectStore("screenings").delete(id)
 
   const audioIndex = tx.objectStore("audio_blobs").index("by-session")
+
   let cursor = await audioIndex.openCursor(id)
+
   while (cursor) {
     await cursor.delete()
+
     cursor = await cursor.continue()
   }
 
   await tx.objectStore("sync_queue").delete(`queue_${id}`)
+
   await tx.done
 }
 
@@ -401,6 +408,12 @@ export async function seedInitialDemoData(): Promise<void> {
         shimmerDb: 4.1,
 
         hnrDb: 21.0,
+
+        // Seeded demo history: these represent past screenings that were
+
+        // measured, so their reports render complete.
+
+        voiceQualityMeasured: true,
       },
 
       mlResult: {
@@ -498,6 +511,12 @@ export async function seedInitialDemoData(): Promise<void> {
         shimmerDb: 2.2,
 
         hnrDb: 28.5,
+
+        // Seeded demo history: these represent past screenings that were
+
+        // measured, so their reports render complete.
+
+        voiceQualityMeasured: true,
       },
 
       mlResult: {
@@ -576,6 +595,12 @@ export async function seedInitialDemoData(): Promise<void> {
         shimmerDb: 3.6,
 
         hnrDb: 23.1,
+
+        // Seeded demo history: these represent past screenings that were
+
+        // measured, so their reports render complete.
+
+        voiceQualityMeasured: true,
       },
 
       mlResult: {
@@ -615,12 +640,18 @@ export async function seedInitialDemoData(): Promise<void> {
 
 export async function clearAllScreenings(): Promise<void> {
   const db = await getDB()
+
   const tx = db.transaction(
     ["screenings", "audio_blobs", "sync_queue"],
+
     "readwrite",
   )
+
   await tx.objectStore("screenings").clear()
+
   await tx.objectStore("audio_blobs").clear()
+
   await tx.objectStore("sync_queue").clear()
+
   await tx.done
 }

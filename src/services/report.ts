@@ -3,6 +3,12 @@
 import { ScreeningSession } from "../types"
 
 export function generateAndDownloadReport(session: ScreeningSession): void {
+  // Sessions recorded before voice quality was measured carry placeholder
+
+  // values and no flag; absent means not measured, never assumed measured.
+
+  const voiceQualityMeasured = session.biomarkers.voiceQualityMeasured === true
+
   const dateFormatted = new Date(session.createdAt).toLocaleString("en-IN", {
     dateStyle: "long",
 
@@ -101,9 +107,16 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
         <div class="card-title">Acoustic Biomarkers</div>
         <div class="stat-row"><span class="stat-label">Speech Rate</span><span class="stat-val">${session.biomarkers.speechRateWpm} WPM</span></div>
         <div class="stat-row"><span class="stat-label">Pause Ratio</span><span class="stat-val">${session.biomarkers.pausePatternRatio}%</span></div>
-        <div class="stat-row"><span class="stat-label">Pitch Jitter</span><span class="stat-val">${session.biomarkers.jitterPercent}%</span></div>
+        ${
+          voiceQualityMeasured
+            ? `<div class="stat-row"><span class="stat-label">Mean F0</span><span class="stat-val">${session.biomarkers.f0MeanHz ?? "—"} Hz</span></div>
+        <div class="stat-row"><span class="stat-label">F0 Variation (SD)</span><span class="stat-val">${session.biomarkers.pitchVariationHz} Hz</span></div>
+        <div class="stat-row"><span class="stat-label">Pitch Jitter (RAP)</span><span class="stat-val">${session.biomarkers.jitterPercent}%</span></div>
         <div class="stat-row"><span class="stat-label">Amplitude Shimmer</span><span class="stat-val">${session.biomarkers.shimmerDb} dB</span></div>
-        <div class="stat-row"><span class="stat-label">Harmonics-to-Noise (HNR)</span><span class="stat-val">${session.biomarkers.hnrDb} dB</span></div>
+        <div class="stat-row"><span class="stat-label">Harmonics-to-Noise (HNR)</span><span class="stat-val">${session.biomarkers.hnrDb} dB</span></div>`
+            : `<div class="stat-row"><span class="stat-label">Voice Quality</span><span class="stat-val">Not measured</span></div>
+        <div style="margin-top:8px;font-size:11px;color:#64748b;line-height:1.45;">Fundamental frequency, jitter, shimmer and HNR require sustained voiced speech. This recording did not contain enough to support an estimate, so no values are reported.</div>`
+        }
       </div>
     </div>
 
