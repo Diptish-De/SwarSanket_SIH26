@@ -378,6 +378,12 @@ export interface ExplainabilityData {
 
   shap_contributions: Record<string, number>
 
+  /** Never measured from audio; identical for every patient. Not shown to users. */
+
+  imputed_constant_features?: string[]
+
+  imputed_constant_attribution_share?: number
+
   human_readable_explanation: string
 
   disclaimer: string
@@ -406,6 +412,36 @@ export interface ScreeningApiResponse {
     peak_amplitude: number
 
     silence_percentage: number
+  }
+
+  /**
+   * Measured fundamental frequency and voice perturbation.
+   *
+   * `measured: false` means the recording held too little voiced speech to
+   * estimate these. Callers must show them as unavailable in that case - a zero
+   * here is the absence of a reading, not a reading of zero.
+   */
+
+  voice_quality?: {
+    measured: boolean
+
+    f0_mean_hz: number
+
+    f0_sd_hz: number
+
+    f0_sd_semitones: number
+
+    jitter_local_percent: number
+
+    jitter_rap_percent: number
+
+    shimmer_local_db: number
+
+    hnr_db: number
+
+    voiced_ratio: number
+
+    cycles_analyzed: number
   }
 
   live_features: {
@@ -463,11 +499,65 @@ export interface ScreeningApiResponse {
   }>
 
   /**
+   * False when the recording was too short to estimate the ratio features from.
+   * The screening block then carries no probability and no risk tier.
+   */
+
+  sample_sufficient?: boolean
+
+  sample_requirements?: {
+    words_recorded: number
+
+    words_required: number
+
+    seconds_recorded: number
+
+    seconds_required: number
+  }
+
+  /**
+   * Cross-lingual correction status. The model's lexical features were fitted on
+   * Chinese ASR corpora; a language without a reference profile cannot be scored
+   * comparably, and no risk tier is reported for it.
+   */
+
+  language_calibration?: {
+    status: "calibrated" | "uncalibrated"
+
+    language: string
+
+    is_calibrated: boolean
+
+    profile_quality: "provisional" | "validated" | null
+
+    profile_sample_size?: number
+
+    adjusted_features: {
+      feature: string
+
+      raw_value: number
+
+      calibrated_value: number
+
+      speaker_z_in_own_language: number
+    }[]
+
+    note: string
+
+    available_languages: string[]
+  }
+
+  /** Feature values before cross-lingual calibration and support clamping. */
+
+  raw_features?: Record<string, number>
+
+  /**
    * Provenance for how the 22-feature vector was scored against the training
    * distribution. "canonical" means the utterance matched the standardized
    * picture-description Information Unit lexicon; "proxy" means it was scored
    * as conversational speech.
    */
+
   feature_calibration?: {
     iu_scoring_mode: "canonical" | "proxy" | "empty"
 
@@ -493,20 +583,23 @@ export interface ScreeningApiResponse {
   screening: {
     model_name?: string
 
-    predicted_class: 0 | 1
+    predicted_class: 0 | 1 | null
 
-    probability: number
+    probability: number | null
 
-    probability_percent: number
+    probability_percent: number | null
 
     technical_confidence_percent: number
 
     /** Monte Carlo Dropout predictive standard deviation (epistemic uncertainty). */
+
     uncertainty_std: number
 
     predictive_entropy?: number
 
-    risk_tier?: string
+    /** Null when the language is uncalibrated or the sample was too short. */
+
+    risk_tier?: string | null
 
     status: string
 

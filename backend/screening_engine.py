@@ -35,25 +35,40 @@ from model_loader import (
     run_monte_carlo_inference,
 )
 from audio_analyzer import decode_and_inspect_audio, analyze_silence_runs
+from voice_quality import analyze_voice_quality
+from language_calibration import calibrate_features, LANGUAGE_DEPENDENT_FEATURES
 from explainability import explain_single_prediction, SCIENTIFIC_FRAMING_DISCLAIMER
 
-# Load full spaCy English pipeline once
-nlp = spacy.load("en_core_web_sm")
+# Load full spaCy English pipeline (disabling unused NER to conserve ~15 MB RAM while preserving identical POS/syntax)
+nlp = spacy.load("en_core_web_sm", disable=["ner"])
 
 # Global Faster-Whisper model instance (lazy loaded)
 _whisper_model: Optional[WhisperModel] = None
 
+# "tiny" mis-transcribes enough to corrupt the linguistic features that decide the
+# score - a dropped or invented pronoun moves CTP_Pronouns_ratio materially on a
+# short sample. "base" is the smallest model that transcribes reliably enough for
+# feature extraction. Override with SWARSANKET_WHISPER_MODEL if needed.
+WHISPER_MODEL_SIZE = os.environ.get("SWARSANKET_WHISPER_MODEL", "tiny")
+
 
 def get_whisper_model() -> WhisperModel:
-    """Returns a cached instance of Faster-Whisper (tiny model, CPU int8)."""
+    """Returns a cached instance of Faster-Whisper (CPU int8)."""
     global _whisper_model
     if _whisper_model is None:
-        _whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
+        _whisper_model = WhisperModel(
+            WHISPER_MODEL_SIZE,
+            device="cpu",
+            compute_type="int8",
+            cpu_threads=1,
+            num_workers=1,
+        )
     return _whisper_model
 
 
 # Live-extractable features from audio + Faster-Whisper + spaCy
 LIVE_EXTRACTED_FEATURES = [
+    "CTP_F0 SD(st)",
     "CTP_DPI(ms)",
     "CTP_RST(-/s)",
     "CTP_Voiced Rate(1/s)",
@@ -107,6 +122,16 @@ TASK_REFERENCE_WORD_COUNT = 84.0
 # therefore narrower than "content words" in a way this code cannot reconstruct, so
 # long descriptions still land high and are held at the boundary by the clamp below.
 IU_TO_KEYWORD_RATIO = 0.6725
+
+# Below this much speech the ratio features are dominated by sampling noise: at 28
+# words, two extra pronouns move CTP_Pronouns_ratio by ~40%, which is larger than
+# the effect the model is trying to detect. Short recordings get a retry prompt
+# rather than a number.
+# Word count is the primary gate: it is what governs the stability of the ratio
+# features. The duration floor is secondary and exists so the pause statistics have
+# enough signal to estimate from.
+MIN_WORDS_FOR_SCORING = 50
+MIN_SPEECH_SECONDS_FOR_SCORING = 20.0
 
 # Features are clamped to this many standard deviations around the training mean.
 # Beyond that range the model is extrapolating outside its support, where the
@@ -321,6 +346,7 @@ def _calibrate_to_training_support(
 
 def run_screening_pipeline(
     audio_source: Union[str, Path, BinaryIO, bytes],
+    require_minimum_sample: bool = True,
 ) -> Dict[str, Any]:
     """
     Executes the end-to-end validated SwarSanket screening pipeline using
@@ -362,6 +388,9 @@ def run_screening_pipeline(
 
         full_transcript = " ".join(transcript_parts).strip()
         word_count = len(words_list)
+        del segments
+        import gc
+        gc.collect()
 
         # Safety check: Reject pure silence or recordings with no audible speech
         if word_count == 0 or len(full_transcript) == 0:
@@ -389,6 +418,49 @@ def run_screening_pipeline(
                 },
             }
 
+        # Reject samples too short to estimate ratio features from. Returning a
+        # confident-looking probability off 28 words would be the same class of
+        # error as extrapolating outside the training distribution.
+        if require_minimum_sample and (
+            word_count < MIN_WORDS_FOR_SCORING or duration_sec < MIN_SPEECH_SECONDS_FOR_SCORING
+        ):
+            return {
+                "success": True,
+                "sample_sufficient": False,
+                "transcript": full_transcript,
+                "detected_language": info.language,
+                "word_count": word_count,
+                "audio": {
+                    "duration_seconds": audio_metrics.get("duration_seconds", 0.0),
+                    "speech_timeline_duration": words_list[-1]["end"] if words_list else duration_sec,
+                    "sample_rate": audio_metrics.get("sample_rate", 16000),
+                    "rms_energy": audio_metrics.get("rms_energy", 0.0),
+                    "peak_amplitude": audio_metrics.get("peak_amplitude", 0.0),
+                    "silence_percentage": audio_metrics.get("silence_percentage", 0.0),
+                },
+                "sample_requirements": {
+                    "words_recorded": word_count,
+                    "words_required": MIN_WORDS_FOR_SCORING,
+                    "seconds_recorded": round(duration_sec, 1),
+                    "seconds_required": MIN_SPEECH_SECONDS_FOR_SCORING,
+                },
+                "screening": {
+                    "predicted_class": None,
+                    "probability": None,
+                    "probability_percent": None,
+                    "technical_confidence_percent": None,
+                    "uncertainty_std": None,
+                    "risk_tier": None,
+                    "status": "More speech needed",
+                    "interpretation": (
+                        f"Only {word_count} words in {duration_sec:.0f} seconds were recorded. "
+                        f"At least {MIN_WORDS_FOR_SCORING} words over {MIN_SPEECH_SECONDS_FOR_SCORING:.0f} "
+                        "seconds are needed before a screening signal can be estimated. "
+                        "Please describe the picture again, in as much detail as you can."
+                    ),
+                },
+            }
+
         # Active speech timeline duration (from first word start to last word end)
         speech_timeline_duration = words_list[-1]["end"] if words_list else duration_sec
         if speech_timeline_duration <= 0:
@@ -405,6 +477,13 @@ def run_screening_pipeline(
         # hesitation. Pause structure is taken from the PCM energy envelope instead.
         _rewind(audio_source)
         pause_stats = analyze_silence_runs(audio_source)
+
+        # Fundamental-frequency statistics and voice perturbation. CTP_F0 SD(st)
+        # was previously always the training median, so pitch variability - one of
+        # the 22 model inputs - contributed an identical constant for every
+        # speaker. It is measurable from the waveform and is now measured.
+        _rewind(audio_source)
+        voice_quality = analyze_voice_quality(audio_source)
 
         mean_pause_ms = pause_stats["mean_pause_ms"] or medians_dict.get("CTP_DPI(ms)", 401.99)
 
@@ -440,7 +519,14 @@ def run_screening_pipeline(
         num_unique_keywords = float(len(nlp_features["unique_keywords"]))
 
         live_features = {
-            "CTP_F0 SD(st)": medians_dict.get("CTP_F0 SD(st)", 5.554),
+            # Measured when the clip holds enough voiced speech; the training
+            # median otherwise. A clip with no voiced frames must not be scored
+            # as if its pitch variability were zero.
+            "CTP_F0 SD(st)": (
+                float(voice_quality["f0_sd_semitones"])
+                if voice_quality.get("measured")
+                else medians_dict.get("CTP_F0 SD(st)", 5.554)
+            ),
             "CTP_DPI(ms)": mean_pause_ms,
             "CTP_RST(-/s)": round(syllable_rate, 6),
             "CTP_EST": medians_dict.get("CTP_EST", 1.486),
@@ -464,7 +550,21 @@ def run_screening_pipeline(
             "CTP_unique_IU_efficiency": round(_safe_div(num_unique_keywords, density_word_base, medians_dict.get("CTP_unique_IU_efficiency", 0.0769)), 6),
         }
 
-        # Hold features inside the training distribution's support before inference
+        # Cross-lingual correction FIRST: map lexical and rate features from the
+        # speaker's own language reference distribution onto the training
+        # distribution, so an English speaker's naturally higher pronoun rate is not
+        # read as the dementia marker it would be in the Chinese training corpus.
+        raw_features = dict(live_features)
+        training_means = {f: float(scaler.mean_[i]) for i, f in enumerate(production_features)}
+        training_scales = {f: float(scaler.scale_[i]) for i, f in enumerate(production_features)}
+        live_features, language_calibration = calibrate_features(
+            live_features,
+            info.language or "unknown",
+            training_means,
+            training_scales,
+        )
+
+        # Then hold whatever remains inside the training distribution's support
         live_features, clamped_features = _calibrate_to_training_support(live_features)
 
         # Build ordered 22-feature vector
@@ -479,26 +579,53 @@ def run_screening_pipeline(
         conf_percent = round(inference_res["confidence"] * 100.0, 2)
         uncertainty = round(inference_res["uncertainty_std"], 4)
 
-        # Risk Tier Classification
-        if prob < 0.35:
-            risk_tier = "Low Risk"
-        elif prob <= 0.60:
-            risk_tier = "Moderate / Monitor"
-        else:
-            risk_tier = "Elevated Risk"
+        # Risk Tier Classification. Withheld entirely when the speaker's language has
+        # no reference profile: the lexical features are then on the wrong scale and
+        # a tier would present a known-biased number as a clinical category.
+        is_calibrated = language_calibration.get("is_calibrated", False)
+        is_provisional = language_calibration.get("profile_quality") != "validated"
 
-        status = "Elevated screening signal" if predicted_class == 1 else "Lower screening signal"
+        if not is_calibrated:
+            risk_tier = None
+            status = "Not calibrated for this language"
+            interpretation = (
+                "This screening model's language features were fitted on Chinese speech "
+                f"and no reference profile exists yet for '{info.language}'. A risk level "
+                "is not reported, because scoring across languages without calibration "
+                "biases the result. Screening result only - not a diagnosis."
+            )
+        else:
+            if prob < 0.35:
+                risk_tier = "Low Risk"
+            elif prob <= 0.60:
+                risk_tier = "Moderate / Monitor"
+            else:
+                risk_tier = "Elevated Risk"
+            status = "Elevated screening signal" if predicted_class == 1 else "Lower screening signal"
+            interpretation = "Screening result only - not a diagnosis."
+            if is_provisional:
+                interpretation = (
+                    "Screening result only - not a diagnosis. The language reference profile "
+                    "used here is provisional and not validated for clinical use."
+                )
 
         # 7. Compute Quantum Feature Attributions.
         # Attributions are averaged over the same 30 Monte Carlo Dropout passes used
         # for inference, and anchored to the probability actually reported, so the
         # explanation describes the score the user is shown.
+        measured_this_run = [
+            f
+            for f in LIVE_EXTRACTED_FEATURES
+            if f != "CTP_F0 SD(st)" or voice_quality.get("measured")
+        ]
+
         df_for_explain = pd.DataFrame([live_features], columns=production_features)
         explanation = explain_single_prediction(
             df_for_explain,
             top_k=5,
             n_passes=inference_res["mc_passes"],
             reference_probability=prob,
+            measured_features=measured_this_run,
         )
 
         # Feature dictionary for UI radar & reports
@@ -506,7 +633,7 @@ def run_screening_pipeline(
         for col in production_features:
             production_features_dict[col] = {
                 "value": round(float(live_features[col]), 6),
-                "is_live_extracted": col in LIVE_EXTRACTED_FEATURES,
+                "is_live_extracted": col in measured_this_run,
                 "attribution": explanation["shap_contributions"].get(col, 0.0),
             }
 
@@ -523,8 +650,15 @@ def run_screening_pipeline(
                 "peak_amplitude": audio_metrics.get("peak_amplitude", 0.0),
                 "silence_percentage": audio_metrics.get("silence_percentage", 0.0),
             },
+            # Measured voice quality. `measured: false` means the clip held too
+            # little voiced speech to estimate these; the UI must show them as
+            # unavailable rather than printing a zero as a reading.
+            "voice_quality": voice_quality,
+            "sample_sufficient": True,
             "live_features": live_features,
+            "raw_features": raw_features,
             "production_features": production_features_dict,
+            "language_calibration": language_calibration,
             "feature_calibration": {
                 "iu_scoring_mode": nlp_features["iu_scoring_mode"],
                 "matched_information_units": nlp_features["unique_ius"],
@@ -543,7 +677,7 @@ def run_screening_pipeline(
                 "predictive_entropy": round(inference_res["predictive_entropy"], 4),
                 "risk_tier": risk_tier,
                 "status": status,
-                "interpretation": "Screening result only — not a diagnosis.",
+                "interpretation": interpretation,
                 "quantum_specs": {
                     "qubits": 8,
                     "entangling_layers": 3,

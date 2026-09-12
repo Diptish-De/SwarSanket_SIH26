@@ -97,6 +97,74 @@ body,
   50% { transform: translateY(-4px); }
 }
 
+@keyframes quantum-orbit-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes quantum-orbit-ccw {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes soundwave-equalizer {
+  0%, 100% {
+    height: 18%;
+    opacity: 0.5;
+  }
+  25% {
+    height: 72%;
+    opacity: 0.85;
+  }
+  50% {
+    height: 98%;
+    opacity: 1;
+  }
+  75% {
+    height: 45%;
+    opacity: 0.7;
+  }
+}
+
+@keyframes soundwave-equalizer-alt {
+  0%, 100% {
+    height: 85%;
+    opacity: 0.95;
+  }
+  30% {
+    height: 25%;
+    opacity: 0.55;
+  }
+  65% {
+    height: 95%;
+    opacity: 1;
+  }
+  85% {
+    height: 45%;
+    opacity: 0.7;
+  }
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+@keyframes quantum-pulse-glow {
+  0%, 100% {
+    transform: scale(0.97);
+    box-shadow: 0 0 25px rgba(2, 115, 138, 0.3), 0 0 55px rgba(56, 189, 248, 0.2);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 45px rgba(2, 115, 138, 0.55), 0 0 85px rgba(56, 189, 248, 0.35);
+  }
+}
+
 .animate-fade-in-up {
   animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -111,6 +179,24 @@ body,
 
 .animate-float {
   animation: soft-float 4s ease-in-out infinite;
+}
+
+.animate-quantum-orbit-cw {
+  animation: quantum-orbit-cw 24s linear infinite;
+  transform-origin: center;
+}
+
+.animate-quantum-orbit-ccw {
+  animation: quantum-orbit-ccw 16s linear infinite;
+  transform-origin: center;
+}
+
+.animate-quantum-glow {
+  animation: quantum-pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-shimmer-sweep {
+  animation: shimmer-sweep 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .bar-wave {
