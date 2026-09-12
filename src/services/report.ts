@@ -3,6 +3,18 @@
 import { ScreeningSession } from "../types"
 
 export function generateAndDownloadReport(session: ScreeningSession): void {
+  // Ambient noise measured before recording. Every acoustic biomarker below
+  // degrades with background noise, so a clinician reading a borderline result
+  // needs to know whether it was captured in a quiet room or beside a fan.
+  // Absent on sessions recorded before the pre-flight existed.
+  const snr = session.tasks[0]?.snrEstimateDb
+  const recordingConditions =
+    typeof snr === "number" && Number.isFinite(snr)
+      ? `${
+          snr >= 30 ? "Quiet" : snr >= 20 ? "Some background noise" : "Noisy"
+        } (projected SNR ${snr} dB)`
+      : ""
+
   // Sessions recorded before voice quality was measured carry placeholder
 
   // values and no flag; absent means not measured, never assumed measured.
@@ -101,6 +113,11 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
         <div class="stat-row"><span class="stat-label">Assisted Mode</span><span class="stat-val">${
           session.assistedMode ? "Yes (Caregiver)" : "No (Direct)"
         }</span></div>
+        ${
+          recordingConditions
+            ? `<div class="stat-row"><span class="stat-label">Recording Conditions</span><span class="stat-val">${recordingConditions}</span></div>`
+            : ""
+        }
       </div>
 
       <div class="card">

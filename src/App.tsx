@@ -142,6 +142,8 @@ import {
 } from "./services/household"
 
 import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
+import NoiseCheckCard from "./components/NoiseCheckCard"
+import { NoiseReading } from "./services/noiseCheck"
 
 import { MODEL_EVAL } from "./services/modelEval"
 
@@ -3852,6 +3854,13 @@ function SwarSanketApp({
     restoredSession?.lastResult ?? "elevated",
   )
 
+  // Ambient noise pre-flight. The reading is kept on the session because a
+  // result recorded in a noisy room needs that context attached to it when a
+  // clinician reads it later, not just at the moment of recording.
+  const [noiseReading, setNoiseReading] = useState<NoiseReading | null>(null)
+
+  const [showNoiseCheck, setShowNoiseCheck] = useState(false)
+
   const [fullScreenMode, setFullScreenMode] = useState<boolean>(false)
 
   const [showApkModal, setShowApkModal] = useState<boolean>(false)
@@ -4456,6 +4465,9 @@ function SwarSanketApp({
             ),
 
             quality: vqState,
+
+            // Projected SNR from the pre-flight, when one was taken.
+            snrEstimateDb: noiseReading?.projectedSnrDb,
 
             timestamp: new Date().toISOString(),
           },
@@ -5531,10 +5543,28 @@ function SwarSanketApp({
             </div>
 
             <div className="p-5 bg-white border-t border-[#d7eaef] shrink-0">
-              <Btn
-                label={t(lang, "startSpeaking")}
-                onClick={() => navigate("recording")}
-              />
+              {showNoiseCheck ? (
+                <NoiseCheckCard
+                  fontFamily={F.display}
+                  onDone={(reading) => {
+                    setNoiseReading(reading)
+
+                    setShowNoiseCheck(false)
+
+                    navigate("recording")
+                  }}
+                  onSkip={() => {
+                    setShowNoiseCheck(false)
+
+                    navigate("recording")
+                  }}
+                />
+              ) : (
+                <Btn
+                  label={t(lang, "startSpeaking")}
+                  onClick={() => setShowNoiseCheck(true)}
+                />
+              )}
             </div>
             <HomeIndicator />
           </div>
