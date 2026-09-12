@@ -210,7 +210,17 @@ class SupabaseService:
                 "notes": f"Screening audio duration: {audio_metrics.get('duration_seconds', 0)}s",
             }
 
-            res = self.client.table("screenings").insert(row).execute()
+            try:
+                res = self.client.table("screenings").insert(row).execute()
+            except Exception as insert_err:
+                err_str = str(insert_err)
+                if ("23503" in err_str or "foreign key" in err_str.lower()) and row.get("recording_id"):
+                    logger.info("[Supabase] recording_id not found in recordings table; saving screening standalone.")
+                    row["recording_id"] = None
+                    res = self.client.table("screenings").insert(row).execute()
+                else:
+                    raise insert_err
+
             logger.info(f"[Supabase] Screening session persisted: {row['session_id']}")
             return {"saved": True, "data": res.data}
         except Exception as e:

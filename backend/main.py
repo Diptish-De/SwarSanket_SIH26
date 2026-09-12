@@ -221,6 +221,25 @@ async def analyze_audio(audio: UploadFile = File(...)):
                 result["supabase_url"] = supabase_upload.get("public_url")
 
             recording_id = uuid.uuid4().hex[:12]
+            audio_info = result.get("audio", {})
+            try:
+                supabase_service.save_recording_record({
+                    "recording_id": recording_id,
+                    "original_filename": audio.filename or saved_path.name,
+                    "stored_filename": saved_path.name,
+                    "storage_path": supabase_upload.get("path"),
+                    "supabase_storage_url": result.get("supabase_url"),
+                    "audio_format": saved_path.suffix.lstrip(".") or "wav",
+                    "duration_seconds": audio_info.get("duration_seconds"),
+                    "sample_rate": audio_info.get("sample_rate"),
+                    "number_of_channels": audio_info.get("channels"),
+                    "file_size_bytes": size_bytes,
+                    "processing_status": "completed",
+                    "prediction_status": "completed",
+                })
+            except Exception as rec_err:
+                logger.info(f"Non-fatal recording record save warning: {rec_err}")
+
             db_record = {
                 **result,
                 "recording_id": recording_id,
