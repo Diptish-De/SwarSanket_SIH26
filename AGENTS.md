@@ -24,6 +24,12 @@ React 19 + Vite + Tailwind CSS v4 web application, FastAPI + PennyLane backend, 
 - **Audio Decoding**: Use PyAV container decoding with explicit casting (see `backend/audio_analyzer.py` and `backend/speech_features.py`).
 - **Speech-to-Text**: Faster-Whisper with CPU fallback (`backend/screening_engine.py`).
 
+### Dependencies & Deployment
+- **This project installs with pnpm.** Vercel builds from `pnpm-lock.yaml` with `--frozen-lockfile`, so the lockfile must always match `package.json`.
+- **Adding a dependency**: run `pnpm add <pkg>` and commit the updated `pnpm-lock.yaml` alongside `package.json`. Running `npm install` instead updates nothing pnpm reads, the lockfile silently goes stale, and the next deploy fails with `ERR_PNPM_OUTDATED_LOCKFILE`.
+- `package-lock.json` and `yarn.lock` are gitignored on purpose. A second lockfile is what caused that failure; do not commit one.
+- `npm run build` / `npx tsc` still work locally against an existing `node_modules`. Only dependency *changes* must go through pnpm.
+
 ### Git & Commit Hygiene
 - **No AI Co-Authorship Tags**: Never add `Co-Authored-By`, tool signatures, or synthetic contributor metadata to commit messages or PR descriptions. Commits must attribute team contributors only.
 
