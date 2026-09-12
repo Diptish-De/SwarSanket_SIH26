@@ -1,6 +1,6 @@
 // ─── Alois Memory Aid & Wellness Data Contracts ─────────────────────────────
 
-export type AloisTab = "home" | "meds" | "routine" | "safety" | "profile"
+export type AloisTab = "home" | "schedule" | "progress" | "messages" | "profile" | "medications" | "dailyCare"
 
 export interface MedicationItem {
   id: string
@@ -31,4 +31,15 @@ export interface DoctorAppointment {
   status: "upcoming" | "completed"
   rating: number
   avatarColor: string
+}
+
+export interface ClinicalTestItem {
+  id: string
+  title: string
+  subtitle: string
+  duration: string
+  category: "vocal_biomarker" | "saccadic_eye" | "mmse_cognitive" | "motor_speed"
+  status: "ready" | "in_progress" | "completed"
+  lastScore?: string
+  confidence?: string
 }

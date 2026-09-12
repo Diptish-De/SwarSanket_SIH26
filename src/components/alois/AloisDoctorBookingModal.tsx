@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   X,
   Stethoscope,
@@ -12,20 +13,29 @@ import {
 
 interface AloisDoctorBookingModalProps {
   isOpen: boolean
+
   onClose: () => void
+
   onBookingConfirmed?: () => void
+
   fontFamily?: string
 }
 
 export default function AloisDoctorBookingModal({
   isOpen,
+
   onClose,
+
   onBookingConfirmed,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisDoctorBookingModalProps) {
   const [selectedDoctorId, setSelectedDoctorId] = useState("doc-1")
+
   const [selectedSlot, setSelectedSlot] = useState("Tomorrow, 10:30 AM")
+
   const [attachReport, setAttachReport] = useState(true)
+
   const [isBooked, setIsBooked] = useState(false)
 
   if (!isOpen) return null
@@ -33,20 +43,33 @@ export default function AloisDoctorBookingModal({
   const doctors = [
     {
       id: "doc-1",
+
       name: "Dr. Arvind Sharma",
+
       qualifications: "MD, DM (Neurology - AIIMS)",
+
       hospital: "Apollo Multispecialty Hospitals",
+
       rating: 4.9,
+
       experience: "16+ yrs exp",
+
       fee: "₹1,200",
     },
+
     {
       id: "doc-2",
+
       name: "Dr. Priya Nair",
+
       qualifications: "MD, Cognitive Geriatrician (NIMHANS)",
+
       hospital: "Fortis Memorial Research Institute",
+
       rating: 4.8,
+
       experience: "12+ yrs exp",
+
       fee: "₹1,000",
     },
   ]
@@ -55,9 +78,12 @@ export default function AloisDoctorBookingModal({
 
   const handleConfirm = () => {
     setIsBooked(true)
+
     setTimeout(() => {
       setIsBooked(false)
+
       if (onBookingConfirmed) onBookingConfirmed()
+
       onClose()
     }, 1400)
   }
@@ -101,6 +127,7 @@ export default function AloisDoctorBookingModal({
           <div className="space-y-2">
             {doctors.map((doc) => {
               const isSelected = selectedDoctorId === doc.id
+
               return (
                 <div
                   key={doc.id}
@@ -146,6 +173,7 @@ export default function AloisDoctorBookingModal({
           <div className="grid grid-cols-1 gap-1.5">
             {slots.map((slot) => {
               const isSelected = selectedSlot === slot
+
               return (
                 <button
                   key={slot}

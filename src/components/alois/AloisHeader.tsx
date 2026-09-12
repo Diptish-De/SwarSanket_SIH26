@@ -1,39 +1,61 @@
 import React from "react"
+
 import { Users, Bell, Shield, Globe } from "lucide-react"
 
 interface AloisHeaderProps {
   patientName: string
+
   caregiverName?: string
+
   isAssisted?: boolean
+
   selectedLanguageName: string
+
   onSwitchProfile: () => void
+
   onOpenLanguageModal?: () => void
+
   fontFamily?: string
 }
 
 export default function AloisHeader({
   patientName,
+
   caregiverName,
+
   isAssisted = false,
+
   selectedLanguageName,
+
   onSwitchProfile,
+
   onOpenLanguageModal,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisHeaderProps) {
   const todayFormatted = new Date().toLocaleDateString("en-IN", {
     weekday: "short",
+
     month: "short",
+
     day: "numeric",
   })
 
   // Get initials
+
   const initials =
     patientName
+
       .split(" ")
+
       .map((n) => n[0])
+
       .filter(Boolean)
+
       .slice(0, 2)
+
       .join("")
+
       .toUpperCase() || "PT"
 
   return (

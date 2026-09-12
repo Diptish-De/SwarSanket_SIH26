@@ -1,203 +1,333 @@
 import React, { useState } from "react"
 import {
-  Pill,
-  CheckCircle2,
-  Clock,
+  ChevronLeft,
+  Bell,
+  Settings,
+  MoreVertical,
   Plus,
-  AlertCircle,
-  Sparkles,
+  Check,
+  Pill,
 } from "lucide-react"
-import { MedicationItem } from "./types"
-
-const INITIAL_MEDS: MedicationItem[] = [
-  {
-    id: "med-1",
-    name: "Donepezil HCl",
-    dosage: "5 mg (1 tablet)",
-    timeOfDay: "morning",
-    timeStr: "8:00 AM",
-    instructions: "Take with breakfast and a glass of water",
-    taken: true,
-    color: "#3b82f6",
-  },
-  {
-    id: "med-2",
-    name: "Vitamin B-Complex & D3",
-    dosage: "1 capsule",
-    timeOfDay: "afternoon",
-    timeStr: "1:30 PM",
-    instructions: "After lunch for neuroprotection",
-    taken: true,
-    color: "#10b981",
-  },
-  {
-    id: "med-3",
-    name: "Melatonin",
-    dosage: "3 mg (1 tablet)",
-    timeOfDay: "night",
-    timeStr: "9:30 PM",
-    instructions: "30 minutes before sleep for restorative sleep cycles",
-    taken: false,
-    color: "#8b5cf6",
-  },
-]
 
 interface AloisMedicationTrackerProps {
+  onBack?: () => void
+  onOpenSettings?: () => void
   fontFamily?: string
 }
 
+interface MedItem {
+  id: string
+  name: string
+  dose: string
+  tags: { label: string bg: string fg: string }[]
+  taken: boolean
+  color: string
+}
+
+/**
+ * Alois Medications Screen — matching Figma node 496:20424 & app/(main)/medications.tsx.
+ */
 export default function AloisMedicationTracker({
+  onBack,
+  onOpenSettings,
   fontFamily = "'Outfit', sans-serif",
 }: AloisMedicationTrackerProps) {
-  const [meds, setMeds] = useState<MedicationItem[]>(INITIAL_MEDS)
+  const [tab, setTab] = useState<"week" | "today" | "month">("today")
+  const [selectedDay, setSelectedDay] = useState(15)
+
+  const [medsList, setMedsList] = useState<MedItem[]>([
+    {
+      id: "1",
+      name: "Rivastigmine",
+      dose: "4.6 mg / 24 hr",
+      tags: [
+        { label: "09:00 AM", bg: "#F4F4F4", fg: "#161616" },
+        { label: "After Meal", bg: "#F4F4F4", fg: "#161616" },
+      ],
+      taken: true,
+      color: "#FA4D56",
+    },
+    {
+      id: "2",
+      name: "Donepezil",
+      dose: "10 mg",
+      tags: [
+        { label: "08:00 PM", bg: "#F4F4F4", fg: "#161616" },
+        { label: "Before Sleep", bg: "#F4F4F4", fg: "#161616" },
+      ],
+      taken: true,
+      color: "#0F62FE",
+    },
+    {
+      id: "3",
+      name: "Galantamine",
+      dose: "8 mg",
+      tags: [
+        { label: "01:00 PM", bg: "#F4F4F4", fg: "#161616" },
+        { label: "After Lunch", bg: "#F4F4F4", fg: "#161616" },
+      ],
+      taken: false,
+      color: "#42BE65",
+    },
+  ])
 
   const toggleTaken = (id: string) => {
-    setMeds((prev) =>
+    setMedsList((prev) =>
       prev.map((m) => (m.id === id ? { ...m, taken: !m.taken } : m)),
     )
   }
 
-  const takenCount = meds.filter((m) => m.taken).length
-  const totalCount = meds.length
-  const progressPercent = Math.round((takenCount / totalCount) * 100)
+  const days = [
+    { day: "Sun", date: 13 },
+    { day: "Mon", date: 14 },
+    { day: "Tue", date: 15 },
+    { day: "Wed", date: 16 },
+    { day: "Thu", date: 17 },
+    { day: "Fri", date: 18 },
+    { day: "Sat", date: 19 },
+  ]
+
+  const takenCount = medsList.filter((m) => m.taken).length
+  const totalCount = medsList.length
+  const percent = Math.round((takenCount / totalCount) * 100)
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
-      {/* Top Header Card with Circular Progress */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-3xl p-5 shadow-lg shadow-blue-500/20 flex items-center justify-between">
-        <div>
-          <span className="text-[11px] font-bold tracking-wider uppercase text-blue-200">
-            Daily Adherence
-          </span>
-          <h2 style={{ fontFamily }} className="text-2xl font-bold mt-0.5">
-            {takenCount} of {totalCount} Taken
-          </h2>
-          <p className="text-xs text-blue-100 mt-1">
-            {progressPercent === 100
-              ? "All medicines taken for today! Excellent."
-              : `${totalCount - takenCount} remaining for this evening.`}
-          </p>
-        </div>
-
-        {/* Circular Progress Gauge */}
-        <div className="relative w-18 h-18 flex items-center justify-center shrink-0">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <path
-              className="text-blue-400/30"
-              strokeWidth="3.5"
-              stroke="currentColor"
-              fill="none"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            />
-            <path
-              className="text-emerald-300 transition-all duration-500 ease-out"
-              strokeDasharray={`${progressPercent}, 100`}
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              stroke="currentColor"
-              fill="none"
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-            />
-          </svg>
-          <span
+    <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none pb-28">
+      {/* ─── Nav Bar ─────────────────────────────────────────────────── */}
+      <header className="h-[72px] px-4 flex items-center justify-between bg-[#F4F4F4] border-b border-[#E0E0E0] sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back"
+              className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] active:scale-95 transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+          <h1
             style={{ fontFamily }}
-            className="absolute text-sm font-extrabold text-white"
+            className="text-[20px] font-bold text-[#161616] tracking-tight"
           >
-            {progressPercent}%
-          </span>
-        </div>
-      </div>
-
-      {/* Pill List Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h3
-            style={{ fontFamily }}
-            className="text-sm font-bold text-slate-800 uppercase tracking-wider"
-          >
-            Today's Schedule
-          </h3>
-          <span className="text-xs text-slate-400 font-medium">3 Doses</span>
+            Medications
+          </h1>
         </div>
 
-        {meds.map((med) => {
-          return (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] active:scale-95 transition-all"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Settings"
+            className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] active:scale-95 transition-all"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      <div className="px-4 pt-4 space-y-4 max-w-[375px] mx-auto">
+        {/* ─── Calendar Day Strip (Figma Calendar Component) ───────────── */}
+        <div className="bg-white rounded-2xl border border-[#E0E0E0] p-3 shadow-2xs">
+          <div className="flex items-center justify-between mb-2.5 px-1">
+            <span
+              style={{ fontFamily }}
+              className="text-[13px] font-bold text-[#161616]"
+            >
+              August 2026
+            </span>
+            <span className="text-[11px] text-[#6F6F6F]">Week 3</span>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5 text-center">
+            {days.map((item) => {
+              const isSelected = item.date === selectedDay
+              return (
+                <button
+                  key={item.date}
+                  type="button"
+                  onClick={() => setSelectedDay(item.date)}
+                  className={`py-2 rounded-xl flex flex-col items-center justify-center transition-all ${
+                    isSelected
+                      ? "bg-[#0F62FE] text-white font-bold shadow-xs scale-105"
+                      : "hover:bg-slate-100 text-[#525252]"
+                  }`}
+                >
+                  <span className="text-[10px] uppercase font-medium">
+                    {item.day}
+                  </span>
+                  <span className="text-[14px] font-semibold mt-0.5">
+                    {item.date}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ─── Segmented Control: Week | Today | Month ─────────────────── */}
+        <div className="flex rounded-xl bg-slate-200/70 p-1">
+          <button
+            type="button"
+            onClick={() => setTab("week")}
+            className={`flex-1 py-1.5 text-[12px] font-semibold rounded-lg transition-all ${
+              tab === "week"
+                ? "bg-white text-[#161616] shadow-xs"
+                : "text-[#525252] hover:text-[#161616]"
+            }`}
+          >
+            Week
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("today")}
+            className={`flex-1 py-1.5 text-[12px] font-semibold rounded-lg transition-all ${
+              tab === "today"
+                ? "bg-white text-[#161616] shadow-xs"
+                : "text-[#525252] hover:text-[#161616]"
+            }`}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("month")}
+            className={`flex-1 py-1.5 text-[12px] font-semibold rounded-lg transition-all ${
+              tab === "month"
+                ? "bg-white text-[#161616] shadow-xs"
+                : "text-[#525252] hover:text-[#161616]"
+            }`}
+          >
+            Month
+          </button>
+        </div>
+
+        {/* ─── Adherence Donut Progress Card ───────────────────────────── */}
+        <div className="rounded-2xl bg-white border border-[#E0E0E0] p-4 flex items-center justify-between shadow-2xs">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#0F62FE]">
+              Daily Adherence
+            </span>
+            <h3
+              style={{ fontFamily }}
+              className="text-[18px] font-bold text-[#161616] mt-0.5"
+            >
+              {takenCount} of {totalCount} Taken
+            </h3>
+            <p className="text-[11px] text-[#525252] mt-0.5">
+              {percent === 100
+                ? "All pills completed for today!"
+                : `${totalCount - takenCount} dosage pending`}
+            </p>
+          </div>
+
+          <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-slate-100"
+                strokeWidth="3.5"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                className="text-[#0F62FE] transition-all duration-500 ease-out"
+                strokeDasharray={`${percent}, 100`}
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+            <span className="absolute text-[11px] font-bold text-[#161616]">
+              {percent}%
+            </span>
+          </div>
+        </div>
+
+        {/* ─── Medication Cards (Figma node 496:20424) ─────────────────── */}
+        <div className="space-y-3 pt-1">
+          {medsList.map((med) => (
             <div
               key={med.id}
-              className={`p-4 rounded-2xl border transition-all duration-200 ${
-                med.taken
-                  ? "bg-slate-50/80 border-slate-200 text-slate-400 opacity-80"
-                  : "bg-white border-slate-200/90 shadow-xs hover:shadow-md text-slate-800"
-              }`}
+              className="rounded-xl bg-white border border-[#E0E0E0] p-3.5 flex items-start gap-3 shadow-2xs relative"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
-                    style={{
-                      backgroundColor: med.taken ? "#e2e8f0" : `${med.color}15`,
-                      color: med.taken ? "#94a3b8" : med.color,
-                    }}
-                  >
-                    <Pill className="w-5 h-5" />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4
-                        style={{ fontFamily }}
-                        className={`text-base font-bold ${
-                          med.taken
-                            ? "line-through text-slate-500"
-                            : "text-slate-900"
-                        }`}
-                      >
-                        {med.name}
-                      </h4>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                        {med.dosage}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{med.timeStr}</span>
-                      <span>•</span>
-                      <span className="capitalize">{med.timeOfDay}</span>
-                    </div>
-
-                    <p className="text-xs text-slate-500 mt-1.5 italic">
-                      "{med.instructions}"
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => toggleTaken(med.id)}
-                  className={`p-2 rounded-xl transition-all active:scale-90 ${
-                    med.taken
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                  }`}
-                  title={med.taken ? "Mark as Not Taken" : "Mark as Taken"}
-                >
-                  <CheckCircle2 className="w-6 h-6" />
-                </button>
+              {/* Medicine Icon */}
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-white shadow-xs"
+                style={{ backgroundColor: med.color }}
+              >
+                <Pill className="w-6 h-6" />
               </div>
-            </div>
-          )
-        })}
-      </div>
 
-      {/* Safety Notice */}
-      <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/70 flex items-start gap-2.5 text-xs text-amber-900">
-        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-        <span>
-          Medication schedules are configured by your primary caregiver or
-          treating neurologist. Do not alter dosages without professional
-          advice.
-        </span>
+              {/* Body */}
+              <div className="flex-1 min-w-0 pr-8">
+                <h4
+                  style={{ fontFamily }}
+                  className="text-[14px] font-semibold text-[#161616] truncate"
+                >
+                  {med.name}
+                </h4>
+                <p className="text-[12px] text-[#525252] truncate mt-0.5">
+                  {med.dose}
+                </p>
+
+                {/* Tags */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  {med.tags.map((tag) => (
+                    <span
+                      key={tag.label}
+                      className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                    >
+                      {tag.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Overflow Menu */}
+              <button
+                type="button"
+                className="absolute top-3 right-3 text-[#525252] hover:text-[#161616]"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {/* Interactive Checkbox */}
+              <button
+                type="button"
+                onClick={() => toggleTaken(med.id)}
+                title={med.taken ? "Mark not taken" : "Mark taken"}
+                className={`absolute bottom-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                  med.taken
+                    ? "bg-[#42BE65] text-white shadow-xs"
+                    : "border-2 border-slate-300 hover:border-slate-400 text-transparent"
+                }`}
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* ─── Add Medication Button ───────────────────────────────────── */}
+        <div className="pt-2">
+          <button
+            type="button"
+            className="w-full py-3 rounded-xl bg-white border border-dashed border-[#0F62FE] text-[#0F62FE] text-[13px] font-semibold flex items-center justify-center gap-2 hover:bg-blue-50/50 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Medication Reminder</span>
+          </button>
+        </div>
       </div>
     </div>
   )
