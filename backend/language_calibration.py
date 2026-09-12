@@ -93,7 +93,27 @@ TRANSFERABLE_FEATURES = [
     "CTP_Energy Mean(Pa^2·s)",
 ]
 
-LANGUAGE_DEPENDENT_FEATURES = LEXICAL_FEATURES + RATE_FEATURES
+# Pitch variability. Acoustic, but NOT transferable, and for the same structural
+# reason as the pronoun ratio: Mandarin is a tonal language. Lexical tone obliges
+# a speaker to trace rising, falling and dipping F0 contours on individual
+# syllables, so pitch variability is inflated by the grammar of the language
+# before any speaker-specific factor applies. The fitted training mean is
+# 5.70 semitones; measured non-tonal speech in this pipeline runs near 2.4,
+# roughly 1.9 SD below it.
+#
+# The direction of this bias is the opposite of the lexical ones: reduced pitch
+# variability (monotone speech) is the dementia marker, so an uncorrected
+# English or Hindi speaker looks flatter - and therefore more impaired - than
+# they are. It is listed here so that it is corrected as soon as a language
+# profile carrying F0 statistics exists; with no such profile the calibrator
+# skips it and nothing changes.
+TONAL_DEPENDENT_FEATURES = [
+    "CTP_F0 SD(st)",
+]
+
+LANGUAGE_DEPENDENT_FEATURES = (
+    LEXICAL_FEATURES + RATE_FEATURES + TONAL_DEPENDENT_FEATURES
+)
 
 
 def profile_path(language: str) -> Path:
