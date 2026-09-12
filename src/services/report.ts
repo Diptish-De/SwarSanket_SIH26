@@ -3,6 +3,29 @@
 import { ScreeningSession } from "../types"
 
 export function generateAndDownloadReport(session: ScreeningSession): void {
+  // Ambient noise measured before recording. Every acoustic biomarker below
+
+  // degrades with background noise, so a clinician reading a borderline result
+
+  // needs to know whether it was captured in a quiet room or beside a fan.
+
+  // Absent on sessions recorded before the pre-flight existed.
+
+  const snr = session.tasks[0]?.snrEstimateDb
+
+  const recordingConditions =
+    typeof snr === "number" && Number.isFinite(snr)
+      ? `${
+          snr >= 30 ? "Quiet" : snr >= 20 ? "Some background noise" : "Noisy"
+        } (projected SNR ${snr} dB)`
+      : ""
+
+  // Sessions recorded before voice quality was measured carry placeholder
+
+  // values and no flag; absent means not measured, never assumed measured.
+
+  const voiceQualityMeasured = session.biomarkers.voiceQualityMeasured === true
+
   const dateFormatted = new Date(session.createdAt).toLocaleString("en-IN", {
     dateStyle: "long",
 
@@ -95,15 +118,27 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
         <div class="stat-row"><span class="stat-label">Assisted Mode</span><span class="stat-val">${
           session.assistedMode ? "Yes (Caregiver)" : "No (Direct)"
         }</span></div>
+        ${
+          recordingConditions
+            ? `<div class="stat-row"><span class="stat-label">Recording Conditions</span><span class="stat-val">${recordingConditions}</span></div>`
+            : ""
+        }
       </div>
 
       <div class="card">
         <div class="card-title">Acoustic Biomarkers</div>
         <div class="stat-row"><span class="stat-label">Speech Rate</span><span class="stat-val">${session.biomarkers.speechRateWpm} WPM</span></div>
         <div class="stat-row"><span class="stat-label">Pause Ratio</span><span class="stat-val">${session.biomarkers.pausePatternRatio}%</span></div>
-        <div class="stat-row"><span class="stat-label">Pitch Jitter</span><span class="stat-val">${session.biomarkers.jitterPercent}%</span></div>
+        ${
+          voiceQualityMeasured
+            ? `<div class="stat-row"><span class="stat-label">Mean F0</span><span class="stat-val">${session.biomarkers.f0MeanHz ?? "—"} Hz</span></div>
+        <div class="stat-row"><span class="stat-label">F0 Variation (SD)</span><span class="stat-val">${session.biomarkers.pitchVariationHz} Hz</span></div>
+        <div class="stat-row"><span class="stat-label">Pitch Jitter (RAP)</span><span class="stat-val">${session.biomarkers.jitterPercent}%</span></div>
         <div class="stat-row"><span class="stat-label">Amplitude Shimmer</span><span class="stat-val">${session.biomarkers.shimmerDb} dB</span></div>
-        <div class="stat-row"><span class="stat-label">Harmonics-to-Noise (HNR)</span><span class="stat-val">${session.biomarkers.hnrDb} dB</span></div>
+        <div class="stat-row"><span class="stat-label">Harmonics-to-Noise (HNR)</span><span class="stat-val">${session.biomarkers.hnrDb} dB</span></div>`
+            : `<div class="stat-row"><span class="stat-label">Voice Quality</span><span class="stat-val">Not measured</span></div>
+        <div style="margin-top:8px;font-size:11px;color:#64748b;line-height:1.45;">Fundamental frequency, jitter, shimmer and HNR require sustained voiced speech. This recording did not contain enough to support an estimate, so no values are reported.</div>`
+        }
       </div>
     </div>
 

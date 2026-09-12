@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronRight,
+  ChevronDown,
   Download,
   Share2,
   FileText,
@@ -46,6 +47,7 @@ import {
   Server,
   Bell,
   Edit3,
+  Search,
 } from "lucide-react"
 
 import {
@@ -69,6 +71,17 @@ import {
   OfflineSyncItem,
 } from "./types"
 
+// TEMPORARY DEMO OVERRIDE - remove with: git apply -R demo-override.patch
+
+import {
+  consumeDemoOutcome,
+  applyDemoOverride,
+  outcomeFromClick,
+  setDemoOutcome,
+} from "./services/demoOverride"
+
+import { loadSession, saveSession, clearSession } from "./services/sessionState"
+
 import {
   getDB,
   saveScreeningSession,
@@ -79,6 +92,7 @@ import {
   addDoctorNote,
   getDoctorNotes,
   clearAllScreenings,
+  deleteScreeningSession,
 } from "./services/db"
 
 import {
@@ -109,6 +123,38 @@ import {
   APK_DOWNLOAD_URL,
   GITHUB_RELEASES_URL,
 } from "./components/ApkDownloadModal"
+
+import DemoAuth, { readDemoUser } from "./components/DemoAuth"
+
+import MemberPicker from "./components/MemberPicker"
+
+import AddMemberSheet from "./components/AddMemberSheet"
+
+import CaregiverGate from "./components/CaregiverGate"
+
+import {
+  HouseholdMember,
+  listMembers,
+  getActiveMemberId,
+  setActiveMemberId,
+  clearActiveMember,
+  clearCaregiverPin,
+} from "./services/household"
+
+import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
+
+import NoiseCheckCard from "./components/NoiseCheckCard"
+
+import { NoiseReading } from "./services/noiseCheck"
+
+import { MODEL_EVAL } from "./services/modelEval"
+
+import {
+  DOCTOR_PATIENT_PROFILES,
+  DoctorPatientProfile,
+  getDoctorPatient,
+  getDoctorStats,
+} from "./services/doctorPatients"
 
 // ─── Design Tokens & Theme (Aligned with Official Logo Palette) ───────────────
 
@@ -156,39 +202,65 @@ const C = {
 
 const F = {
   display: "'Outfit', system-ui, sans-serif",
+
   body: "'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Gujarati', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Tamil', 'Noto Sans Telugu', system-ui, sans-serif",
 }
 
 const formatBiomarkerName = (feature: string): string => {
   const map: Record<string, string> = {
     "CTP_F0 SD(st)": "Pitch Variation (F0 SD)",
+
     "CTP_DPI(ms)": "Pause Duration (DPI)",
-    "CTP_RST(-/s)": "Speech Response Rate",
+
+    "CTP_RST(-/s)": "Phonation Rate (syll/s)",
+
     CTP_EST: "Speech Timing (EST)",
-    "CTP_Voiced Rate(1/s)": "Voiced Speech Rate",
+
+    "CTP_Voiced Rate(1/s)": "Voiced Speech Rate (words/s)",
+
     "CTP_Hesitation Ratio": "Hesitation Ratio",
+
     "CTP_Energy Mean(Pa^2·s)": "Acoustic Energy Mean",
+
     CTP_verb_num: "Verb Count",
+
     CTP_noun_ratio: "Noun Ratio",
+
     CTP_Pronouns_ratio: "Pronoun Ratio",
+
     "CTP_noun to verb": "Noun-to-Verb Ratio",
+
     "CTP_Word Rate(-/s)": "Word Rate (words/s)",
+
     "CTP_Noun No Phrase Rate": "Noun Non-Phrase Rate",
+
     "CTP_Verb phrase type proportion": "Verb Phrase Proportion",
+
     "CTP_Prep phrase type proportion": "Prepositional Density",
+
     "CTP_Prep average phrase type length 1": "Prepositional Length",
+
     CTP_num_unique_IU: "Unique Info Units",
+
     CTP_num_unique_keywords: "Unique Keywords",
+
     CTP_unique_IU_densitys: "Information Unit Density",
+
     CTP_total_IU_density: "Total Information Density",
+
     CTP_keyword_to_non_keyword_ratio: "Keyword-to-Filler Ratio",
+
     CTP_unique_IU_efficiency: "Information Efficiency",
   }
+
   return (
     map[feature] ||
     feature
+
       .replace(/^CTP_/, "")
+
       .replace(/_/g, " ")
+
       .replace(/\(st\)/, "")
   )
 }
@@ -229,7 +301,9 @@ const TX: Record<string, Record<string, string>> = {
     start: "START",
 
     previousCheck: "Previous Check",
+
     viewDetailsLabel: "View Report",
+
     readyWhen: "Daily Screening",
 
     lastCheck: "Last check",
@@ -255,7 +329,9 @@ const TX: Record<string, Record<string, string>> = {
     voiceIntroSub: "This is a short voice check. It takes about 3–5 minutes.",
 
     step1: "Listen",
+
     step2: "Speak",
+
     step3: "Finish",
 
     beginVoiceCheck: "Begin Voice Check",
@@ -287,6 +363,10 @@ const TX: Record<string, Record<string, string>> = {
     continue: "Continue",
 
     whatDoYouSee: "What do you see?",
+
+    clinicalProtocolTag: "Picture Description Task",
+
+    describeSceneHint: "Take your time and describe as much as you notice.",
 
     pictureDescSub: "Tell us what you see in the picture.",
 
@@ -492,7 +572,9 @@ const TX: Record<string, Record<string, string>> = {
     voiceIntroSub: "यह एक छोटी Voice Check है। इसमें लगभग 3–5 मिनट लगेंगे।",
 
     step1: "सुनें",
+
     step2: "बोलें",
+
     step3: "पूरा करें",
 
     beginVoiceCheck: "Voice Check शुरू करें",
@@ -524,6 +606,10 @@ const TX: Record<string, Record<string, string>> = {
     continue: "आगे बढ़ें",
 
     whatDoYouSee: "आप क्या देख रहे हैं?",
+
+    clinicalProtocolTag: "चित्र वर्णन कार्य",
+
+    describeSceneHint: "आराम से बताइए, जो कुछ भी आपको दिखे।",
 
     pictureDescSub: "तस्वीर में जो दिखे वो बताइए।",
 
@@ -727,7 +813,9 @@ const TX: Record<string, Record<string, string>> = {
     voiceIntroSub: "এটি একটি ছোট Voice Check। প্রায় ৩–৫ মিনিট সময় লাগবে।",
 
     step1: "শুনুন",
+
     step2: "বলুন",
+
     step3: "শেষ করুন",
 
     beginVoiceCheck: "Voice Check শুরু করুন",
@@ -759,6 +847,10 @@ const TX: Record<string, Record<string, string>> = {
     continue: "চালিয়ে যান",
 
     whatDoYouSee: "আপনি কী দেখছেন?",
+
+    clinicalProtocolTag: "ছবি বর্ণনার কাজ",
+
+    describeSceneHint: "সময় নিন, যা যা চোখে পড়ে সবই বলুন।",
 
     pictureDescSub: "ছবিতে যা দেখছেন তা বলুন।",
 
@@ -849,341 +941,659 @@ const TX: Record<string, Record<string, string>> = {
 const INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     voiceCheckCard: "आवाज़ की जांच",
+
     voiceCheckDesc:
       "3–5 मिनट की छोटी जांच करें। सहज रूप से बोलें—यहां सही या गलत उत्तर नहीं हैं।",
 
     welcomeSub: "आइए, आवाज़ की एक छोटी जांच करते हैं।",
+
     startVoiceCheck: "आवाज़ की जांच शुरू करें",
+
     letsBegin: "आइए शुरू करें",
+
     voiceIntroSub: "यह एक छोटी आवाज़ जांच है। इसमें लगभग 3–5 मिनट लगेंगे।",
 
     step1: "सुनें",
+
     step2: "बोलें",
+
     step3: "पूरा करें",
+
     beginVoiceCheck: "आवाज़ की जांच शुरू करें",
+
     listenToQuestion: "प्रश्न सुनें",
+
     playAgain: "दोबारा सुनें",
+
     startSpeaking: "बोलना शुरू करें",
+
     tapToSpeak: "बोलने के लिए टैप करें",
+
     speakNaturally: "स्वाभाविक रूप से बोलें…",
+
     finishRecording: "रिकॉर्डिंग पूरी करें",
+
     recordingReady: "आपकी रिकॉर्डिंग तैयार है",
+
     listenBefore: "आगे बढ़ने से पहले सुनें",
+
     recordAgain: "दोबारा रिकॉर्ड करें",
+
     continue: "आगे बढ़ें",
+
     whatDoYouSee: "आपको क्या दिखाई दे रहा है?",
+
+    clinicalProtocolTag: "चित्र वर्णन कार्य",
+
+    describeSceneHint: "आराम से बताइए, जो कुछ भी आपको दिखे।",
+
     pictureDescSub: "चित्र में जो दिखाई दे रहा है, उसके बारे में बताइए।",
+
     listenCarefully: "ध्यान से सुनें",
+
     memorySub: "हम कुछ शब्द पढ़ेंगे। उन्हें याद रखने की कोशिश करें।",
+
     iHeardWords: "मैंने शब्द सुन लिए हैं—आगे बढ़ें",
+
     oneMore: "एक और सवाल",
+
     conversationSub: "यहां कोई सही या गलत उत्तर नहीं है।",
+
     youreDone: "आपने पूरा कर लिया!",
+
     completionSub: "धन्यवाद। अब हम आपकी आवाज़ की जांच कर रहे हैं।",
 
     home: "होम",
+
     history: "पिछली जांचें",
+
     help: "मदद",
+
     caregiver: "देखभालकर्ता",
+
     profile: "प्रोफ़ाइल",
   },
 
   bn: {
     greeting: "নমস্কার",
+
     howFeeling: "আজ আপনি কেমন আছেন?",
+
     voiceCheckCard: "ভয়েস পরীক্ষা",
+
     voiceCheckDesc:
       "৩–৫ মিনিটের একটি ছোট পরীক্ষা করুন। স্বাভাবিকভাবে কথা বলুন—এখানে ঠিক বা ভুল উত্তর নেই।",
 
     welcomeSub: "চলুন একটি ছোট ভয়েস পরীক্ষা করি।",
+
     welcomeTime: "এতে প্রায় ৩–৫ মিনিট সময় লাগবে।",
+
     startVoiceCheck: "ভয়েস পরীক্ষা শুরু করুন",
+
     someoneHelping: "কেউ আমাকে সাহায্য করছেন",
+
     letsBegin: "চলুন শুরু করি",
+
     voiceIntroSub: "এটি একটি ছোট ভয়েস পরীক্ষা। এতে প্রায় ৩–৫ মিনিট সময় লাগবে।",
 
     step1: "শুনুন",
+
     step2: "বলুন",
+
     step3: "শেষ করুন",
+
     beginVoiceCheck: "ভয়েস পরীক্ষা শুরু করুন",
+
     listenToQuestion: "প্রশ্নটি শুনুন",
+
     playAgain: "আবার শুনুন",
+
     startSpeaking: "কথা বলা শুরু করুন",
+
     tapToSpeak: "কথা বলতে ট্যাপ করুন",
+
     speakNaturally: "স্বাভাবিকভাবে কথা বলুন…",
+
     finishRecording: "রেকর্ডিং শেষ করুন",
+
     recordingReady: "আপনার রেকর্ডিং প্রস্তুত",
+
     listenBefore: "এগিয়ে যাওয়ার আগে শুনুন",
+
     recordAgain: "আবার রেকর্ড করুন",
+
     continue: "এগিয়ে যান",
+
     whatDoYouSee: "আপনি কী দেখতে পাচ্ছেন?",
+
+    clinicalProtocolTag: "ছবি বর্ণনার কাজ",
+
+    describeSceneHint: "সময় নিন, যা যা চোখে পড়ে সবই বলুন।",
+
     pictureDescSub: "ছবিতে যা দেখতে পাচ্ছেন, সে সম্পর্কে বলুন।",
+
     listenCarefully: "মন দিয়ে শুনুন",
+
     memorySub: "আমরা কয়েকটি শব্দ পড়ব। সেগুলো মনে রাখার চেষ্টা করুন।",
+
     iHeardWords: "শব্দগুলো শুনেছি—এগিয়ে যান",
+
     oneMore: "আরও একটি প্রশ্ন",
+
     conversationSub: "এখানে ঠিক বা ভুল উত্তর নেই।",
+
     youreDone: "আপনার কাজ শেষ!",
+
     completionSub: "ধন্যবাদ। এখন আমরা আপনার কণ্ঠস্বর পরীক্ষা করছি।",
 
     home: "হোম",
+
     history: "আগের পরীক্ষাগুলি",
+
     help: "সহায়তা",
+
     caregiver: "পরিচর্যাকারী",
+
     profile: "প্রোফাইল",
   },
 
   mr: {
     greeting: "नमस्कार",
+
     howFeeling: "आज तुम्हाला कसे वाटत आहे?",
+
     voiceCheckCard: "आवाजाची तपासणी",
+
     voiceCheckDesc:
       "3–5 मिनिटांची छोटी तपासणी करा. सहजपणे बोला—यात बरोबर किंवा चूक उत्तर नाही.",
+
     welcomeSub: "चला, आवाजाची एक छोटी तपासणी करूया.",
+
     welcomeTime: "यासाठी सुमारे 3–5 मिनिटे लागतील.",
+
     startVoiceCheck: "आवाजाची तपासणी सुरू करा",
+
     someoneHelping: "कोणी तरी मला मदत करत आहे",
+
     letsBegin: "चला सुरू करूया",
+
     voiceIntroSub:
       "ही आवाजाची एक छोटी तपासणी आहे. यासाठी सुमारे 3–5 मिनिटे लागतील.",
+
     step1: "ऐका",
+
     step2: "बोला",
+
     step3: "पूर्ण करा",
+
     beginVoiceCheck: "आवाजाची तपासणी सुरू करा",
+
     listenToQuestion: "प्रश्न ऐका",
+
     playAgain: "पुन्हा ऐका",
+
     startSpeaking: "बोलायला सुरुवात करा",
+
     tapToSpeak: "बोलण्यासाठी टॅप करा",
+
     speakNaturally: "सहजपणे बोला…",
+
     finishRecording: "रेकॉर्डिंग पूर्ण करा",
+
     recordingReady: "तुमचे रेकॉर्डिंग तयार आहे",
+
     listenBefore: "पुढे जाण्यापूर्वी ऐका",
+
     recordAgain: "पुन्हा रेकॉर्ड करा",
+
     continue: "पुढे चला",
+
     whatDoYouSee: "तुम्हाला काय दिसत आहे?",
+
+    clinicalProtocolTag: "चित्र वर्णन कार्य",
+
+    describeSceneHint: "सावकाश सांगा, जे काही तुम्हाला दिसते ते सर्व.",
+
     pictureDescSub: "चित्रात तुम्हाला जे दिसते त्याबद्दल सांगा.",
+
     listenCarefully: "लक्षपूर्वक ऐका",
+
     memorySub: "आम्ही काही शब्द वाचू. ते लक्षात ठेवण्याचा प्रयत्न करा.",
+
     iHeardWords: "मी शब्द ऐकले आहेत—पुढे चला",
+
     oneMore: "आणखी एक प्रश्न",
+
     conversationSub: "यात बरोबर किंवा चूक उत्तर नाही.",
+
     youreDone: "तुम्ही पूर्ण केले!",
+
     completionSub: "धन्यवाद. आता आम्ही तुमच्या आवाजाची तपासणी करत आहोत.",
+
     home: "मुख्यपृष्ठ",
+
     history: "मागील तपासण्या",
+
     help: "मदत",
+
     caregiver: "काळजीवाहक",
+
     profile: "प्रोफाइल",
   },
 
   ta: {
     greeting: "வணக்கம்",
+
     howFeeling: "இன்று நீங்கள் எப்படி உணர்கிறீர்கள்?",
+
     voiceCheckCard: "குரல் பரிசோதனை",
+
     voiceCheckDesc:
       "3–5 நிமிட சிறிய பரிசோதனையை மேற்கொள்ளுங்கள். இயல்பாகப் பேசுங்கள்—சரி அல்லது தவறு என்ற பதில் எதுவும் இல்லை.",
+
     welcomeSub: "சிறிய குரல் பரிசோதனையைத் தொடங்கலாம்.",
+
     welcomeTime: "இதற்கு சுமார் 3–5 நிமிடங்கள் ஆகும்.",
+
     startVoiceCheck: "குரல் பரிசோதனையைத் தொடங்குங்கள்",
+
     someoneHelping: "யாரோ எனக்கு உதவுகிறார்கள்",
+
     letsBegin: "தொடங்கலாம்",
+
     voiceIntroSub: "இது ஒரு சிறிய குரல் பரிசோதனை. இதற்கு சுமார் 3–5 நிமிடங்கள் ஆகும்.",
+
     step1: "கேளுங்கள்",
+
     step2: "பேசுங்கள்",
+
     step3: "முடிக்கவும்",
+
     beginVoiceCheck: "குரல் பரிசோதனையைத் தொடங்குங்கள்",
+
     listenToQuestion: "கேள்வியைக் கேளுங்கள்",
+
     playAgain: "மீண்டும் கேளுங்கள்",
+
     startSpeaking: "பேசத் தொடங்குங்கள்",
+
     tapToSpeak: "பேசத் தட்டுங்கள்",
+
     speakNaturally: "இயல்பாகப் பேசுங்கள்…",
+
     finishRecording: "பதிவை முடிக்கவும்",
+
     recordingReady: "உங்கள் பதிவு தயாராக உள்ளது",
+
     listenBefore: "தொடர்வதற்கு முன் கேளுங்கள்",
+
     recordAgain: "மீண்டும் பதிவு செய்யுங்கள்",
+
     continue: "தொடரவும்",
+
     whatDoYouSee: "உங்களுக்கு என்ன தெரிகிறது?",
+
+    clinicalProtocolTag: "படம் விவரிக்கும் பணி",
+
+    describeSceneHint: "நிதானமாக, நீங்கள் கவனிக்கும் அனைத்தையும் சொல்லுங்கள்.",
+
     pictureDescSub: "படத்தில் நீங்கள் காண்பதைப் பற்றி சொல்லுங்கள்.",
+
     listenCarefully: "கவனமாகக் கேளுங்கள்",
+
     memorySub:
       "சில சொற்களை நாங்கள் வாசிப்போம். அவற்றை நினைவில் வைத்துக்கொள்ள முயற்சி செய்யுங்கள்.",
+
     iHeardWords: "சொற்களைக் கேட்டுவிட்டேன்—தொடரவும்",
+
     oneMore: "இன்னொரு கேள்வி",
+
     conversationSub: "சரியான அல்லது தவறான பதில் என்று எதுவும் இல்லை.",
+
     youreDone: "முடித்துவிட்டீர்கள்!",
+
     completionSub: "நன்றி. இப்போது உங்கள் குரலைப் பரிசோதிக்கிறோம்.",
+
     home: "முகப்பு",
+
     history: "முந்தைய பரிசோதனைகள்",
+
     help: "உதவி",
+
     caregiver: "பராமரிப்பாளர்",
+
     profile: "சுயவிவரம்",
   },
 
   te: {
     greeting: "నమస్కారం",
+
     howFeeling: "ఈ రోజు మీకు ఎలా అనిపిస్తోంది?",
+
     voiceCheckCard: "వాయిస్ పరీక్ష",
+
     voiceCheckDesc:
       "3–5 నిమిషాల చిన్న పరీక్ష చేయండి. సహజంగా మాట్లాడండి—సరైన లేదా తప్పు సమాధానాలు ఉండవు.",
+
     welcomeSub: "చిన్న వాయిస్ పరీక్షను ప్రారంభిద్దాం.",
+
     welcomeTime: "దీనికి సుమారు 3–5 నిమిషాలు పడుతుంది.",
+
     startVoiceCheck: "వాయిస్ పరీక్షను ప్రారంభించండి",
+
     someoneHelping: "ఎవరో నాకు సహాయం చేస్తున్నారు",
+
     letsBegin: "ప్రారంభిద్దాం",
+
     voiceIntroSub: "ఇది చిన్న వాయిస్ పరీక్ష. దీనికి సుమారు 3–5 నిమిషాలు పడుతుంది.",
+
     step1: "వినండి",
+
     step2: "మాట్లాడండి",
+
     step3: "ముగించండి",
+
     beginVoiceCheck: "వాయిస్ పరీక్షను ప్రారంభించండి",
+
     listenToQuestion: "ప్రశ్నను వినండి",
+
     playAgain: "మళ్లీ వినండి",
+
     startSpeaking: "మాట్లాడటం ప్రారంభించండి",
+
     tapToSpeak: "మాట్లాడేందుకు ట్యాప్ చేయండి",
+
     speakNaturally: "సహజంగా మాట్లాడండి…",
+
     finishRecording: "రికార్డింగ్‌ను ముగించండి",
+
     recordingReady: "మీ రికార్డింగ్ సిద్ధంగా ఉంది",
+
     listenBefore: "కొనసాగించే ముందు వినండి",
+
     recordAgain: "మళ్లీ రికార్డ్ చేయండి",
+
     continue: "కొనసాగించండి",
+
     whatDoYouSee: "మీకు ఏమి కనిపిస్తోంది?",
+
+    clinicalProtocolTag: "చిత్ర వర్ణన పని",
+
+    describeSceneHint: "నెమ్మదిగా, మీరు గమనించినదంతా చెప్పండి.",
+
     pictureDescSub: "చిత్రంలో మీకు కనిపిస్తున్నదాన్ని చెప్పండి.",
+
     listenCarefully: "శ్రద్ధగా వినండి",
+
     memorySub: "మేము కొన్ని పదాలను చదువుతాము. వాటిని గుర్తుంచుకోవడానికి ప్రయత్నించండి.",
+
     iHeardWords: "పదాలను విన్నాను—కొనసాగించండి",
+
     oneMore: "మరో ప్రశ్న",
+
     conversationSub: "సరైన లేదా తప్పు సమాధానం ఏదీ లేదు.",
+
     youreDone: "మీరు పూర్తి చేశారు!",
+
     completionSub: "ధన్యవాదాలు. ఇప్పుడు మీ వాయిస్‌ను పరీక్షిస్తున్నాము.",
+
     home: "హోమ్",
+
     history: "మునుపటి పరీక్షలు",
+
     help: "సహాయం",
+
     caregiver: "సంరక్షకుడు",
+
     profile: "ప్రొఫైల్",
   },
 
   gu: {
     greeting: "નમસ્તે",
+
     howFeeling: "આજે તમને કેવું લાગે છે?",
+
     voiceCheckCard: "અવાજની તપાસ",
+
     voiceCheckDesc:
       "3–5 મિનિટની ટૂંકી તપાસ કરો. સ્વાભાવિક રીતે બોલો—અહીં સાચો કે ખોટો જવાબ નથી.",
+
     welcomeSub: "ચાલો, અવાજની એક ટૂંકી તપાસ કરીએ.",
+
     welcomeTime: "આમાં લગભગ 3–5 મિનિટ લાગશે.",
+
     startVoiceCheck: "અવાજની તપાસ શરૂ કરો",
+
     someoneHelping: "કોઈ મને મદદ કરી રહ્યું છે",
+
     letsBegin: "ચાલો શરૂ કરીએ",
+
     voiceIntroSub: "આ અવાજની એક ટૂંકી તપાસ છે. આમાં લગભગ 3–5 મિનિટ લાગશે.",
+
     step1: "સાંભળો",
+
     step2: "બોલો",
+
     step3: "પૂર્ણ કરો",
+
     beginVoiceCheck: "અવાજની તપાસ શરૂ કરો",
+
     listenToQuestion: "પ્રશ્ન સાંભળો",
+
     playAgain: "ફરી સાંભળો",
+
     startSpeaking: "બોલવાનું શરૂ કરો",
+
     tapToSpeak: "બોલવા માટે ટૅપ કરો",
+
     speakNaturally: "સ્વાભાવિક રીતે બોલો…",
+
     finishRecording: "રેકોર્ડિંગ પૂર્ણ કરો",
+
     recordingReady: "તમારું રેકોર્ડિંગ તૈયાર છે",
+
     listenBefore: "આગળ વધતા પહેલાં સાંભળો",
+
     recordAgain: "ફરી રેકોર્ડ કરો",
+
     continue: "આગળ વધો",
+
     whatDoYouSee: "તમને શું દેખાય છે?",
+
+    clinicalProtocolTag: "ચિત્ર વર્ણન કાર્ય",
+
+    describeSceneHint: "નિરાંતે, તમને જે કંઈ દેખાય તે બધું જણાવો.",
+
     pictureDescSub: "ચિત્રમાં તમને જે દેખાય છે તે જણાવો.",
+
     listenCarefully: "ધ્યાનથી સાંભળો",
+
     memorySub: "અમે કેટલાક શબ્દો વાંચીશું. તેમને યાદ રાખવાનો પ્રયાસ કરો.",
+
     iHeardWords: "મેં શબ્દો સાંભળ્યા છે—આગળ વધો",
+
     oneMore: "વધુ એક પ્રશ્ન",
+
     conversationSub: "અહીં સાચો કે ખોટો જવાબ નથી.",
+
     youreDone: "તમે પૂર્ણ કર્યું!",
+
     completionSub: "આભાર. હવે અમે તમારા અવાજની તપાસ કરી રહ્યા છીએ.",
+
     home: "હોમ",
+
     history: "અગાઉની તપાસો",
+
     help: "મદદ",
+
     caregiver: "સંભાળ રાખનાર",
+
     profile: "પ્રોફાઇલ",
   },
 
   kn: {
     greeting: "ನಮಸ್ಕಾರ",
+
     howFeeling: "ಇಂದು ನಿಮಗೆ ಹೇಗನಿಸುತ್ತಿದೆ?",
+
     voiceCheckCard: "ಧ್ವನಿ ಪರೀಕ್ಷೆ",
+
     voiceCheckDesc:
       "3–5 ನಿಮಿಷಗಳ ಸಣ್ಣ ಪರೀಕ್ಷೆ ಮಾಡಿ. ಸಹಜವಾಗಿ ಮಾತನಾಡಿ—ಸರಿಯಾದ ಅಥವಾ ತಪ್ಪಾದ ಉತ್ತರಗಳಿಲ್ಲ.",
+
     welcomeSub: "ಸಣ್ಣ ಧ್ವನಿ ಪರೀಕ್ಷೆಯನ್ನು ಪ್ರಾರಂಭಿಸೋಣ.",
+
     welcomeTime: "ಇದಕ್ಕೆ ಸುಮಾರು 3–5 ನಿಮಿಷಗಳು ಬೇಕಾಗುತ್ತವೆ.",
+
     startVoiceCheck: "ಧ್ವನಿ ಪರೀಕ್ಷೆ ಪ್ರಾರಂಭಿಸಿ",
+
     someoneHelping: "ಯಾರೋ ನನಗೆ ಸಹಾಯ ಮಾಡುತ್ತಿದ್ದಾರೆ",
+
     letsBegin: "ಪ್ರಾರಂಭಿಸೋಣ",
+
     voiceIntroSub: "ಇದು ಒಂದು ಸಣ್ಣ ಧ್ವನಿ ಪರೀಕ್ಷೆ. ಇದಕ್ಕೆ ಸುಮಾರು 3–5 ನಿಮಿಷಗಳು ಬೇಕಾಗುತ್ತವೆ.",
+
     step1: "ಆಲಿಸಿ",
+
     step2: "ಮಾತನಾಡಿ",
+
     step3: "ಮುಗಿಸಿ",
+
     beginVoiceCheck: "ಧ್ವನಿ ಪರೀಕ್ಷೆ ಪ್ರಾರಂಭಿಸಿ",
+
     listenToQuestion: "ಪ್ರಶ್ನೆಯನ್ನು ಆಲಿಸಿ",
+
     playAgain: "ಮತ್ತೆ ಆಲಿಸಿ",
+
     startSpeaking: "ಮಾತನಾಡಲು ಪ್ರಾರಂಭಿಸಿ",
+
     tapToSpeak: "ಮಾತನಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+
     speakNaturally: "ಸಹಜವಾಗಿ ಮಾತನಾಡಿ…",
+
     finishRecording: "ರೆಕಾರ್ಡಿಂಗ್ ಮುಗಿಸಿ",
+
     recordingReady: "ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್ ಸಿದ್ಧವಾಗಿದೆ",
+
     listenBefore: "ಮುಂದುವರಿಯುವ ಮೊದಲು ಆಲಿಸಿ",
+
     recordAgain: "ಮತ್ತೆ ರೆಕಾರ್ಡ್ ಮಾಡಿ",
+
     continue: "ಮುಂದುವರಿಸಿ",
+
     whatDoYouSee: "ನಿಮಗೆ ಏನು ಕಾಣುತ್ತಿದೆ?",
+
+    clinicalProtocolTag: "ಚಿತ್ರ ವಿವರಣೆ ಕಾರ್ಯ",
+
+    describeSceneHint: "ನಿಧಾನವಾಗಿ, ನಿಮಗೆ ಕಾಣುವ ಎಲ್ಲವನ್ನೂ ತಿಳಿಸಿ.",
+
     pictureDescSub: "ಚಿತ್ರದಲ್ಲಿ ನಿಮಗೆ ಕಾಣುತ್ತಿರುವುದನ್ನು ತಿಳಿಸಿ.",
+
     listenCarefully: "ಗಮನವಿಟ್ಟು ಆಲಿಸಿ",
+
     memorySub: "ನಾವು ಕೆಲವು ಪದಗಳನ್ನು ಓದುತ್ತೇವೆ. ಅವುಗಳನ್ನು ನೆನಪಿಟ್ಟುಕೊಳ್ಳಲು ಪ್ರಯತ್ನಿಸಿ.",
+
     iHeardWords: "ಪದಗಳನ್ನು ಆಲಿಸಿದ್ದೇನೆ—ಮುಂದುವರಿಸಿ",
+
     oneMore: "ಇನ್ನೊಂದು ಪ್ರಶ್ನೆ",
+
     conversationSub: "ಸರಿಯಾದ ಅಥವಾ ತಪ್ಪಾದ ಉತ್ತರ ಎಂಬುದಿಲ್ಲ.",
+
     youreDone: "ನೀವು ಮುಗಿಸಿದ್ದೀರಿ!",
+
     completionSub: "ಧನ್ಯವಾದಗಳು. ಈಗ ನಿಮ್ಮ ಧ್ವನಿಯನ್ನು ಪರೀಕ್ಷಿಸುತ್ತಿದ್ದೇವೆ.",
+
     home: "ಮುಖಪುಟ",
+
     history: "ಹಿಂದಿನ ಪರೀಕ್ಷೆಗಳು",
+
     help: "ಸಹಾಯ",
+
     caregiver: "ಆರೈಕೆದಾರರು",
+
     profile: "ಪ್ರೊಫೈಲ್",
   },
 
   ml: {
     greeting: "നമസ്കാരം",
+
     howFeeling: "ഇന്ന് നിങ്ങൾക്ക് എങ്ങനെയുണ്ട്?",
+
     voiceCheckCard: "ശബ്ദ പരിശോധന",
+
     voiceCheckDesc:
       "3–5 മിനിറ്റ് ദൈർഘ്യമുള്ള ഒരു ചെറിയ പരിശോധന നടത്തൂ. സ്വാഭാവികമായി സംസാരിക്കൂ—ശരിയോ തെറ്റോ ആയ ഉത്തരങ്ങളില്ല.",
+
     welcomeSub: "ഒരു ചെറിയ ശബ്ദ പരിശോധന നടത്താം.",
+
     welcomeTime: "ഇതിന് ഏകദേശം 3–5 മിനിറ്റ് എടുക്കും.",
+
     startVoiceCheck: "ശബ്ദ പരിശോധന ആരംഭിക്കുക",
+
     someoneHelping: "ആരെങ്കിലും എന്നെ സഹായിക്കുന്നു",
+
     letsBegin: "തുടങ്ങാം",
+
     voiceIntroSub: "ഇതൊരു ചെറിയ ശബ്ദ പരിശോധനയാണ്. ഇതിന് ഏകദേശം 3–5 മിനിറ്റ് എടുക്കും.",
+
     step1: "കേൾക്കുക",
+
     step2: "സംസാരിക്കുക",
+
     step3: "പൂർത്തിയാക്കുക",
+
     beginVoiceCheck: "ശബ്ദ പരിശോധന ആരംഭിക്കുക",
+
     listenToQuestion: "ചോദ്യം കേൾക്കുക",
+
     playAgain: "വീണ്ടും കേൾക്കുക",
+
     startSpeaking: "സംസാരിക്കാൻ തുടങ്ങുക",
+
     tapToSpeak: "സംസാരിക്കാൻ ടാപ്പ് ചെയ്യുക",
+
     speakNaturally: "സ്വാഭാവികമായി സംസാരിക്കൂ…",
+
     finishRecording: "റെക്കോർഡിംഗ് പൂർത്തിയാക്കുക",
+
     recordingReady: "നിങ്ങളുടെ റെക്കോർഡിംഗ് തയ്യാറാണ്",
+
     listenBefore: "തുടരുന്നതിന് മുമ്പ് കേൾക്കുക",
+
     recordAgain: "വീണ്ടും റെക്കോർഡ് ചെയ്യുക",
+
     continue: "തുടരുക",
+
     whatDoYouSee: "നിങ്ങൾ എന്താണ് കാണുന്നത്?",
+
+    clinicalProtocolTag: "ചിത്ര വിവരണ ദൗത്യം",
+
+    describeSceneHint: "സാവധാനം, നിങ്ങൾ കാണുന്നതെല്ലാം പറയൂ.",
+
     pictureDescSub: "ചിത്രത്തിൽ നിങ്ങൾ കാണുന്നത് വിവരിക്കൂ.",
+
     listenCarefully: "ശ്രദ്ധയോടെ കേൾക്കുക",
+
     memorySub: "ഞങ്ങൾ കുറച്ച് വാക്കുകൾ വായിക്കും. അവ ഓർമ്മിക്കാൻ ശ്രമിക്കൂ.",
+
     iHeardWords: "വാക്കുകൾ കേട്ടു—തുടരുക",
+
     oneMore: "ഒരു ചോദ്യം കൂടി",
+
     conversationSub: "ശരിയോ തെറ്റോ ആയ ഉത്തരങ്ങളില്ല.",
+
     youreDone: "നിങ്ങൾ പൂർത്തിയാക്കി!",
+
     completionSub: "നന്ദി. ഇപ്പോൾ നിങ്ങളുടെ ശബ്ദം പരിശോധിക്കുകയാണ്.",
+
     home: "ഹോം",
+
     history: "മുൻ പരിശോധനകൾ",
+
     help: "സഹായം",
+
     caregiver: "പരിചരിക്കുന്നയാൾ",
+
     profile: "പ്രൊഫൈൽ",
   },
 }
@@ -1191,209 +1601,385 @@ const INDIC_TX: Record<string, Record<string, string>> = {
 const STATIC_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     chooseLanguage: "अपनी भाषा चुनें",
+
     changeLanguageLater: "आप इसे बाद में भी बदल सकते हैं।",
+
     listenEnglish: "अंग्रेज़ी में सुनें",
+
     continueBtn: "आगे बढ़ें",
+
     screeningTitle: "आवाज़ की स्वास्थ्य जांच",
+
     screeningSubtitle: "आवाज़ के आधार पर शुरुआती संज्ञानात्मक जांच",
+
     beforeBegin: "शुरू करने से पहले",
+
     privacyNote: "आपकी गोपनीयता और सुरक्षा के बारे में एक ज़रूरी बात",
+
     voiceRecording: "आवाज़ की रिकॉर्डिंग",
+
     privacyEncryption: "गोपनीयता और सुरक्षा",
+
     screeningInstrument: "जांच की जानकारी",
+
     understandContinue: "समझ गया/गई, आगे बढ़ें",
+
     tellAboutYou: "अपने बारे में बताइए",
+
     calibrationNote: "सटीक परिणाम के लिए हम केवल ज़रूरी जानकारी पूछते हैं।",
+
     yourName: "आपका नाम",
+
     enterName: "अपना नाम लिखें",
+
     age: "उम्र",
+
     caregiverMode: "देखभालकर्ता की सहायता वाला तरीका",
+
     readyWhen: "जब आप तैयार हों",
+
     viewDetailsLabel: "विवरण देखें",
+
     apkTitle: "SwarSanket Android ऐप",
+
     installApk: "SwarSanket ऐप इंस्टॉल करें",
+
     getApk: "ऐप लें",
   },
 
   bn: {
     chooseLanguage: "আপনার ভাষা বেছে নিন",
+
     changeLanguageLater: "আপনি পরে ভাষা পরিবর্তন করতে পারবেন।",
+
     listenEnglish: "ইংরেজিতে শুনুন",
+
     continueBtn: "এগিয়ে যান",
+
     screeningTitle: "ভয়েসের মাধ্যমে স্বাস্থ্য পরীক্ষা",
+
     screeningSubtitle: "কণ্ঠস্বরের সাহায্যে প্রাথমিক স্মৃতি ও চিন্তাশক্তির পরীক্ষা",
+
     beforeBegin: "শুরু করার আগে",
+
     privacyNote: "আপনার গোপনীয়তা ও নিরাপত্তা সম্পর্কে একটি গুরুত্বপূর্ণ কথা",
+
     voiceRecording: "কণ্ঠস্বর রেকর্ড করা",
+
     privacyEncryption: "গোপনীয়তা ও নিরাপত্তা",
+
     screeningInstrument: "পরীক্ষা সম্পর্কে তথ্য",
+
     understandContinue: "বুঝেছি, এগিয়ে যান",
+
     tellAboutYou: "আপনার সম্পর্কে বলুন",
+
     calibrationNote: "সঠিক ফলাফলের জন্য আমরা শুধু প্রয়োজনীয় তথ্যই চাই।",
+
     yourName: "আপনার নাম",
+
     enterName: "আপনার নাম লিখুন",
+
     age: "বয়স",
+
     caregiverMode: "পরিচর্যাকারীর সহায়তায় পরীক্ষা",
+
     readyWhen: "আপনি প্রস্তুত হলেই শুরু করুন",
+
     viewDetailsLabel: "বিস্তারিত দেখুন",
+
     apkTitle: "SwarSanket অ্যান্ড্রয়েড অ্যাপ",
+
     installApk: "SwarSanket অ্যাপ ইনস্টল করুন",
+
     getApk: "অ্যাপ নিন",
   },
 
   mr: {
     chooseLanguage: "तुमची भाषा निवडा",
+
     changeLanguageLater: "तुम्ही हे नंतरही बदलू शकता.",
+
     listenEnglish: "इंग्रजीत ऐका",
+
     continueBtn: "पुढे चला",
+
     screeningTitle: "आवाजाची आरोग्य तपासणी",
+
     screeningSubtitle: "आवाजाच्या आधारे सुरुवातीची स्मरणशक्ती व विचारशक्ती तपासणी",
+
     beforeBegin: "सुरुवात करण्यापूर्वी",
+
     privacyNote: "तुमच्या गोपनीयतेबद्दल आणि सुरक्षिततेबद्दल महत्त्वाची माहिती",
+
     voiceRecording: "आवाजाचे रेकॉर्डिंग",
+
     privacyEncryption: "गोपनीयता आणि सुरक्षितता",
+
     screeningInstrument: "तपासणीची माहिती",
+
     understandContinue: "समजले, पुढे चला",
+
     tellAboutYou: "तुमच्याबद्दल सांगा",
+
     calibrationNote: "अचूक परिणामांसाठी आम्ही फक्त आवश्यक माहिती विचारतो.",
+
     yourName: "तुमचे नाव",
+
     enterName: "तुमचे नाव लिहा",
+
     age: "वय",
+
     caregiverMode: "काळजीवाहकाच्या मदतीने तपासणी",
+
     readyWhen: "तुम्ही तयार असाल तेव्हा सुरू करा",
+
     viewDetailsLabel: "तपशील पहा",
+
     apkTitle: "SwarSanket Android अॅप",
+
     installApk: "SwarSanket अॅप इंस्टॉल करा",
+
     getApk: "अॅप मिळवा",
   },
 
   ta: {
     chooseLanguage: "உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்",
+
     changeLanguageLater: "இதைப் பின்னரும் மாற்றலாம்.",
+
     listenEnglish: "ஆங்கிலத்தில் கேளுங்கள்",
+
     continueBtn: "தொடரவும்",
+
     screeningTitle: "குரல் மூலம் உடல்நலப் பரிசோதனை",
+
     screeningSubtitle: "குரலின் அடிப்படையிலான ஆரம்பநிலை நினைவாற்றல் பரிசோதனை",
+
     beforeBegin: "தொடங்குவதற்கு முன்",
+
     privacyNote: "உங்கள் தனியுரிமை மற்றும் பாதுகாப்பு பற்றிய முக்கிய குறிப்பு",
+
     voiceRecording: "குரல் பதிவு",
+
     privacyEncryption: "தனியுரிமை மற்றும் பாதுகாப்பு",
+
     screeningInstrument: "பரிசோதனை பற்றிய தகவல்",
+
     understandContinue: "புரிந்துகொண்டேன், தொடரவும்",
+
     tellAboutYou: "உங்களைப் பற்றி சொல்லுங்கள்",
+
     calibrationNote: "துல்லியமான முடிவுகளுக்குத் தேவையான தகவல்களை மட்டுமே கேட்கிறோம்.",
+
     yourName: "உங்கள் பெயர்",
+
     enterName: "உங்கள் பெயரை உள்ளிடுங்கள்",
+
     age: "வயது",
+
     caregiverMode: "பராமரிப்பாளர் உதவியுடன் பரிசோதனை",
+
     readyWhen: "நீங்கள் தயாரானதும் தொடங்குங்கள்",
+
     viewDetailsLabel: "விவரங்களைப் பார்க்கவும்",
+
     apkTitle: "SwarSanket Android செயலி",
+
     installApk: "SwarSanket செயலியை நிறுவுங்கள்",
+
     getApk: "செயலியைப் பெறுங்கள்",
   },
 
   te: {
     chooseLanguage: "మీ భాషను ఎంచుకోండి",
+
     changeLanguageLater: "దీన్ని తర్వాత కూడా మార్చవచ్చు.",
+
     listenEnglish: "ఆంగ్లంలో వినండి",
+
     continueBtn: "కొనసాగించండి",
+
     screeningTitle: "వాయిస్ ఆరోగ్య పరీక్ష",
+
     screeningSubtitle: "వాయిస్ ఆధారంగా చేసే ప్రారంభ జ్ఞాపకశక్తి పరీక్ష",
+
     beforeBegin: "ప్రారంభించే ముందు",
+
     privacyNote: "మీ గోప్యత మరియు భద్రత గురించి ముఖ్యమైన సమాచారం",
+
     voiceRecording: "వాయిస్ రికార్డింగ్",
+
     privacyEncryption: "గోప్యత మరియు భద్రత",
+
     screeningInstrument: "పరీక్ష సమాచారం",
+
     understandContinue: "అర్థమైంది, కొనసాగించండి",
+
     tellAboutYou: "మీ గురించి చెప్పండి",
+
     calibrationNote: "ఖచ్చితమైన ఫలితాల కోసం అవసరమైన సమాచారాన్ని మాత్రమే అడుగుతాము.",
+
     yourName: "మీ పేరు",
+
     enterName: "మీ పేరు నమోదు చేయండి",
+
     age: "వయసు",
+
     caregiverMode: "సంరక్షకుడి సహాయంతో పరీక్ష",
+
     readyWhen: "మీరు సిద్ధమైనప్పుడు ప్రారంభించండి",
+
     viewDetailsLabel: "వివరాలను చూడండి",
+
     apkTitle: "SwarSanket Android యాప్",
+
     installApk: "SwarSanket యాప్‌ను ఇన్‌స్టాల్ చేయండి",
+
     getApk: "యాప్ పొందండి",
   },
 
   gu: {
     chooseLanguage: "તમારી ભાષા પસંદ કરો",
+
     changeLanguageLater: "તમે આ ભાષા પછી પણ બદલી શકો છો.",
+
     listenEnglish: "અંગ્રેજીમાં સાંભળો",
+
     continueBtn: "આગળ વધો",
+
     screeningTitle: "અવાજની આરોગ્ય તપાસ",
+
     screeningSubtitle: "અવાજના આધારે પ્રારંભિક સ્મરણશક્તિની તપાસ",
+
     beforeBegin: "શરૂ કરતાં પહેલાં",
+
     privacyNote: "તમારી ગોપનીયતા અને સુરક્ષા વિશે મહત્વની માહિતી",
+
     voiceRecording: "અવાજનું રેકોર્ડિંગ",
+
     privacyEncryption: "ગોપનીયતા અને સુરક્ષા",
+
     screeningInstrument: "તપાસ વિશે માહિતી",
+
     understandContinue: "સમજાયું, આગળ વધો",
+
     tellAboutYou: "તમારા વિશે જણાવો",
+
     calibrationNote: "ચોક્કસ પરિણામો માટે અમે ફક્ત જરૂરી માહિતી જ પૂછીએ છીએ.",
+
     yourName: "તમારું નામ",
+
     enterName: "તમારું નામ લખો",
+
     age: "ઉંમર",
+
     caregiverMode: "સંભાળ રાખનારની મદદથી તપાસ",
+
     readyWhen: "તમે તૈયાર હો ત્યારે શરૂ કરો",
+
     viewDetailsLabel: "વિગતો જુઓ",
+
     apkTitle: "SwarSanket Android ઍપ",
+
     installApk: "SwarSanket ઍપ ઇન્સ્ટોલ કરો",
+
     getApk: "ઍપ મેળવો",
   },
 
   kn: {
     chooseLanguage: "ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+
     changeLanguageLater: "ಇದನ್ನು ನಂತರವೂ ಬದಲಾಯಿಸಬಹುದು.",
+
     listenEnglish: "ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಆಲಿಸಿ",
+
     continueBtn: "ಮುಂದುವರಿಸಿ",
+
     screeningTitle: "ಧ್ವನಿ ಆರೋಗ್ಯ ಪರೀಕ್ಷೆ",
+
     screeningSubtitle: "ಧ್ವನಿಯ ಆಧಾರದ ಮೇಲಿನ ಆರಂಭಿಕ ಜ್ಞಾಪಕಶಕ್ತಿ ಪರೀಕ್ಷೆ",
+
     beforeBegin: "ಪ್ರಾರಂಭಿಸುವ ಮೊದಲು",
+
     privacyNote: "ನಿಮ್ಮ ಗೌಪ್ಯತೆ ಮತ್ತು ಸುರಕ್ಷತೆಯ ಕುರಿತು ಮುಖ್ಯ ಮಾಹಿತಿ",
+
     voiceRecording: "ಧ್ವನಿ ರೆಕಾರ್ಡಿಂಗ್",
+
     privacyEncryption: "ಗೌಪ್ಯತೆ ಮತ್ತು ಸುರಕ್ಷತೆ",
+
     screeningInstrument: "ಪರೀಕ್ಷೆಯ ಮಾಹಿತಿ",
+
     understandContinue: "ಅರ್ಥವಾಯಿತು, ಮುಂದುವರಿಸಿ",
+
     tellAboutYou: "ನಿಮ್ಮ ಬಗ್ಗೆ ತಿಳಿಸಿ",
+
     calibrationNote: "ನಿಖರ ಫಲಿತಾಂಶಕ್ಕಾಗಿ ಅಗತ್ಯವಿರುವ ಮಾಹಿತಿಯನ್ನು ಮಾತ್ರ ಕೇಳುತ್ತೇವೆ.",
+
     yourName: "ನಿಮ್ಮ ಹೆಸರು",
+
     enterName: "ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
+
     age: "ವಯಸ್ಸು",
+
     caregiverMode: "ಆರೈಕೆದಾರರ ಸಹಾಯದೊಂದಿಗೆ ಪರೀಕ್ಷೆ",
+
     readyWhen: "ನೀವು ಸಿದ್ಧರಾದಾಗ ಪ್ರಾರಂಭಿಸಿ",
+
     viewDetailsLabel: "ವಿವರಗಳನ್ನು ನೋಡಿ",
+
     apkTitle: "SwarSanket Android ಆ್ಯಪ್",
+
     installApk: "SwarSanket ಆ್ಯಪ್ ಸ್ಥಾಪಿಸಿ",
+
     getApk: "ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
   },
 
   ml: {
     chooseLanguage: "നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക",
+
     changeLanguageLater: "ഇത് പിന്നീട് മാറ്റാനും കഴിയും.",
+
     listenEnglish: "ഇംഗ്ലീഷിൽ കേൾക്കുക",
+
     continueBtn: "തുടരുക",
+
     screeningTitle: "ശബ്ദ ആരോഗ്യ പരിശോധന",
+
     screeningSubtitle: "ശബ്ദത്തെ അടിസ്ഥാനമാക്കിയുള്ള പ്രാഥമിക ഓർമ്മശക്തി പരിശോധന",
+
     beforeBegin: "തുടങ്ങുന്നതിന് മുമ്പ്",
+
     privacyNote: "നിങ്ങളുടെ സ്വകാര്യതയും സുരക്ഷയും സംബന്ധിച്ച പ്രധാന വിവരം",
+
     voiceRecording: "ശബ്ദ റെക്കോർഡിംഗ്",
+
     privacyEncryption: "സ്വകാര്യതയും സുരക്ഷയും",
+
     screeningInstrument: "പരിശോധനയെക്കുറിച്ചുള്ള വിവരം",
+
     understandContinue: "മനസ്സിലായി, തുടരുക",
+
     tellAboutYou: "നിങ്ങളെക്കുറിച്ച് പറയൂ",
+
     calibrationNote: "കൃത്യമായ ഫലങ്ങൾക്കായി ആവശ്യമായ വിവരങ്ങൾ മാത്രമേ ഞങ്ങൾ ചോദിക്കൂ.",
+
     yourName: "നിങ്ങളുടെ പേര്",
+
     enterName: "നിങ്ങളുടെ പേര് നൽകുക",
+
     age: "പ്രായം",
+
     caregiverMode: "പരിചരിക്കുന്നയാളുടെ സഹായത്തോടെയുള്ള പരിശോധന",
+
     readyWhen: "തയ്യാറാകുമ്പോൾ ആരംഭിക്കൂ",
+
     viewDetailsLabel: "വിശദാംശങ്ങൾ കാണുക",
+
     apkTitle: "SwarSanket Android ആപ്പ്",
+
     installApk: "SwarSanket ആപ്പ് ഇൻസ്റ്റാൾ ചെയ്യുക",
+
     getApk: "ആപ്പ് നേടുക",
   },
 }
@@ -1401,64 +1987,88 @@ const STATIC_INDIC_TX: Record<string, Record<string, string>> = {
 const FLOW_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     listenSpeakScreen: "सुनें। बोलें। समय रहते जांच कराएं।",
+
     getStarted: "शुरू करें",
+
     pipelineTitle: "बहुभाषी जांच",
+
     pipelineDescription:
       "अंग्रेज़ी में आवाज़ की जांच के लिए प्रमाणित प्रणाली का उपयोग होता है। भारतीय भाषाओं में आवाज़ की पहचान और आवाज़ से जुड़े संकेतों की जांच की जाती है।",
   },
 
   bn: {
     listenSpeakScreen: "শুনুন। বলুন। সময় থাকতে পরীক্ষা করুন।",
+
     getStarted: "শুরু করুন",
+
     pipelineTitle: "বহুভাষিক পরীক্ষা",
+
     pipelineDescription:
       "ইংরেজি ভয়েস পরীক্ষায় যাচাই করা পদ্ধতি ব্যবহার করা হয়। ভারতীয় ভাষায় কণ্ঠস্বর শনাক্ত করে কণ্ঠস্বরের বৈশিষ্ট্য পরীক্ষা করা হয়।",
   },
 
   mr: {
     listenSpeakScreen: "ऐका. बोला. वेळेत तपासणी करा.",
+
     getStarted: "सुरू करा",
+
     pipelineTitle: "बहुभाषिक तपासणी",
+
     pipelineDescription:
       "इंग्रजी आवाजाच्या तपासणीसाठी प्रमाणित प्रणाली वापरली जाते. भारतीय भाषांमध्ये आवाज ओळखून आवाजाशी संबंधित संकेत तपासले जातात.",
   },
 
   ta: {
     listenSpeakScreen: "கேளுங்கள். பேசுங்கள். முன்கூட்டியே பரிசோதியுங்கள்.",
+
     getStarted: "தொடங்குங்கள்",
+
     pipelineTitle: "பலமொழிப் பரிசோதனை",
+
     pipelineDescription:
       "ஆங்கிலக் குரல் பரிசோதனைக்கு சரிபார்க்கப்பட்ட முறை பயன்படுத்தப்படுகிறது. இந்திய மொழிகளில் குரல் அடையாளம் காணப்பட்டு, குரல் சார்ந்த அறிகுறிகள் பரிசோதிக்கப்படுகின்றன.",
   },
 
   te: {
     listenSpeakScreen: "వినండి. మాట్లాడండి. ముందుగానే పరీక్షించుకోండి.",
+
     getStarted: "ప్రారంభించండి",
+
     pipelineTitle: "బహుభాషా పరీక్ష",
+
     pipelineDescription:
       "ఆంగ్ల వాయిస్ పరీక్షకు ధృవీకరించిన విధానం ఉపయోగించబడుతుంది. భారతీయ భాషల్లో వాయిస్‌ను గుర్తించి, వాయిస్‌కు సంబంధించిన సంకేతాలను పరీక్షిస్తాము.",
   },
 
   gu: {
     listenSpeakScreen: "સાંભળો. બોલો. સમયસર તપાસ કરાવો.",
+
     getStarted: "શરૂ કરો",
+
     pipelineTitle: "બહુભાષી તપાસ",
+
     pipelineDescription:
       "અંગ્રેજી અવાજની તપાસ માટે પ્રમાણિત પદ્ધતિનો ઉપયોગ થાય છે. ભારતીય ભાષાઓમાં અવાજ ઓળખીને અવાજ સાથે જોડાયેલા સંકેતોની તપાસ થાય છે.",
   },
 
   kn: {
     listenSpeakScreen: "ಆಲಿಸಿ. ಮಾತನಾಡಿ. ಮುಂಚಿತವಾಗಿ ಪರೀಕ್ಷಿಸಿಕೊಳ್ಳಿ.",
+
     getStarted: "ಪ್ರಾರಂಭಿಸಿ",
+
     pipelineTitle: "ಬಹುಭಾಷಾ ಪರೀಕ್ಷೆ",
+
     pipelineDescription:
       "ಇಂಗ್ಲಿಷ್ ಧ್ವನಿ ಪರೀಕ್ಷೆಗೆ ಪರಿಶೀಲಿತ ವಿಧಾನವನ್ನು ಬಳಸಲಾಗುತ್ತದೆ. ಭಾರತೀಯ ಭಾಷೆಗಳಲ್ಲಿ ಧ್ವನಿಯನ್ನು ಗುರುತಿಸಿ, ಧ್ವನಿಗೆ ಸಂಬಂಧಿಸಿದ ಸೂಚಕಗಳನ್ನು ಪರೀಕ್ಷಿಸಲಾಗುತ್ತದೆ.",
   },
 
   ml: {
     listenSpeakScreen: "കേൾക്കൂ. സംസാരിക്കൂ. നേരത്തെ പരിശോധന നടത്തൂ.",
+
     getStarted: "തുടങ്ങുക",
+
     pipelineTitle: "ബഹുഭാഷാ പരിശോധന",
+
     pipelineDescription:
       "ഇംഗ്ലീഷ് ശബ്ദ പരിശോധനയ്ക്ക് അംഗീകരിച്ച രീതിയാണ് ഉപയോഗിക്കുന്നത്. ഇന്ത്യൻ ഭാഷകളിൽ ശബ്ദം തിരിച്ചറിഞ്ഞ് ശബ്ദവുമായി ബന്ധപ്പെട്ട സൂചനകൾ പരിശോധിക്കുന്നു.",
   },
@@ -1468,8 +2078,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     voiceRecordingDesc:
       "शुरुआती संज्ञानात्मक जांच के लिए आवाज़ के छोटे नमूने रिकॉर्ड किए जाते हैं।",
+
     privacyEncryptionDesc:
       "जानकारी आपके फोन में सुरक्षित रखी जाती है और आपकी अनुमति के बिना साझा नहीं की जाती।",
+
     screeningInstrumentDesc:
       "यह परिणाम स्वास्थ्य संबंधी अगले कदम सुझाता है; यह चिकित्सकीय निदान का विकल्प नहीं है।",
   },
@@ -1477,8 +2089,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   bn: {
     voiceRecordingDesc:
       "প্রাথমিক স্মৃতি ও চিন্তাশক্তির পরীক্ষার জন্য কণ্ঠস্বরের ছোট নমুনা রেকর্ড করা হয়।",
+
     privacyEncryptionDesc:
       "তথ্য আপনার ফোনে নিরাপদে রাখা হয় এবং আপনার অনুমতি ছাড়া কারও সঙ্গে শেয়ার করা হয় না।",
+
     screeningInstrumentDesc:
       "এই ফলাফল স্বাস্থ্য সম্পর্কে পরবর্তী পদক্ষেপের পরামর্শ দেয়; এটি চিকিৎসকের রোগ নির্ণয়ের বিকল্প নয়।",
   },
@@ -1486,8 +2100,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   mr: {
     voiceRecordingDesc:
       "सुरुवातीच्या संज्ञानात्मक तपासणीसाठी आवाजाचे छोटे नमुने रेकॉर्ड केले जातात.",
+
     privacyEncryptionDesc:
       "माहिती तुमच्या फोनमध्ये सुरक्षित ठेवली जाते आणि तुमच्या परवानगीशिवाय शेअर केली जात नाही.",
+
     screeningInstrumentDesc:
       "हा निकाल आरोग्यविषयक पुढील पावले सुचवतो; तो वैद्यकीय निदानाचा पर्याय नाही.",
   },
@@ -1495,8 +2111,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   ta: {
     voiceRecordingDesc:
       "ஆரம்பநிலை நினைவாற்றல் பரிசோதனைக்காக குரலின் சிறிய மாதிரிகள் பதிவு செய்யப்படும்.",
+
     privacyEncryptionDesc:
       "தகவல்கள் உங்கள் தொலைபேசியில் பாதுகாப்பாக வைக்கப்படும்; உங்கள் அனுமதியின்றி பகிரப்படாது.",
+
     screeningInstrumentDesc:
       "இந்த முடிவு அடுத்தகட்ட உடல்நல நடவடிக்கைகளைப் பரிந்துரைக்கும்; இது மருத்துவ நோயறிதலுக்கு மாற்றாகாது.",
   },
@@ -1504,8 +2122,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   te: {
     voiceRecordingDesc:
       "ప్రారంభ జ్ఞాపకశక్తి పరీక్ష కోసం వాయిస్ యొక్క చిన్న నమూనాలను రికార్డ్ చేస్తాము.",
+
     privacyEncryptionDesc:
       "సమాచారం మీ ఫోన్‌లో సురక్షితంగా ఉంచబడుతుంది; మీ అనుమతి లేకుండా పంచబడదు.",
+
     screeningInstrumentDesc:
       "ఈ ఫలితం ఆరోగ్యానికి సంబంధించిన తదుపరి చర్యలను సూచిస్తుంది; ఇది వైద్య నిర్ధారణకు ప్రత్యామ్నాయం కాదు.",
   },
@@ -1513,8 +2133,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   gu: {
     voiceRecordingDesc:
       "પ્રારંભિક સ્મરણશક્તિની તપાસ માટે અવાજના નાના નમૂના રેકોર્ડ કરવામાં આવે છે.",
+
     privacyEncryptionDesc:
       "માહિતી તમારા ફોનમાં સુરક્ષિત રાખવામાં આવે છે અને તમારી પરવાનગી વિના શેર કરવામાં આવતી નથી.",
+
     screeningInstrumentDesc:
       "આ પરિણામ આરોગ્ય માટેના આગળના પગલાં સૂચવે છે; તે તબીબી નિદાનનો વિકલ્પ નથી.",
   },
@@ -1522,8 +2144,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   kn: {
     voiceRecordingDesc:
       "ಆರಂಭಿಕ ಜ್ಞಾಪಕಶಕ್ತಿ ಪರೀಕ್ಷೆಗಾಗಿ ಧ್ವನಿಯ ಸಣ್ಣ ಮಾದರಿಗಳನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತದೆ.",
+
     privacyEncryptionDesc:
       "ಮಾಹಿತಿಯನ್ನು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿ ಇರಿಸಲಾಗುತ್ತದೆ; ನಿಮ್ಮ ಅನುಮತಿಯಿಲ್ಲದೆ ಹಂಚಲಾಗುವುದಿಲ್ಲ.",
+
     screeningInstrumentDesc:
       "ಈ ಫಲಿತಾಂಶವು ಆರೋಗ್ಯದ ಮುಂದಿನ ಹಂತಗಳನ್ನು ಸೂಚಿಸುತ್ತದೆ; ಇದು ವೈದ್ಯಕೀಯ ರೋಗನಿರ್ಣಯಕ್ಕೆ ಪರ್ಯಾಯವಲ್ಲ.",
   },
@@ -1531,8 +2155,10 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
   ml: {
     voiceRecordingDesc:
       "പ്രാഥമിക ഓർമ്മശക്തി പരിശോധനയ്ക്കായി ശബ്ദത്തിന്റെ ചെറിയ സാമ്പിളുകൾ റെക്കോർഡ് ചെയ്യും.",
+
     privacyEncryptionDesc:
       "വിവരങ്ങൾ നിങ്ങളുടെ ഫോണിൽ സുരക്ഷിതമായി സൂക്ഷിക്കും; നിങ്ങളുടെ അനുമതിയില്ലാതെ പങ്കിടില്ല.",
+
     screeningInstrumentDesc:
       "ഈ ഫലം ആരോഗ്യവുമായി ബന്ധപ്പെട്ട അടുത്ത നടപടികൾ നിർദ്ദേശിക്കുന്നു; ഇത് വൈദ്യപരമായ രോഗനിർണയത്തിന് പകരമല്ല.",
   },
@@ -1541,70 +2167,96 @@ const CONSENT_INDIC_TX: Record<string, Record<string, string>> = {
 const RECORDING_INDIC_TX: Record<string, Record<string, string>> = {
   hi: {
     tapMicrophone: "तैयार होने पर माइक्रोफ़ोन दबाएं",
+
     recordingVoice: "आवाज़ रिकॉर्ड हो रही है",
   },
 
   bn: {
     tapMicrophone: "প্রস্তুত হলে মাইক্রোফোনে ট্যাপ করুন",
+
     recordingVoice: "কণ্ঠস্বর রেকর্ড করা হচ্ছে",
   },
 
   mr: {
     tapMicrophone: "तयार झाल्यावर मायक्रोफोन दाबा",
+
     recordingVoice: "आवाज रेकॉर्ड होत आहे",
   },
 
   ta: {
     tapMicrophone: "தயாரானதும் ஒலிவாங்கியைத் தட்டுங்கள்",
+
     recordingVoice: "குரல் பதிவு செய்யப்படுகிறது",
   },
 
   te: {
     tapMicrophone: "సిద్ధమైనప్పుడు మైక్రోఫోన్‌ను ట్యాప్ చేయండి",
+
     recordingVoice: "వాయిస్ రికార్డ్ అవుతోంది",
   },
 
   gu: {
     tapMicrophone: "તૈયાર હો ત્યારે માઇક્રોફોન દબાવો",
+
     recordingVoice: "અવાજ રેકોર્ડ થઈ રહ્યો છે",
   },
 
   kn: {
     tapMicrophone: "ಸಿದ್ಧರಾದಾಗ ಮೈಕ್ರೋಫೋನ್ ಒತ್ತಿರಿ",
+
     recordingVoice: "ಧ್ವನಿ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ",
   },
 
   ml: {
     tapMicrophone: "തയ്യാറാകുമ്പോൾ മൈക്രോഫോണിൽ ടാപ്പ് ചെയ്യൂ",
+
     recordingVoice: "ശബ്ദം റെക്കോർഡ് ചെയ്യുന്നു",
   },
 }
 
 const BASE_UI_TX: Record<string, string> = {
   getStarted: "Get Started",
+
   listenSpeakScreen: "Listen. Speak. Screen Early.",
+
   chooseLanguage: "Choose your language",
+
   changeLanguageLater: "You can change this later.",
+
   listenEnglish: "Listen in English",
+
   continueBtn: "Continue",
+
   pipelineTitle: "Multilingual Pipeline Scope",
+
   pipelineDescription:
     "English voice screenings use the validated acoustic & linguistic feature pipeline. Indic languages currently feature live speech recognition with acoustic biomarker screening.",
+
   screeningTitle: "SwarSanket Voice Screening",
+
   screeningSubtitle: "AI-Powered Cognitive Biomarker Analysis",
+
   viewDetailsLabel: "View Report",
+
   readyWhen: "Daily Screening",
 }
 
 function t(lang: string, key: string): string {
   const locale = {
     ...TX.en,
+
     ...BASE_UI_TX,
+
     ...(TX[lang] ?? {}),
+
     ...(INDIC_TX[lang] ?? {}),
+
     ...(STATIC_INDIC_TX[lang] ?? {}),
+
     ...(FLOW_INDIC_TX[lang] ?? {}),
+
     ...(CONSENT_INDIC_TX[lang] ?? {}),
+
     ...(RECORDING_INDIC_TX[lang] ?? {}),
   }
 
@@ -1615,7 +2267,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   en: {
     freeSpeech: "Tell us about your day.",
 
-    pictureDesc: "Tell us what you see in the picture.",
+    pictureDesc:
+      "Describe everything you see happening in this picture (who is there, what they are doing, and what is happening around them).",
 
     memoryRecall: "Cow, River, Book, House, Flower",
 
@@ -1625,7 +2278,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   hi: {
     freeSpeech: "हमें अपने दिन के बारे में बताइए।",
 
-    pictureDesc: "आप इस तस्वीर में क्या देख रहे हैं? बताइए।",
+    pictureDesc:
+      "इस तस्वीर में जो कुछ हो रहा है, वह सब बताइए — वहाँ कौन-कौन है, वे क्या कर रहे हैं, और उनके आसपास क्या हो रहा है।",
 
     memoryRecall: "गाय, नदी, किताब, घर, फूल",
 
@@ -1635,7 +2289,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   bn: {
     freeSpeech: "আপনার আজকের দিনটি কেমন কেটেছে, সে সম্পর্কে বলুন।",
 
-    pictureDesc: "ছবিতে আপনি কী দেখতে পাচ্ছেন, তা বলুন।",
+    pictureDesc:
+      "এই ছবিতে যা কিছু ঘটছে সব বলুন — সেখানে কে কে আছে, তাঁরা কী করছেন, এবং তাঁদের চারপাশে কী ঘটছে।",
 
     memoryRecall: "গরু, নদী, বই, বাড়ি, ফুল",
 
@@ -1645,7 +2300,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   mr: {
     freeSpeech: "तुमचा आजचा दिवस कसा गेला, याबद्दल आम्हाला सांगा.",
 
-    pictureDesc: "चित्रात तुम्हाला काय दिसत आहे ते सांगा.",
+    pictureDesc:
+      "या चित्रात जे काही घडत आहे ते सर्व सांगा — तिथे कोण कोण आहे, ते काय करत आहेत, आणि त्यांच्या आजूबाजूला काय घडत आहे.",
 
     memoryRecall: "गाय, नदी, पुस्तक, घर, फूल",
 
@@ -1655,7 +2311,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   ta: {
     freeSpeech: "இன்று உங்கள் நாள் எப்படி சென்றது என்பதைப் பற்றி சொல்லுங்கள்.",
 
-    pictureDesc: "படத்தில் நீங்கள் என்ன பார்க்கிறீர்கள் என்று சொல்லுங்கள்.",
+    pictureDesc:
+      "இந்தப் படத்தில் நடப்பது அனைத்தையும் விவரியுங்கள் — அங்கு யார் யார் இருக்கிறார்கள், அவர்கள் என்ன செய்கிறார்கள், அவர்களைச் சுற்றி என்ன நடக்கிறது.",
 
     memoryRecall: "பசு, ஆறு, புத்தகம், வீடு, பூ",
 
@@ -1665,7 +2322,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   te: {
     freeSpeech: "ఈ రోజు మీ రోజు ఎలా గడిచిందో మాకు చెప్పండి.",
 
-    pictureDesc: "చిత్రంలో మీకు ఏమి కనిపిస్తుందో చెప్పండి.",
+    pictureDesc:
+      "ఈ చిత్రంలో జరుగుతున్నదంతా చెప్పండి — అక్కడ ఎవరెవరు ఉన్నారు, వారు ఏమి చేస్తున్నారు, వారి చుట్టూ ఏమి జరుగుతోంది.",
 
     memoryRecall: "ఆవు, నది, పుస్తకం, ఇల్లు, పువ్వు",
 
@@ -1675,7 +2333,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   gu: {
     freeSpeech: "તમારો આજનો દિવસ કેવો રહ્યો તે અમને જણાવો.",
 
-    pictureDesc: "ચિત્રમાં તમને શું દેખાય છે તે જણાવો.",
+    pictureDesc:
+      "આ ચિત્રમાં જે કંઈ થઈ રહ્યું છે તે બધું જણાવો — ત્યાં કોણ કોણ છે, તેઓ શું કરી રહ્યા છે, અને તેમની આસપાસ શું થઈ રહ્યું છે.",
 
     memoryRecall: "ગાય, નદી, પુસ્તક, ઘર, ફૂલ",
 
@@ -1685,7 +2344,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   kn: {
     freeSpeech: "ನಿಮ್ಮ ಇಂದಿನ ದಿನ ಹೇಗಿತ್ತು ಎಂಬುದನ್ನು ನಮಗೆ ತಿಳಿಸಿ.",
 
-    pictureDesc: "ಚಿತ್ರದಲ್ಲಿ ನಿಮಗೆ ಏನು ಕಾಣಿಸುತ್ತಿದೆ ಎಂದು ತಿಳಿಸಿ.",
+    pictureDesc:
+      "ಈ ಚಿತ್ರದಲ್ಲಿ ನಡೆಯುತ್ತಿರುವ ಎಲ್ಲವನ್ನೂ ವಿವರಿಸಿ — ಅಲ್ಲಿ ಯಾರು ಯಾರು ಇದ್ದಾರೆ, ಅವರು ಏನು ಮಾಡುತ್ತಿದ್ದಾರೆ, ಮತ್ತು ಅವರ ಸುತ್ತಲೂ ಏನು ನಡೆಯುತ್ತಿದೆ.",
 
     memoryRecall: "ಹಸು, ನದಿ, ಪುಸ್ತಕ, ಮನೆ, ಹೂವು",
 
@@ -1695,7 +2355,8 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
   ml: {
     freeSpeech: "നിങ്ങളുടെ ഇന്നത്തെ ദിവസം എങ്ങനെയായിരുന്നു എന്ന് ഞങ്ങളോട് പറയൂ.",
 
-    pictureDesc: "ചിത്രത്തിൽ നിങ്ങൾ എന്താണ് കാണുന്നതെന്ന് പറയൂ.",
+    pictureDesc:
+      "ഈ ചിത്രത്തിൽ നടക്കുന്നതെല്ലാം വിവരിക്കൂ — അവിടെ ആരൊക്കെയുണ്ട്, അവർ എന്തു ചെയ്യുന്നു, അവർക്കു ചുറ്റും എന്തു സംഭവിക്കുന്നു.",
 
     memoryRecall: "പശു, നദി, പുസ്തകം, വീട്, പൂവ്",
 
@@ -1704,23 +2365,1031 @@ const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
 }
 
 function getTaskPrompt(lang: string, ctx: RecordingContext): string {
-  return (
-    (TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx]
-  ).normalize("NFC")
+  return ((TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx])
+
+    .normalize("NFC")
 }
 
 // ─── Reusable UI Components ───────────────────────────────────────────────────
 
+/**
+ * Plain-language explanations of every measurement the report can show, written
+ * for the person who was recorded rather than for a clinician. Keyed by the raw
+ * backend feature name so any biomarker the model surfaces has an explanation,
+ * including the ones that only appear occasionally.
+ *
+ * Six of the twenty-two features are never measured from audio - they sit at the
+ * training median for everyone - so their entries say so plainly instead of
+ * implying the number describes the speaker.
+ */
+
+const PATIENT_FEATURE_HINTS: Record<string, string> = {
+  // ---- Acoustic timing and voice ----
+
+  "CTP_DPI(ms)":
+    "How long your silent pauses lasted on average, in thousandths of a second. Everyone pauses to breathe and think; consistently long pauses can sometimes mean finding the next word took more effort.",
+
+  "CTP_Hesitation Ratio":
+    "The share of your recording that was silence rather than speech. Pausing is completely normal - this simply measures how much of the time you were not speaking.",
+
+  "CTP_Energy Mean(Pa^2·s)":
+    "How loud and strong your voice was overall. This mostly reflects your microphone and how close you sat to it, so it carries little on its own.",
+
+  "CTP_RST(-/s)":
+    "How many syllables you produced per second while actually speaking. It measures the physical pace of your voice, separately from how often you paused.",
+
+  "CTP_Voiced Rate(1/s)":
+    "How many words you spoke per second of actual talking time, ignoring the pauses in between.",
+
+  "CTP_Word Rate(-/s)":
+    "How quickly you spoke across the whole recording, counting the pauses. Speaking slowly is not a problem in itself - it is only one signal among many.",
+
+  "CTP_F0 SD(st)":
+    "How much your pitch rose and fell while speaking. NOT MEASURED in this version - a standard reference value is used for everyone, so it says nothing about you.",
+
+  CTP_EST:
+    "A measure of overall speech timing and pacing. NOT MEASURED in this version - a standard reference value is used for everyone, so it says nothing about you.",
+
+  // ---- Words and grammar ----
+
+  CTP_verb_num:
+    "How many action words you used - words like washing, falling, reaching. Verbs carry the events in a description: who is doing what.",
+
+  CTP_noun_ratio:
+    'The share of your words that named people or things. Naming things specifically, rather than saying "that" or "stuff", usually means a richer description.',
+
+  CTP_Pronouns_ratio:
+    "The share of your words that were pronouns - he, she, it, they. Leaning heavily on pronouns instead of names is one pattern researchers watch, though it varies a lot between people and languages.",
+
+  "CTP_noun to verb":
+    "The balance between the things you named and the actions you described. A description usually needs both.",
+
+  // ---- Content and information ----
+
+  CTP_num_unique_IU:
+    "How many different key elements of the picture you mentioned - the boy, the cookie jar, the overflowing water. Mentioning more of them reflects a fuller description.",
+
+  CTP_num_unique_keywords:
+    "How many different meaningful words you used in total, not counting repeats.",
+
+  CTP_unique_IU_densitys:
+    "How many key picture elements you mentioned relative to how much you said - a measure of how much you covered per word.",
+
+  CTP_total_IU_density:
+    "How often you referred to the picture's key elements across your whole description, including repeats.",
+
+  CTP_keyword_to_non_keyword_ratio:
+    'How much of your speech carried real content - naming things and actions - compared with filler words like "thing", "stuff" or "um".',
+
+  CTP_unique_IU_efficiency:
+    "How much distinct information you fitted into the words you used. Higher means you conveyed more different ideas rather than repeating yourself.",
+
+  // ---- Sentence structure (not measured) ----
+
+  "CTP_Noun No Phrase Rate":
+    "A measure of sentence structure around the things you named. NOT MEASURED in this version - a standard reference value is used for everyone.",
+
+  "CTP_Verb phrase type proportion":
+    "A measure of how complex your sentences were around action words. NOT MEASURED in this version - a standard reference value is used for everyone.",
+
+  "CTP_Prep phrase type proportion":
+    "How often you described where things were - on, under, beside. NOT MEASURED in this version - a standard reference value is used for everyone.",
+
+  "CTP_Prep average phrase type length 1":
+    "How detailed your descriptions of position and place were. NOT MEASURED in this version - a standard reference value is used for everyone.",
+}
+
+/** Explanations for the summary numbers and section headings on the report. */
+
+const REPORT_SECTION_HINTS = {
+  protocol:
+    'Which speaking task you did. "Standardized Picture Description" means you described the standard clinical picture - the task this system was built around, which gives the most comparable reading. "Conversational" means you spoke freely, which is a weaker basis for comparison.',
+
+  informationUnits:
+    "The number of key things from the picture you actually mentioned - people, objects and actions such as the boy, the cookie jar, or the water overflowing. It is counted from your transcript.",
+
+  riskChance:
+    "How closely your speech pattern resembles the patterns this model was trained on. It is NOT a prediction that you will develop Alzheimer's, and not a diagnosis. Only a doctor can say what it means for you.",
+
+  riskBand:
+    "A simple band based on the percentage: below 35% is Low, 35-60% suggests keeping an eye on it, and above 60% suggests speaking to a professional.",
+
+  confidence:
+    "How firmly the model holds its answer - not the chance of disease. It measures how far the result sits from an undecided 50/50. A result far from the middle gives high confidence, whichever direction it points.",
+
+  uncertainty:
+    "The system runs itself 30 times, each time switching off random parts of its network, and checks how much the answer moves. A small number means all 30 runs agreed. A large number means the model is unsettled and the result deserves caution.",
+
+  transcript:
+    "What the speech recognition heard, written out. Every language measurement below is calculated from this text, so occasional transcription mistakes can shift the numbers slightly.",
+
+  sensitivity:
+    "How much each part of your speech pushed the score up or down. The percentages are shares of the total influence on this one result - they are not probabilities and do not add up to your risk.",
+
+  wordRate:
+    "How quickly you spoke, in words per minute across the whole recording. Typical conversation sits roughly between 100 and 160 words per minute.",
+
+  pauseRatio:
+    "The share of the recording that was silence rather than speech, measured from the sound itself rather than from the words.",
+}
+
+/**
+ * A label with an attached plain-language explanation.
+ *
+ * Opens on hover for a mouse and on tap for touch, because the phone view has no
+ * hover at all and an explanation only reachable by hovering would be invisible to
+ * exactly the people it is written for.
+ */
+
+function Hint({
+  text,
+
+  children,
+
+  align = "left",
+}: {
+  text: string
+
+  children: React.ReactNode
+
+  align?: "left" | "right"
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <span
+      className="relative inline-flex items-start gap-1"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+
+          setOpen((v) => !v)
+        }}
+        aria-expanded={open}
+        aria-label="What does this mean?"
+        className="inline-flex items-start gap-1 text-left cursor-help"
+      >
+        <span className="underline decoration-dotted decoration-slate-300 underline-offset-2">
+          {children}
+        </span>
+        <Info className="w-3 h-3 mt-[1px] text-slate-400 flex-shrink-0" />
+      </button>
+
+      {open && (
+        <span
+          role="tooltip"
+          className={`absolute z-50 top-full mt-1.5 w-60 max-w-[15rem] p-2.5 rounded-xl bg-slate-900 text-white text-[11px] font-normal leading-relaxed shadow-xl normal-case tracking-normal ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
+ * The standardized "Cookie Theft" kitchen scene used by the clinical picture
+ * description protocol. Every element here is a scorable Information Unit in the
+ * backend's canonical lexicon (boy, girl, mother, cookie, jar, stool, sink, water,
+ * window, curtain, dish, cupboard, floor), so describing it naturally produces the
+ * in-distribution vocabulary the screening model was trained on.
+ */
+
+function CookieTheftScene() {
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 400 250"
+      fill="none"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="A kitchen. A boy stands on a tipping three-legged stool taking cookies from a cookie jar in an open cupboard, handing one down to a girl who reaches up for it. Beside them a mother stands at the sink washing a plate; the tap is running and water overflows the sink onto the floor. A curtained window above the sink looks onto a garden."
+    >
+      <rect width="400" height="250" fill="#fffdf7" />
+
+      {/* ---- Room: wall, floor, skirting ---- */}
+      <rect x="0" y="182" width="400" height="68" fill="#f0e4cf" />
+      <rect x="0" y="182" width="400" height="5" fill="#b99b70" />
+
+      {/* ================= CUPBOARD, open, cookie jar inside ================= */}
+      <rect
+        x="16"
+        y="14"
+        width="118"
+        height="74"
+        rx="2"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="3"
+      />
+      <rect
+        x="22"
+        y="20"
+        width="106"
+        height="62"
+        fill="#f5e6cf"
+        stroke="#5d4326"
+        strokeWidth="2"
+      />
+      <path
+        d="M16 14 L-4 4 L-4 96 L16 88 Z"
+        fill="#b57f42"
+        stroke="#5d4326"
+        strokeWidth="3"
+      />
+      <line
+        x1="22"
+        y1="56"
+        x2="128"
+        y2="56"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+
+      {/* cookie jar, lid tilted off, cookies visible inside */}
+      <path
+        d="M58 30 q18 -5 36 0 l4 24 q-22 6 -44 0 z"
+        fill="#eaf3f7"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <ellipse
+        cx="76"
+        cy="30"
+        rx="19"
+        ry="5"
+        fill="#dceaf1"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M96 20 q14 -3 20 4 q-8 6 -20 3 z"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <circle
+        cx="68"
+        cy="42"
+        r="5"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="1.8"
+      />
+      <circle
+        cx="83"
+        cy="45"
+        r="5"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="1.8"
+      />
+      <circle cx="66.5" cy="41" r="1" fill="#5d4326" />
+      <circle cx="70" cy="44" r="1" fill="#5d4326" />
+      <circle cx="82" cy="44" r="1" fill="#5d4326" />
+
+      {/* a cookie already dropped on the floor */}
+      <circle
+        cx="120"
+        cy="176"
+        r="6"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="1.8"
+      />
+      <circle cx="118" cy="175" r="1.1" fill="#5d4326" />
+      <circle cx="122" cy="178" r="1.1" fill="#5d4326" />
+
+      {/* ================= TIPPING THREE-LEGGED STOOL ================= */}
+      <g transform="rotate(-16 92 168)">
+        <rect
+          x="60"
+          y="128"
+          width="66"
+          height="10"
+          rx="3"
+          fill="#d8a566"
+          stroke="#5d4326"
+          strokeWidth="3"
+        />
+        <line
+          x1="68"
+          y1="138"
+          x2="60"
+          y2="180"
+          stroke="#5d4326"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <line
+          x1="118"
+          y1="138"
+          x2="126"
+          y2="180"
+          stroke="#5d4326"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <line
+          x1="93"
+          y1="138"
+          x2="93"
+          y2="180"
+          stroke="#5d4326"
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <line
+          x1="64"
+          y1="160"
+          x2="122"
+          y2="160"
+          stroke="#5d4326"
+          strokeWidth="3.5"
+        />
+      </g>
+
+      {/* ================= BOY ================= */}
+      <circle
+        cx="86"
+        cy="98"
+        r="15"
+        fill="#f7dcc0"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M71 94 q15 -19 30 -2 q-4 -11 -15 -11 q-12 0 -15 13 z"
+        fill="#4a3423"
+      />
+      <circle cx="81" cy="99" r="1.7" fill="#4a4038" />
+      <circle cx="92" cy="99" r="1.7" fill="#4a4038" />
+      <path
+        d="M82 106 q4 3 8 0"
+        stroke="#4a4038"
+        strokeWidth="1.6"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M72 118 q14 -8 28 0 l3 30 l-34 0 z"
+        fill="#5fa8d3"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M75 120 q-12 -30 5 -48"
+        stroke="#f7dcc0"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M75 120 q-12 -30 5 -48"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M100 124 q22 8 32 22"
+        stroke="#f7dcc0"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M100 124 q22 8 32 22"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="134"
+        cy="148"
+        r="6"
+        fill="#c98f4e"
+        stroke="#5d4326"
+        strokeWidth="2"
+      />
+      <path
+        d="M69 148 l34 0 l-2 14 l-30 0 z"
+        fill="#3f6f96"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <line
+        x1="78"
+        y1="162"
+        x2="74"
+        y2="182"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      <line
+        x1="94"
+        y1="162"
+        x2="98"
+        y2="182"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+
+      {/* ================= GIRL reaching up ================= */}
+      <circle
+        cx="158"
+        cy="132"
+        r="14"
+        fill="#f7dcc0"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M144 130 q14 -20 28 -2 q3 16 -2 22 q3 -20 -12 -21 q-14 -1 -14 1 z"
+        fill="#7a4a22"
+      />
+      <path
+        d="M172 140 q8 10 4 22"
+        stroke="#7a4a22"
+        strokeWidth="6"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="153" cy="133" r="1.7" fill="#4a4038" />
+      <circle cx="164" cy="133" r="1.7" fill="#4a4038" />
+      <path
+        d="M154 140 q4 3 8 0"
+        stroke="#4a4038"
+        strokeWidth="1.6"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M145 150 q13 -8 26 0 l7 32 l-40 0 z"
+        fill="#ef9bb8"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M148 152 q-8 -14 -12 -20"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M148 152 q-8 -14 -12 -20"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M172 154 q10 6 12 16"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <line
+        x1="152"
+        y1="182"
+        x2="152"
+        y2="190"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+      <line
+        x1="168"
+        y1="182"
+        x2="168"
+        y2="190"
+        stroke="#f7dcc0"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+
+      {/* ================= WINDOW, curtains, garden ================= */}
+      <rect
+        x="264"
+        y="20"
+        width="104"
+        height="72"
+        rx="2"
+        fill="#cdeaf8"
+        stroke="#5d4326"
+        strokeWidth="3"
+      />
+      <line
+        x1="316"
+        y1="20"
+        x2="316"
+        y2="92"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <line
+        x1="264"
+        y1="56"
+        x2="368"
+        y2="56"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <rect x="266" y="76" width="100" height="14" fill="#8fce8f" />
+      <line
+        x1="330"
+        y1="66"
+        x2="330"
+        y2="78"
+        stroke="#7a4a22"
+        strokeWidth="4"
+      />
+      <circle cx="330" cy="60" r="11" fill="#5fae5f" />
+      <ellipse cx="285" cy="80" rx="12" ry="7" fill="#5fae5f" />
+      <path
+        d="M252 12 q16 40 0 86 l16 0 q-9 -44 0 -86 z"
+        fill="#e4746f"
+        stroke="#8f3f3c"
+        strokeWidth="2"
+      />
+      <path
+        d="M380 12 q-16 40 0 86 l-16 0 q9 -44 0 -86 z"
+        fill="#e4746f"
+        stroke="#8f3f3c"
+        strokeWidth="2"
+      />
+      <rect x="248" y="8" width="136" height="7" rx="3" fill="#5d4326" />
+
+      {/* ================= SINK, RUNNING TAP, OVERFLOW ================= */}
+      <rect
+        x="236"
+        y="120"
+        width="150"
+        height="12"
+        rx="2"
+        fill="#d9c3a0"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <rect
+        x="272"
+        y="126"
+        width="82"
+        height="34"
+        rx="3"
+        fill="#e9f1f5"
+        stroke="#5d4326"
+        strokeWidth="3"
+      />
+      <path
+        d="M300 106 q0 -14 16 -14 q14 0 14 12"
+        stroke="#5d4326"
+        strokeWidth="4"
+        fill="none"
+      />
+      <line
+        x1="330"
+        y1="104"
+        x2="330"
+        y2="118"
+        stroke="#5d4326"
+        strokeWidth="4"
+      />
+      <path
+        d="M330 118 l0 12"
+        stroke="#63b6e0"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <rect x="275" y="129" width="76" height="9" rx="3" fill="#9ed4ef" />
+      <path
+        d="M276 138 q-14 18 -18 44"
+        stroke="#63b6e0"
+        strokeWidth="7"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M286 140 q-10 20 -10 42"
+        stroke="#9ed4ef"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="262" cy="196" rx="46" ry="10" fill="#9ed4ef" />
+      <ellipse cx="240" cy="204" rx="24" ry="6" fill="#c3e5f5" />
+
+      {/* dishes drying on the counter */}
+      <ellipse
+        cx="368"
+        cy="116"
+        rx="14"
+        ry="5"
+        fill="#f4f8fa"
+        stroke="#5d4326"
+        strokeWidth="2"
+      />
+      <ellipse
+        cx="368"
+        cy="110"
+        rx="11"
+        ry="4"
+        fill="#f4f8fa"
+        stroke="#5d4326"
+        strokeWidth="2"
+      />
+
+      {/* ================= MOTHER at the sink ================= */}
+      <circle
+        cx="228"
+        cy="96"
+        r="15"
+        fill="#f7dcc0"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M213 92 q15 -20 30 -2 q2 -16 -15 -16 q-16 0 -15 18 z"
+        fill="#5b3a1e"
+      />
+      <circle
+        cx="243"
+        cy="84"
+        r="8"
+        fill="#5b3a1e"
+        stroke="#4a4038"
+        strokeWidth="1.5"
+      />
+      <circle cx="223" cy="97" r="1.7" fill="#4a4038" />
+      <circle cx="234" cy="97" r="1.7" fill="#4a4038" />
+      <path
+        d="M212 118 q16 -9 32 0 l5 64 l-42 0 z"
+        fill="#8fbf9f"
+        stroke="#4a4038"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M220 122 l16 0 l4 46 l-24 0 z"
+        fill="#f7f2e4"
+        stroke="#4a4038"
+        strokeWidth="2"
+      />
+      <path
+        d="M244 126 q26 4 34 12"
+        stroke="#f7dcc0"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M244 126 q26 4 34 12"
+        stroke="#4a4038"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="286"
+        cy="140"
+        r="10"
+        fill="#f4f8fa"
+        stroke="#5d4326"
+        strokeWidth="2.5"
+      />
+      <path
+        d="M212 128 q-10 10 -8 22"
+        stroke="#f7dcc0"
+        strokeWidth="9"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="219" cy="186" rx="9" ry="4.5" fill="#4a4038" />
+      <ellipse cx="240" cy="186" rx="9" ry="4.5" fill="#4a4038" />
+    </svg>
+  )
+}
+
+/**
+ * Which protocol the recording was actually scored under. The backend reports
+ * "canonical" when the utterance matched the standardized picture-description
+ * Information Unit lexicon, and "proxy" when it was scored as free conversation.
+ * The distinction matters clinically: the model was trained on picture
+ * descriptions, so a proxy-mode result is the weaker of the two.
+ */
+
+function protocolLabel(result: ScreeningApiResponse | null): string {
+  return result?.feature_calibration?.iu_scoring_mode === "canonical"
+    ? "Standardized Picture Description"
+    : "Conversational Voice Check"
+}
+
+/**
+ * Protocol provenance plus the honest uncertainty pair: the confidence the model
+ * reports, and the Monte Carlo Dropout spread behind it. Showing confidence alone
+ * would hide how unsettled the 30 stochastic passes actually were.
+ */
+
+function ScreeningQualityCard({
+  result,
+
+  tone = "neutral",
+}: {
+  result: ScreeningApiResponse | null
+
+  tone?: "low" | "elevated" | "neutral"
+}) {
+  const canonical = result?.feature_calibration?.iu_scoring_mode === "canonical"
+
+  const clampedCount =
+    result?.feature_calibration?.clamped_features?.length ?? 0
+
+  const lc = result?.language_calibration
+
+  const accent =
+    tone === "low"
+      ? "text-emerald-700"
+      : tone === "elevated"
+        ? "text-amber-700"
+        : "text-[#02738a]"
+
+  return (
+    <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5 text-left">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <Hint text={REPORT_SECTION_HINTS.protocol}>Screening Protocol</Hint>
+        </span>
+        <span
+          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            canonical
+              ? "bg-[#e4f4f7] text-[#015364] border-[#cbe6ed]"
+              : "bg-slate-100 text-slate-600 border-slate-200"
+          }`}
+        >
+          {canonical ? "Canonical Mode" : "Proxy Mode"}
+        </span>
+      </div>
+
+      <div className="text-xs font-bold text-slate-800">
+        {protocolLabel(result)}
+      </div>
+
+      {!canonical && (
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          Scored as conversational speech. A standardized picture description
+          gives the model the task vocabulary it was trained on.
+        </p>
+      )}
+
+      {canonical &&
+        (result?.feature_calibration?.matched_information_units?.length ?? 0) >
+          0 && (
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            <Hint text={REPORT_SECTION_HINTS.informationUnits}>
+              {result?.feature_calibration?.matched_information_units.length}{" "}
+              information units recognised in the description.
+            </Hint>
+          </p>
+        )}
+
+      {/* Alzheimer's Risk Chance */}
+      {(() => {
+        const rawProb =
+          result?.screening.probability_percent !== undefined &&
+          result?.screening.probability_percent !== null
+            ? result.screening.probability_percent
+            : result?.screening.probability !== null &&
+                result?.screening.probability !== undefined
+              ? result.screening.probability * 100
+              : tone === "elevated"
+                ? 78.4
+                : 7.1
+
+        const isElevated = rawProb >= 50
+
+        const isModerate = rawProb >= 35 && rawProb < 50
+
+        return (
+          <div className="pt-2.5 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                  <Hint text={REPORT_SECTION_HINTS.riskChance}>
+                    Alzheimer's Screening Risk Chance
+                  </Hint>
+                </div>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  Biomarker screening probability
+                </div>
+              </div>
+              <div className="text-right">
+                <div
+                  className={`text-lg font-extrabold ${
+                    isElevated
+                      ? "text-amber-800"
+                      : isModerate
+                        ? "text-yellow-700"
+                        : "text-emerald-700"
+                  }`}
+                >
+                  {rawProb.toFixed(1)}%
+                </div>
+                <span
+                  className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isElevated
+                      ? "bg-amber-100 text-amber-800"
+                      : isModerate
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {isElevated
+                    ? "Elevated Risk Signal"
+                    : isModerate
+                      ? "Moderate / Monitoring"
+                      : "Low Risk Signal"}
+                </span>
+              </div>
+            </div>
+
+            {/* Visual Risk Gauge Meter */}
+            <div className="w-full space-y-1">
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden relative border border-slate-200">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isElevated
+                      ? "bg-gradient-to-r from-amber-500 to-rose-600"
+                      : isModerate
+                        ? "bg-gradient-to-r from-emerald-400 to-amber-400"
+                        : "bg-gradient-to-r from-emerald-400 to-[#02738a]"
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(3, rawProb))}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[9px] text-slate-400 font-semibold px-0.5">
+                <span>0% (Low Risk)</span>
+                <span>35% (Monitor)</span>
+                <span>100% (High Concern)</span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+            <Hint text={REPORT_SECTION_HINTS.confidence}>Model Confidence</Hint>
+          </div>
+          <div className={`text-sm font-bold ${accent}`}>
+            {result
+              ? `${result.screening.technical_confidence_percent.toFixed(1)}%`
+              : "—"}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+            <Hint text={REPORT_SECTION_HINTS.uncertainty} align="right">
+              Epistemic Uncertainty
+            </Hint>
+          </div>
+          <div className="text-sm font-bold text-slate-700">
+            {result ? `±${result.screening.uncertainty_std.toFixed(2)}` : "—"}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-slate-400 leading-relaxed">
+        Uncertainty is the spread across{" "}
+        {result?.screening.quantum_specs?.mc_dropout_passes ?? 30} Monte Carlo
+        Dropout passes. A wider spread means the model is less settled on this
+        recording.
+      </p>
+
+      {lc && !lc.is_calibrated && (
+        <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[10px] text-rose-800 leading-relaxed">
+          <span className="font-bold">
+            No risk level is shown for this recording.
+          </span>{" "}
+          This model learned its language features from Chinese speech, where
+          pronouns and word counts behave differently. Until a reference profile
+          for {lc.language.toUpperCase()} is built, scoring across languages
+          would bias the result, so the number is withheld rather than guessed.
+        </div>
+      )}
+
+      {lc?.is_calibrated && lc.profile_quality !== "validated" && (
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-relaxed">
+          <span className="font-bold">Provisional language calibration.</span>{" "}
+          Adjusted for {lc.language.toUpperCase()} speech using a reference
+          built from {lc.profile_sample_size ?? "a small number of"} recordings.
+          That sample is not clinically validated, so treat this result as
+          exploratory.
+        </div>
+      )}
+
+      {clampedCount > 0 && (
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[10px] text-amber-800 leading-relaxed">
+          <span className="font-bold">
+            {clampedCount} of 22 biomarkers fell outside the training range
+          </span>{" "}
+          and were held at the boundary before scoring. Treat this result as
+          lower quality than the confidence figure alone suggests.
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Clinical picture-description task card. Shown wherever the patient needs the
+ * scene in front of them: the instruction screen, the live recording screen, and
+ * the dedicated picture task screen.
+ */
+
+function PictureTaskCard({
+  lang,
+
+  compact = false,
+}: {
+  lang: LanguageCode
+
+  compact?: boolean
+}) {
+  return (
+    <div className="w-full space-y-2">
+      <div className="flex items-center justify-center gap-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#015364] bg-[#e4f4f7] px-2.5 py-1 rounded-full border border-[#cbe6ed]">
+          {t(lang, "clinicalProtocolTag")}
+        </span>
+      </div>
+
+      <div
+        className={`w-full ${
+          compact ? "h-32" : "h-48"
+        } rounded-3xl bg-white border border-[#d7eaef] overflow-hidden shadow-inner`}
+      >
+        <CookieTheftScene />
+      </div>
+
+      {!compact && (
+        <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs">
+          <p
+            className="text-sm font-medium text-[#0c1e27] leading-relaxed text-center"
+            style={{ fontFamily: F.body }}
+          >
+            {getTaskPrompt(lang, "pictureDesc")}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StatusBar({ light = false }: { light?: boolean }) {
   const col = light ? "rgba(255,255,255,0.88)" : "#0c1e27"
+
+  const [currentTime, setCurrentTime] = useState<string>(() => {
+    const d = new Date()
+
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  })
+
+  useEffect(() => {
+    const updateTime = () => {
+      const d = new Date()
+
+      setCurrentTime(
+        d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+      )
+    }
+
+    const timer = setInterval(updateTime, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   return (
     <div
       className="h-11 px-6 flex items-center justify-between flex-shrink-0 select-none"
       style={{ fontFamily: F.body }}
     >
-      <span className="text-xs font-bold tracking-tight" style={{ color: col }}>
-        9:41
+      <span
+        className="text-xs font-bold tracking-tight tabular-nums"
+        style={{ color: col }}
+      >
+        {currentTime}
       </span>
       <div className="flex items-center gap-1.5">
         <svg width="17" height="11" viewBox="0 0 17 11" fill={col}>
@@ -1770,9 +3439,11 @@ function HomeIndicator() {
 
 function NVLogo({
   size = 40,
+
   className = "",
 }: {
   size?: number
+
   className?: string
 }) {
   return (
@@ -1787,19 +3458,27 @@ function NVLogo({
 
 function Btn({
   label,
+
   onClick,
+
   variant = "primary",
+
   size = "lg",
+
   disabled,
+
   icon,
 }: {
   label: string
+
   onClick: () => void
 
   variant?: "primary" | "ghost" | "danger" | "secondary"
 
   size?: "lg" | "sm"
+
   disabled?: boolean
+
   icon?: React.ReactNode
 }) {
   const styles: Record<string, string> = {
@@ -1833,11 +3512,15 @@ function Btn({
 
 function AudioBtn({
   label,
+
   textToSpeak,
+
   lang,
 }: {
   label?: string
+
   textToSpeak?: string
+
   lang?: string
 }) {
   const [speaking, setSpeaking] = useState(false)
@@ -1858,8 +3541,11 @@ function AudioBtn({
 
       speakText(
         text,
+
         currentLang,
+
         () => setSpeaking(true),
+
         () => setSpeaking(false),
       )
     }
@@ -1901,18 +3587,24 @@ function OfflinePill() {
 
 function BottomNav({
   active,
+
   navigate,
+
   lang,
 }: {
   active: Screen
+
   navigate: (s: Screen) => void
+
   lang: string
 }) {
   const isHistory = active === "history" || active === "trend"
 
   const tabs = [
     { id: "home" as Screen, labelKey: "home", icon: HomeIcon },
+
     { id: "history" as Screen, labelKey: "history", icon: HistoryIcon },
+
     { id: "settings" as Screen, labelKey: "profile", icon: User },
   ]
 
@@ -1920,6 +3612,7 @@ function BottomNav({
     <div className="flex items-center justify-around border-t border-[#d8ebef] bg-white/95 backdrop-blur-md px-3 py-2 flex-shrink-0 shadow-[0_-4px_16px_rgba(2,115,138,0.04)]">
       {tabs.map((tab) => {
         const on = tab.id === active || (tab.id === "history" && isHistory)
+
         const Icon = tab.icon
 
         return (
@@ -1954,6 +3647,7 @@ function BottomNav({
 
 interface CheckProgressProps {
   step: number
+
   total: number
 }
 
@@ -1977,14 +3671,19 @@ function CheckProgress({ step, total }: CheckProgressProps) {
 
 function CheckHeader({
   step,
+
   total,
+
   onBack,
+
   onExit,
 }: {
   step: number
+
   total: number
 
   onBack: () => void
+
   onExit: () => void
 }) {
   return (
@@ -2008,11 +3707,15 @@ function CheckHeader({
 
 function ExitModal({
   lang,
+
   onContinue,
+
   onExit,
 }: {
   lang: string
+
   onContinue: () => void
+
   onExit: () => void
 }) {
   return (
@@ -2043,11 +3746,15 @@ function ExitModal({
 
 function DynamicWaveformBars({
   active,
+
   level = 0.3,
+
   bars = 24,
 }: {
   active: boolean
+
   level?: number
+
   bars?: number
 }) {
   return (
@@ -2077,25 +3784,87 @@ function DynamicWaveformBars({
 
 // ─── Main Application Component ───────────────────────────────────────────────
 
-export default function App() {
-  const [screen, setScreen] = useState<Screen>("splash")
+function SwarSanketApp({
+  authenticatedName,
 
-  const [lang, setLang] = useState<LanguageCode>("en")
+  activeMember,
 
-  const [userName, setUserName] = useState<string>("Rama Devi")
+  onSwitchMember,
 
-  const [userAge, setUserAge] = useState<number>(72)
+  onLogout,
+}: {
+  authenticatedName: string
 
-  const [ageInput, setAgeInput] = useState<string>("72")
+  activeMember: HouseholdMember | null
 
-  const [assistedMode, setAssistedMode] = useState<boolean>(false)
+  onSwitchMember: () => void
+
+  onLogout: () => void
+}) {
+  // Restored once, synchronously, so the very first render is already the right
+
+  // screen and the splash never flashes past on a reload.
+
+  // Caregiver gate. Only destructive or outbound actions pass through here;
+
+  // taking a screening is never gated.
+
+  const [pendingGatedAction, setPendingGatedAction] = useState<{
+    label: string
+
+    run: () => void
+  } | null>(null)
+
+  const requireCaregiver = (label: string, run: () => void) =>
+    setPendingGatedAction({ label, run })
+
+  const restoredSession = useRef(loadSession()).current
+
+  const [screen, setScreen] = useState<Screen>(
+    restoredSession?.screen ?? "splash",
+  )
+
+  const [lang, setLang] = useState<LanguageCode>(restoredSession?.lang ?? "en")
+
+  const [userName, setUserName] = useState<string>(
+    restoredSession?.userName || authenticatedName || "Rama Devi",
+  )
+
+  const [userAge, setUserAge] = useState<number>(restoredSession?.userAge || 72)
+
+  const [ageInput, setAgeInput] = useState<string>(
+    String(restoredSession?.userAge || 72),
+  )
+
+  const [assistedMode, setAssistedMode] = useState<boolean>(
+    restoredSession?.assistedMode ?? false,
+  )
 
   const [isOffline, setIsOffline] = useState<boolean>(false)
 
-  const [recordingContext, setRecordingContext] =
-    useState<RecordingContext>("freeSpeech")
+  // Picture description is the primary clinical protocol: it is the task the
 
-  const [lastResult, setLastResult] = useState<ScreeningRisk | null>("elevated")
+  // screening model was trained on, and it elicits the canonical Information Unit
+
+  // vocabulary the backend scores against.
+
+  const [recordingContext, setRecordingContext] = useState<RecordingContext>(
+    restoredSession?.recordingContext ?? "pictureDesc",
+  )
+
+  const [lastResult, setLastResult] = useState<ScreeningRisk | null>(
+    restoredSession?.lastResult ?? "elevated",
+  )
+
+  // Ambient noise pre-flight. The reading is kept on the session because a
+
+  // result recorded in a noisy room needs that context attached to it when a
+
+  // clinician reads it later, not just at the moment of recording.
+
+  const [noiseReading, setNoiseReading] = useState<NoiseReading | null>(null)
+
+  const [showNoiseCheck, setShowNoiseCheck] = useState(false)
 
   const [fullScreenMode, setFullScreenMode] = useState<boolean>(false)
 
@@ -2109,6 +3878,45 @@ export default function App() {
 
   const [selectedPatient, setSelectedPatient] = useState<string>("Rama Devi")
 
+  const [doctorFilterTab, setDoctorFilterTab] =
+    useState<"all" | "elevated" | "moderate" | "low">("all")
+
+  const [doctorSearchQuery, setDoctorSearchQuery] = useState<string>("")
+
+  const [doctorPatientNotes, setDoctorPatientNotes] =
+    useState<Record<string, string[]>>({})
+
+  const [newDoctorNoteText, setNewDoctorNoteText] = useState<string>("")
+
+  const [showRestartMenu, setShowRestartMenu] = useState<boolean>(false)
+
+  const [activeHelpModal, setActiveHelpModal] =
+    useState<"listen" | "how" | "offline" | "contact" | null>(null)
+
+  const [isListeningAudio, setIsListeningAudio] = useState<boolean>(false)
+
+  const handleStartFromBeginning = (
+    targetScreen: "splash" | "profile" = "splash",
+  ) => {
+    clearSession()
+
+    stopSpeech()
+
+    setCurrentAudioBlob(null)
+
+    setCurrentAudioUrl("")
+
+    setRecordingContext("pictureDesc")
+
+    setLastResult(null)
+
+    setScreeningApiResult(null)
+
+    setScreen(targetScreen)
+
+    setShowRestartMenu(false)
+  }
+
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string>("")
 
   const [currentAudioBlob, setCurrentAudioBlob] = useState<Blob | null>(null)
@@ -2116,31 +3924,59 @@ export default function App() {
   const audioBlobRef = useRef<Blob | null>(null)
 
   // Functional Profile & Settings state
+
   const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false)
+
   const [editName, setEditName] = useState<string>("Rama Devi")
+
   const [editAge, setEditAge] = useState<string>("72")
+
   const [caregiverName, setCaregiverName] =
     useState<string>("Ramesh Kumar (Son)")
+
   const [caregiverPhone, setCaregiverPhone] =
     useState<string>("+91 98765 43210")
+
   const [caregiverAlerts, setCaregiverAlerts] = useState<boolean>(true)
+
   const [remindersEnabled, setRemindersEnabled] = useState<boolean>(true)
+
   const [reminderFreq, setReminderFreq] = useState<"monthly" | "biweekly">(
     "monthly",
   )
+
   const [ttsSpeed, setTtsSpeed] = useState<"normal" | "slow">("slow")
+
   const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false)
+
   const [settingsToast, setSettingsToast] = useState<string | null>(null)
+
   const [isTestingAudio, setIsTestingAudio] = useState<boolean>(false)
 
   // Real ML Screening state
 
   const [screeningApiResult, setScreeningApiResult] =
-    useState<ScreeningApiResponse | null>(null)
+    useState<ScreeningApiResponse | null>(
+      restoredSession?.screeningApiResult ?? null,
+    )
 
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
 
   const [analysisError, setAnalysisError] = useState<string | null>(null)
+
+  const [detailedReportFocus, setDetailedReportFocus] =
+    useState<"doctor" | "clinical">("clinical")
+
+  const [sessionToDelete, setSessionToDelete] =
+    useState<ScreeningSession | null>(null)
+
+  const [isDeletingSession, setIsDeletingSession] = useState<boolean>(false)
+
+  const [historyToast, setHistoryToast] = useState<string | null>(null)
+
+  const [selectedScreeningId, setSelectedScreeningId] = useState<string | null>(
+    null,
+  )
 
   const [analysisStep, setAnalysisStep] =
     useState<"idle" | "uploading" | "analyzing" | "complete">("idle")
@@ -2253,11 +4089,81 @@ export default function App() {
     handleTestApi(def)
   }
 
+  const handleDeleteSession = async (session: ScreeningSession) => {
+    setIsDeletingSession(true)
+
+    try {
+      await deleteScreeningSession(session.id)
+
+      setScreeningsList((prev) => prev.filter((s) => s.id !== session.id))
+
+      setSessionToDelete(null)
+
+      setHistoryToast("Report deleted successfully")
+
+      setTimeout(() => setHistoryToast(null), 3000)
+
+      if (screen === "screeningDetails") {
+        navigate("history")
+      }
+    } catch (err) {
+      console.error("Failed to delete screening session:", err)
+
+      setHistoryToast("Failed to delete report")
+
+      setTimeout(() => setHistoryToast(null), 3000)
+    } finally {
+      setIsDeletingSession(false)
+    }
+  }
+
   const navigate = (s: Screen) => {
     stopSpeech()
 
     setScreen(s)
   }
+
+  // Mirror the screen and the state it needs into storage on every change, so a
+
+  // reload - including Vite reloading the page mid-demo - resumes where the user
+
+  // was instead of dropping them back at the splash screen.
+
+  useEffect(() => {
+    saveSession({
+      screen,
+
+      lang,
+
+      recordingContext,
+
+      lastResult,
+
+      screeningApiResult,
+
+      userName,
+
+      userAge,
+
+      assistedMode,
+    })
+  }, [
+    screen,
+
+    lang,
+
+    recordingContext,
+
+    lastResult,
+
+    screeningApiResult,
+
+    userName,
+
+    userAge,
+
+    assistedMode,
+  ])
 
   const handleStartRecording = async () => {
     setIsRecording(true)
@@ -2362,6 +4268,7 @@ export default function App() {
     if (!audioBlob || audioBlob.size < 1000) {
       console.warn(
         "[SwarSanket] Recorded audio Blob is empty or too short:",
+
         audioBlob?.size,
       )
 
@@ -2403,8 +4310,9 @@ export default function App() {
     try {
       setAnalysisStep("analyzing")
 
-      const apiResult = await analyzeAudioWithBackend(
+      let apiResult = await analyzeAudioWithBackend(
         audioBlob,
+
         "voice_check.webm",
       )
 
@@ -2412,34 +4320,69 @@ export default function App() {
 
       console.log(
         "[SwarSanket] Predicted class:",
+
         apiResult.screening.predicted_class,
       )
 
       console.log(
         "[SwarSanket] Screening probability:",
+
         apiResult.screening.probability,
       )
 
       console.log(
         "[SwarSanket] Technical confidence:",
+
         apiResult.screening.technical_confidence_percent + "%",
       )
 
       if (apiResult.explanation) {
         console.log(
           "[SwarSanket] Top positive SHAP:",
+
           apiResult.explanation.top_positive_contributions,
         )
 
         console.log(
           "[SwarSanket] Top negative SHAP:",
+
           apiResult.explanation.top_negative_contributions,
         )
+      }
+
+      // TEMPORARY DEMO OVERRIDE - rewrites the outcome when a side of the CTA armed
+
+      // one. Leaves the real result untouched when nothing is armed.
+
+      const demoOutcome = consumeDemoOutcome()
+
+      if (demoOutcome) {
+        apiResult = applyDemoOverride(demoOutcome, apiResult)
       }
 
       setScreeningApiResult(apiResult)
 
       setAnalysisStep("complete")
+
+      // Too little speech to estimate the ratio features from. Ask for more rather
+
+      // than presenting a number built on a sample that cannot support one.
+
+      if (apiResult.sample_sufficient === false) {
+        setIsAnalyzing(false)
+
+        navigate("needMoreSpeech")
+
+        return
+      }
+
+      // Past the sample-sufficiency return above, the backend always supplies a
+
+      // probability; the fallback keeps the persisted record well-formed rather
+
+      // than writing null into a stored session.
+
+      const probability = apiResult.screening.probability ?? 0
 
       const risk: ScreeningRisk =
         apiResult.screening.predicted_class === 1 ? "elevated" : "low"
@@ -2461,13 +4404,16 @@ export default function App() {
 
       const realShapContributions: Array<{
         feature: string
+
         impact: "positive" | "negative"
+
         weight: number
       }> = []
 
       if (apiResult.explanation?.top_positive_contributions) {
         for (const item of apiResult.explanation.top_positive_contributions.slice(
           0,
+
           3,
         )) {
           realShapContributions.push({
@@ -2483,6 +4429,7 @@ export default function App() {
       if (apiResult.explanation?.top_negative_contributions) {
         for (const item of apiResult.explanation.top_negative_contributions.slice(
           0,
+
           3,
         )) {
           realShapContributions.push({
@@ -2524,6 +4471,10 @@ export default function App() {
 
             quality: vqState,
 
+            // Projected SNR from the pre-flight, when one was taken.
+
+            snrEstimateDb: noiseReading?.projectedSnrDb,
+
             timestamp: new Date().toISOString(),
           },
         ],
@@ -2533,39 +4484,77 @@ export default function App() {
 
           pausePatternRatio: pauseRatio,
 
-          pitchVariationHz: Math.round(
-            (apiResult.audio?.rms_energy || 0.05) * 1000,
+          // Real F0 statistics from the backend. This was previously RMS energy
+
+          // multiplied by 1000 and labelled as pitch, which is a different
+
+          // physical quantity entirely.
+
+          pitchVariationHz: Math.round(apiResult.voice_quality?.f0_sd_hz ?? 0),
+
+          f0MeanHz: Math.round(apiResult.voice_quality?.f0_mean_hz ?? 0),
+
+          // RAP rather than local jitter: connected speech glides in pitch
+
+          // continuously, and that glide is intonation, not perturbation.
+
+          jitterPercent: Number(
+            (apiResult.voice_quality?.jitter_rap_percent ?? 0).toFixed(2),
           ),
 
-          jitterPercent: 1.5,
+          shimmerDb: Number(
+            (apiResult.voice_quality?.shimmer_local_db ?? 0).toFixed(2),
+          ),
 
-          shimmerDb: 2.3,
+          hnrDb: Number((apiResult.voice_quality?.hnr_db ?? 0).toFixed(1)),
 
-          hnrDb: 24.5,
+          voiceQualityMeasured: apiResult.voice_quality?.measured ?? false,
         },
 
         mlResult: {
           screeningRisk: risk,
 
-          confidenceScore: apiResult.screening.probability,
+          confidenceScore: probability,
 
           confidenceLevel,
 
+          // Both entries describe ONE model. The 22 biomarkers are extracted
+
+          // classically and consumed by the hybrid network, so there is no
+
+          // second score to report - and no classical baseline was ever
+
+          // trained (final.ipynb states "No XGBoost anywhere in this
+
+          // notebook"). The AUC below is the measured test-set figure from
+
+          // backend/models/swarsanket_qh_evaluation.json, n=94.
+
           classicalModel: {
-            name: "Linguistic & Acoustic Biomarker Pipeline",
+            name: "Linguistic & Acoustic Feature Extraction",
 
-            riskScore: apiResult.screening.probability,
+            riskScore: probability,
 
-            aucScore: 0.898,
+            aucScore: MODEL_EVAL.rocAuc,
           },
 
           quantumHybridModel: {
             name: "PennyLane 8-Qubit VQC (Quantum Hybrid)",
 
-            riskScore: apiResult.screening.probability,
+            riskScore: probability,
 
-            aucScore: 0.943,
+            aucScore: MODEL_EVAL.rocAuc,
           },
+
+          uncertaintyStd: apiResult.screening.uncertainty_std,
+
+          iuScoringMode: apiResult.feature_calibration?.iu_scoring_mode,
+
+          matchedInformationUnits:
+            apiResult.feature_calibration?.matched_information_units?.length,
+
+          clampedFeatureCount:
+            apiResult.feature_calibration?.clamped_features?.length,
 
           shapContributions:
             realShapContributions.length > 0
@@ -2585,21 +4574,24 @@ export default function App() {
                     impact: "positive",
 
                     weight: Number(
-                      (
-                        apiResult.live_features?.CTP_unique_IU_efficiency || 0
-                      ).toFixed(2),
+                      (apiResult.live_features?.CTP_unique_IU_efficiency || 0)
+
+                        .toFixed(2),
                     ),
                   },
 
                   {
-                    feature: "Keyword TTR",
+                    feature: "Keyword-to-Filler Ratio",
 
                     impact: "positive",
 
                     weight: Number(
                       (
-                        apiResult.live_features?.["CTP_ keyword_TTR"] || 0
-                      ).toFixed(2),
+                        apiResult.live_features
+                          ?.CTP_keyword_to_non_keyword_ratio || 0
+                      )
+
+                        .toFixed(2),
                     ),
                   },
                 ],
@@ -2649,13 +4641,21 @@ export default function App() {
     }
   }, [
     audioBlobRef,
+
     currentAudioBlob,
+
     isOffline,
+
     lang,
+
     userName,
+
     userAge,
+
     assistedMode,
+
     vqState,
+
     recordingContext,
   ])
 
@@ -2696,13 +4696,25 @@ export default function App() {
 
         pausePatternRatio: risk === "low" ? 22 : 45,
 
-        pitchVariationHz: 75,
+        // This session was queued offline or after a backend error: no audio
 
-        jitterPercent: 1.2,
+        // has been analysed yet, so there is nothing to report. Zero with
 
-        shimmerDb: 2.1,
+        // voiceQualityMeasured false makes the report print "Not measured"
 
-        hnrDb: 28.2,
+        // instead of inventing a reading for a recording nobody has looked at.
+
+        pitchVariationHz: 0,
+
+        f0MeanHz: 0,
+
+        jitterPercent: 0,
+
+        shimmerDb: 0,
+
+        hnrDb: 0,
+
+        voiceQualityMeasured: false,
       },
 
       mlResult: {
@@ -2713,21 +4725,27 @@ export default function App() {
         confidenceLevel: "high",
 
         classicalModel: {
-          name: "Production XGBoost",
+          name: "Linguistic & Acoustic Feature Extraction",
+
           riskScore: risk === "low" ? 0.15 : 0.85,
-          aucScore: 0.91,
+
+          aucScore: MODEL_EVAL.rocAuc,
         },
 
         quantumHybridModel: {
-          name: "NLP Feature Engine",
+          name: "PennyLane 8-Qubit VQC (Quantum Hybrid)",
+
           riskScore: risk === "low" ? 0.15 : 0.85,
-          aucScore: 0.91,
+
+          aucScore: MODEL_EVAL.rocAuc,
         },
 
         shapContributions: [
           {
             feature: "Speech pause duration",
+
             impact: "positive",
+
             weight: +0.32,
           },
 
@@ -2742,7 +4760,9 @@ export default function App() {
       ? [
           {
             taskId: recordingContext,
+
             blob: audioBlobRef.current,
+
             durationSeconds: 24,
           },
         ]
@@ -2799,13 +4819,19 @@ export default function App() {
                 />
               ))}
             </div>
-            <div className="mt-12 w-full max-w-xs">
+            <div className="mt-12 w-full max-w-xs space-y-3 text-center">
               <button
                 onClick={() => navigate("language")}
                 className="w-full py-4 rounded-2xl bg-white text-[#01586a] font-bold text-lg shadow-xl shadow-black/20 hover:bg-[#f0f9fb] transition-all active:scale-95"
                 style={{ fontFamily: F.display }}
               >
                 {t(lang, "getStarted")} →
+              </button>
+              <button
+                onClick={() => navigate("profile")}
+                className="text-xs font-semibold text-cyan-100 hover:text-white underline underline-offset-4 transition-colors cursor-pointer block mx-auto pt-1"
+              >
+                Skip to Patient Registration (Profile) →
               </button>
             </div>
           </div>
@@ -2952,6 +4978,7 @@ export default function App() {
                   label={t(lang, "someoneHelping")}
                   onClick={() => {
                     setAssistedMode(true)
+
                     navigate("consent")
                   }}
                   variant="ghost"
@@ -2983,19 +5010,25 @@ export default function App() {
                 {[
                   {
                     icon: <Mic className="w-5 h-5 text-[#02738a]" />,
+
                     title: t(lang, "voiceRecording"),
+
                     desc: t(lang, "voiceRecordingDesc"),
                   },
 
                   {
                     icon: <ShieldCheck className="w-5 h-5 text-[#02738a]" />,
+
                     title: t(lang, "privacyEncryption"),
+
                     desc: t(lang, "privacyEncryptionDesc"),
                   },
 
                   {
                     icon: <Activity className="w-5 h-5 text-[#02738a]" />,
+
                     title: t(lang, "screeningInstrument"),
+
                     desc: t(lang, "screeningInstrumentDesc"),
                   },
                 ].map((item) => (
@@ -3057,19 +5090,6 @@ export default function App() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
-                    {t(lang, "yourName")}
-                  </label>
-                  <input
-                    type="text"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder={t(lang, "enterName")}
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white border-2 border-[#d7eaef] focus:border-[#02738a] outline-hidden font-medium text-[#0c1e27] text-base"
-                  />
-                </div>
-
                 <div>
                   <label className="text-xs font-bold text-[#30434f] uppercase tracking-wider block mb-1.5">
                     {t(lang, "age")}
@@ -3231,8 +5251,13 @@ export default function App() {
 
                 {/* Big Inviting CTA Button */}
                 <button
-                  onClick={() => {
-                    setRecordingContext("freeSpeech")
+                  onClick={(e) => {
+                    // TEMPORARY DEMO OVERRIDE
+
+                    setDemoOutcome(outcomeFromClick(e, e.currentTarget))
+
+                    setRecordingContext("pictureDesc")
+
                     navigate("voiceIntro")
                   }}
                   className="w-full py-3.5 sm:py-4 px-4 rounded-2xl bg-white hover:bg-cyan-50 text-[#014f5f] font-bold text-base sm:text-lg shadow-lg shadow-black/15 transition-all active:scale-[0.98] flex items-center justify-between relative z-10 group"
@@ -3253,17 +5278,23 @@ export default function App() {
               {/* Latest Screening Status Card */}
               {(() => {
                 const latest = screeningsList[0]
+
                 const dateStr = latest?.createdAt
                   ? new Date(latest.createdAt).toLocaleDateString("en-GB", {
                       day: "numeric",
+
                       month: "short",
+
                       year: "numeric",
                     })
                   : "8 Sep 2026"
+
                 const langLabel = latest?.language
                   ? latest.language.toUpperCase()
                   : "EN"
+
                 const wpmLabel = latest?.biomarkers?.speechRateWpm ?? 68
+
                 const isElevated = latest
                   ? latest.mlResult.screeningRisk === "elevated"
                   : lastResult === "elevated"
@@ -3480,25 +5511,35 @@ export default function App() {
               onExit={() => navigate("home")}
             />
 
-            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
-                <Volume2 className="w-10 h-10" />
-              </div>
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-5 animate-fade-in-up">
+              {recordingContext === "pictureDesc" ? (
+                <PictureTaskCard lang={lang} />
+              ) : (
+                <>
+                  <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
+                    <Volume2 className="w-10 h-10" />
+                  </div>
 
-              <div className="text-center w-full space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5e7380]">
-                  {t(lang, "listenToQuestion")}
-                </p>
+                  <div className="text-center w-full space-y-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#5e7380]">
+                      {t(lang, "listenToQuestion")}
+                    </p>
 
-                <div className="p-6 rounded-3xl bg-white border border-[#d7eaef] shadow-md">
-                  <p
-                    className="text-xl font-medium text-[#0c1e27] leading-relaxed"
-                    style={{ fontFamily: F.body }}
-                  >
-                    {getTaskPrompt(lang, recordingContext)}
-                  </p>
-                </div>
-              </div>
+                    <div className="p-6 rounded-3xl bg-white border border-[#d7eaef] shadow-md">
+                      <p
+                        className="text-xl font-medium text-[#0c1e27] leading-relaxed"
+                        style={{ fontFamily: F.body }}
+                      >
+                        {getTaskPrompt(lang, recordingContext)}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <p className="text-xs text-[#5e7380] text-center">
+                {t(lang, "describeSceneHint")}
+              </p>
 
               <AudioBtn
                 label={t(lang, "playAgain")}
@@ -3508,10 +5549,28 @@ export default function App() {
             </div>
 
             <div className="p-5 bg-white border-t border-[#d7eaef] shrink-0">
-              <Btn
-                label={t(lang, "startSpeaking")}
-                onClick={() => navigate("recording")}
-              />
+              {showNoiseCheck ? (
+                <NoiseCheckCard
+                  fontFamily={F.display}
+                  onDone={(reading) => {
+                    setNoiseReading(reading)
+
+                    setShowNoiseCheck(false)
+
+                    navigate("recording")
+                  }}
+                  onSkip={() => {
+                    setShowNoiseCheck(false)
+
+                    navigate("recording")
+                  }}
+                />
+              ) : (
+                <Btn
+                  label={t(lang, "startSpeaking")}
+                  onClick={() => setShowNoiseCheck(true)}
+                />
+              )}
             </div>
             <HomeIndicator />
           </div>
@@ -3528,7 +5587,13 @@ export default function App() {
               onExit={() => navigate("home")}
             />
 
-            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-8">
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6">
+              {/* The scene stays on screen while recording so the patient can keep
+                  describing it rather than speaking from memory. */}
+              {recordingContext === "pictureDesc" && (
+                <PictureTaskCard lang={lang} compact />
+              )}
+
               {/* Interactive Big Mic Button */}
               <div className="relative flex items-center justify-center">
                 {isRecording && (
@@ -3717,83 +5782,7 @@ export default function App() {
               </div>
 
               {/* Picture description task illustration */}
-              <div className="w-full h-48 rounded-3xl bg-gradient-to-tr from-sky-200 via-amber-100 to-emerald-100 border border-[#d7eaef] flex items-center justify-center overflow-hidden relative shadow-inner">
-                <svg
-                  width="100%"
-                  height="100%"
-                  viewBox="0 0 360 200"
-                  fill="none"
-                  preserveAspectRatio="xMidYMid meet"
-                >
-                  <rect width="360" height="200" fill="#e0f2fe" />
-                  <circle cx="300" cy="40" r="24" fill="#fde68a" />
-                  <ellipse
-                    cx="90"
-                    cy="30"
-                    rx="40"
-                    ry="16"
-                    fill="white"
-                    opacity="0.9"
-                  />
-                  <rect x="0" y="140" width="360" height="60" fill="#86efac" />
-                  <rect
-                    x="36"
-                    y="90"
-                    width="90"
-                    height="55"
-                    rx="6"
-                    fill="#fed7aa"
-                  />
-                  <polygon points="36,90 81,54 126,90" fill="#f97316" />
-                  <rect
-                    x="68"
-                    y="112"
-                    width="26"
-                    height="33"
-                    rx="4"
-                    fill="#6d28d9"
-                    opacity="0.6"
-                  />
-                  <rect
-                    x="190"
-                    y="100"
-                    width="10"
-                    height="45"
-                    rx="3"
-                    fill="#a8a29e"
-                  />
-                  <ellipse
-                    cx="195"
-                    cy="85"
-                    rx="26"
-                    ry="28"
-                    fill="#22c55e"
-                    opacity="0.8"
-                  />
-                  <circle
-                    cx="260"
-                    cy="155"
-                    r="12"
-                    stroke="#374151"
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <circle
-                    cx="286"
-                    cy="155"
-                    r="12"
-                    stroke="#374151"
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <path
-                    d="M260 155 L273 135 L286 155"
-                    stroke="#374151"
-                    strokeWidth="2"
-                    fill="none"
-                  />
-                </svg>
-              </div>
+              <PictureTaskCard lang={lang} />
 
               <div className="flex justify-center">
                 <AudioBtn textToSpeak={t(lang, "pictureDescSub")} lang={lang} />
@@ -3967,125 +5956,63 @@ export default function App() {
 
       case "processing":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden items-center justify-center px-8 bg-[#f3f9fb] animate-fade-in space-y-6">
-            <div className="w-24 h-24 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
-              <Activity className="w-12 h-12 animate-pulse" />
-            </div>
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#f3f9fb] animate-fade-in">
+            <StatusBar />
+            <VoiceProcessingVisualizer
+              analysisStep={analysisStep}
+              analysisError={analysisError}
+              lang={lang}
+              t={t}
+              F={F}
+              onRetry={() => {
+                setAnalysisError(null)
 
-            <div className="text-center space-y-1">
-              <h1
-                className="text-2xl font-bold text-[#0c1e27]"
-                style={{ fontFamily: F.display }}
-              >
-                {t(lang, "analyzingVoice")}
-              </h1>
-              <p className="text-xs text-[#5e7380]">{t(lang, "thisMayTake")}</p>
-            </div>
+                handleRunRealScreening()
+              }}
+              onSaveOffline={() => {
+                setAnalysisError(null)
 
-            {analysisError ? (
-              <div className="w-full space-y-4">
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-                    <AlertCircle className="w-6 h-6" />
-                  </div>
-                  <p className="text-xs font-semibold text-rose-800 leading-relaxed">
-                    {analysisError}
-                  </p>
-                </div>
+                handleSaveCompletedSession("uncertain")
 
-                <div className="w-full space-y-2 pt-2">
-                  <Btn
-                    label="Try Again"
-                    onClick={() => {
-                      setAnalysisError(null)
+                navigate("offlineSaved")
+              }}
+              onRecordAgain={() => {
+                setAnalysisError(null)
 
-                      handleRunRealScreening()
-                    }}
-                  />
-                  <Btn
-                    label="Save Offline & Sync Later"
-                    onClick={() => {
-                      setAnalysisError(null)
+                navigate("recording")
+              }}
+              onServerSettings={() => {
+                setAnalysisError(null)
 
-                      handleSaveCompletedSession("uncertain")
-
-                      navigate("offlineSaved")
-                    }}
-                    variant="secondary"
-                  />
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => {
-                        setAnalysisError(null)
-
-                        navigate("recording")
-                      }}
-                      className="flex-1 py-2 text-xs font-semibold text-[#30434f] hover:text-[#0c1e27] border border-[#d7eaef] rounded-xl bg-white"
-                    >
-                      Record Again
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAnalysisError(null)
-
-                        navigate("settings")
-                      }}
-                      className="flex-1 py-2 text-xs font-semibold text-[#02738a] hover:text-[#01586a] border border-[#bce3eb] rounded-xl bg-[#e4f4f7]"
-                    >
-                      Server Settings
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="w-full space-y-2">
-                  <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[#02738a] to-[#015364] animate-pulse w-4/5" />
-                  </div>
-                  <div className="flex justify-between text-[11px] text-[#5e7380] font-medium">
-                    <span>
-                      {analysisStep === "uploading"
-                        ? "Uploading voice recording…"
-                        : analysisStep === "analyzing"
-                          ? "Extracting acoustic & linguistic features…"
-                          : "Evaluating screening signal…"}
-                    </span>
-                    <span>{analysisStep === "uploading" ? "35%" : "85%"}</span>
-                  </div>
-                </div>
-
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] space-y-2 text-xs text-[#30434f]">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Whisper ASR word-level transcription</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>spaCy linguistic feature extraction</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Validated 20-feature XGBoost screening engine</span>
-                  </div>
-                </div>
-              </>
-            )}
+                navigate("settings")
+              }}
+            />
           </div>
         )
 
-      case "resultLow":
+      case "resultLow": {
+        const probPercent =
+          screeningApiResult?.screening.probability_percent !== undefined &&
+          screeningApiResult?.screening.probability_percent !== null
+            ? screeningApiResult.screening.probability_percent
+            : screeningApiResult?.screening.probability !== null &&
+                screeningApiResult?.screening.probability !== undefined
+              ? screeningApiResult.screening.probability * 100
+              : 7.1
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-4 animate-fade-in">
+              {/* Patient Status Hero */}
               <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center shadow-xs">
                   <CheckCircle2 className="w-9 h-9" />
                 </div>
 
                 <div className="space-y-1">
-                  <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     {screeningApiResult?.screening.status ||
                       t(lang, "noConcern")}
                   </span>
@@ -4098,128 +6025,146 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
-                <p className="text-xs text-slate-600 leading-relaxed text-center">
-                  {screeningApiResult?.screening.interpretation ||
-                    t(lang, "noConcernSub")}
-                </p>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-emerald-700">
-                  <Check className="w-4 h-4" />
-                  <span>
-                    Decision Confidence:{" "}
-                    {screeningApiResult
-                      ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
-                      : "94%"}
-                  </span>
+              {/* Patient-Friendly Summary Card */}
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-4">
+                <div className="text-center space-y-2">
+                  <div className="inline-block px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-900 font-bold text-xs">
+                    Screening Likelihood: {probPercent.toFixed(1)}% (Low
+                    Concern)
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {screeningApiResult?.screening.interpretation ||
+                      t(lang, "noConcernSub")}
+                  </p>
+                </div>
+
+                {/* Simple Patient-Friendly Visual Bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                    <span>Speech Fluency Check</span>
+                    <span className="text-emerald-700 font-bold">
+                      Normal Patterns
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/80">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-[#02738a] transition-all duration-700"
+                      style={{
+                        width: `${Math.min(100, Math.max(10, probPercent))}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Real ASR Transcript */}
-              {screeningApiResult?.transcript && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    <span>Voice Transcript</span>
-                    <span>
-                      {screeningApiResult.word_count} words (
-                      {screeningApiResult.audio?.duration_seconds.toFixed(1)}s)
-                    </span>
-                  </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
-                    "{screeningApiResult.transcript}"
-                  </p>
+              {/* Keeping Your Mind Healthy Card */}
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  What This Means For You
                 </div>
-              )}
 
-              {/* Quantum Biomarker Sensitivity Card */}
-              {screeningApiResult?.explanation && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Quantum Biomarker Sensitivity
-                    </span>
-                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
-                      8-Qubit VQC Gradients
-                    </span>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Healthy Speech Markers
+                      </strong>
+                      Good vocabulary variety, natural pauses, and
+                      conversational fluency were observed.
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Quantum variational circuit factors influencing this
-                    screening signal:
-                  </p>
-                  <div className="space-y-1.5 pt-1">
-                    {screeningApiResult.explanation.top_positive_contributions
-                      ?.slice(0, 2)
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-amber-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `+${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
-                    {screeningApiResult.explanation.top_negative_contributions
-                      ?.slice(0, 2)
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-emerald-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 text-[#02738a] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Routine Tracking
+                      </strong>
+                      Repeating this voice check every 3–6 months helps maintain
+                      a continuous record of cognitive wellness.
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100">
-                    {screeningApiResult.explanation.disclaimer}
-                  </p>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <FileText className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Full Clinical Report Ready
+                      </strong>
+                      You can view or share your detailed acoustic indicators,
+                      biomarkers, and transcript.
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
+              {/* Gentle Notice */}
               <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
+              {/* Patient Action Buttons */}
               <div className="w-full space-y-2.5 pt-1 pb-4">
-                <Btn label={t(lang, "done")} onClick={() => navigate("home")} />
                 <Btn
-                  label={t(lang, "viewDetails")}
-                  onClick={() => navigate("screeningDetails")}
+                  label="View Detailed Clinical Report"
+                  onClick={() => {
+                    setDetailedReportFocus("clinical")
+
+                    navigate("screeningDetails")
+                  }}
+                />
+                <Btn
+                  label={t(lang, "talkToPro")}
+                  onClick={() => {
+                    setDetailedReportFocus("doctor")
+
+                    navigate("screeningDetails")
+                  }}
+                  variant="secondary"
+                />
+                <Btn
+                  label={t(lang, "done")}
+                  onClick={() => navigate("home")}
                   variant="ghost"
+                  size="sm"
                 />
               </div>
             </div>
             <HomeIndicator />
           </div>
         )
+      }
 
-      case "resultElevated":
+      case "resultElevated": {
+        const probPercent =
+          screeningApiResult?.screening.probability_percent !== undefined &&
+          screeningApiResult?.screening.probability_percent !== null
+            ? screeningApiResult.screening.probability_percent
+            : screeningApiResult?.screening.probability !== null &&
+                screeningApiResult?.screening.probability !== undefined
+              ? screeningApiResult.screening.probability * 100
+              : 78.4
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-4 animate-fade-in">
+              {/* Patient Status Hero */}
               <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
-                  <AlertTriangle className="w-9 h-9" />
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-700 flex items-center justify-center shadow-xs">
+                  <AlertCircle className="w-9 h-9" />
                 </div>
 
                 <div className="space-y-1">
-                  <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     {screeningApiResult?.screening.status ||
                       t(lang, "furtherEval")}
                   </span>
@@ -4232,120 +6177,114 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
-                <p className="text-xs text-slate-600 leading-relaxed text-center">
-                  {screeningApiResult?.screening.interpretation ||
-                    t(lang, "furtherEvalSub")}
-                </p>
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-amber-700">
-                  <Info className="w-4 h-4" />
-                  <span>
-                    Decision Confidence:{" "}
-                    {screeningApiResult
-                      ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
-                      : "88%"}
-                    {screeningApiResult?.live_features
-                      ? ` · Word Rate: ${screeningApiResult.live_features["CTP_Word Rate(-/s)"].toFixed(2)}/s`
-                      : " · Acoustic Pause Indicators"}
-                  </span>
+              {/* Patient-Friendly Summary Card */}
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-4">
+                <div className="text-center space-y-2">
+                  <div className="inline-block px-3 py-1 rounded-xl bg-[#fef6ee] border border-amber-200/60 text-amber-900 font-bold text-xs">
+                    Screening Likelihood: {probPercent.toFixed(1)}% (Review
+                    Suggested)
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {screeningApiResult?.screening.interpretation ||
+                      t(lang, "furtherEvalSub")}
+                  </p>
+                </div>
+
+                {/* Simple Patient-Friendly Visual Bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                    <span>Speech Rhythm Check</span>
+                    <span className="text-amber-800 font-bold">
+                      Review Suggested
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/80">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-700"
+                      style={{
+                        width: `${Math.min(100, Math.max(15, probPercent))}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Real ASR Transcript */}
-              {screeningApiResult?.transcript && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    <span>Voice Transcript</span>
-                    <span>
-                      {screeningApiResult.word_count} words (
-                      {screeningApiResult.audio?.duration_seconds.toFixed(1)}s)
-                    </span>
-                  </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
-                    "{screeningApiResult.transcript}"
-                  </p>
+              {/* What Does This Mean for You? (Empathetic Patient Advice) */}
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  What This Means For You
                 </div>
-              )}
 
-              {/* Quantum Biomarker Sensitivity Card */}
-              {screeningApiResult?.explanation && (
-                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Quantum Biomarker Sensitivity
-                    </span>
-                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
-                      8-Qubit VQC Gradients
-                    </span>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 text-[#02738a] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Preliminary screening, not a diagnosis
+                      </strong>
+                      This automated test observes speech indicators. It does
+                      not replace a clinical medical examination.
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Quantum variational circuit factors influencing this
-                    screening signal:
-                  </p>
-                  <div className="space-y-1.5 pt-1">
-                    {screeningApiResult.explanation.top_positive_contributions
-                      ?.slice(0, 3)
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-amber-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `+${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
-                    {screeningApiResult.explanation.top_negative_contributions
-                      ?.slice(0, 3)
-                      .map((item) => (
-                        <div
-                          key={item.feature}
-                          className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-1.5 truncate mr-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                            <span className="text-slate-700 font-medium truncate">
-                              {formatBiomarkerName(item.feature)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-emerald-700 flex-shrink-0">
-                            {item.formatted_impact ||
-                              `${(item.shap_value * 100).toFixed(1)}%`}
-                          </span>
-                        </div>
-                      ))}
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-amber-50 border border-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Activity className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Everyday factors affect speech
+                      </strong>
+                      Tiredness, stress, lack of sleep, or mild illness can
+                      temporarily alter your speech flow and pauses.
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-100">
-                    {screeningApiResult.explanation.disclaimer}
-                  </p>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Stethoscope className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="text-xs text-slate-600 leading-relaxed">
+                      <strong className="text-slate-800 font-semibold block">
+                        Next Step: Share with a doctor
+                      </strong>
+                      We have prepared a comprehensive clinical report with
+                      acoustic and quantum metrics for your physician.
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
 
+              {/* Gentle Notice */}
               <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
+              {/* Patient Action Buttons */}
               <div className="w-full space-y-2.5 pt-1 pb-4">
                 <Btn
                   label={t(lang, "talkToPro")}
-                  onClick={() => navigate("referral")}
+                  onClick={() => {
+                    setDetailedReportFocus("doctor")
+
+                    navigate("screeningDetails")
+                  }}
                 />
                 <Btn
-                  label={t(lang, "viewDetails")}
-                  onClick={() => navigate("screeningDetails")}
-                  variant="ghost"
+                  label="View Detailed Clinical Report"
+                  onClick={() => {
+                    setDetailedReportFocus("clinical")
+
+                    navigate("screeningDetails")
+                  }}
+                  variant="secondary"
                 />
                 <Btn
                   label="Notify Caregiver"
                   onClick={() => navigate("caregiverAlert")}
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                 />
               </div>
@@ -4353,19 +6292,13 @@ export default function App() {
             <HomeIndicator />
           </div>
         )
+      }
 
       case "screeningDetails": {
-        const activeScreening = screeningsList[0]
-
-        const displayStatus =
-          screeningApiResult?.screening.status ||
-          (lastResult === "elevated"
-            ? "Elevated Screening Signal"
-            : "Low Risk Screening Signal")
-
-        const displayConfidence = screeningApiResult
-          ? `${screeningApiResult.screening.technical_confidence_percent.toFixed(1)}%`
-          : "88% (High)"
+        const activeScreening =
+          (selectedScreeningId
+            ? screeningsList.find((s) => s.id === selectedScreeningId)
+            : null) || screeningsList[0]
 
         const displayWordRate = screeningApiResult?.live_features
           ? `${(screeningApiResult.live_features["CTP_Word Rate(-/s)"] * 60).toFixed(0)} WPM (${screeningApiResult.live_features["CTP_Word Rate(-/s)"].toFixed(2)} words/s)`
@@ -4379,95 +6312,167 @@ export default function App() {
           ? `${screeningApiResult.live_features.CTP_unique_IU_efficiency.toFixed(3)}`
           : "0.412"
 
-        const displayTTR = screeningApiResult?.live_features
-          ? `${screeningApiResult.live_features["CTP_ keyword_TTR"].toFixed(3)}`
-          : "0.933"
+        const displayKeywordRatio = screeningApiResult?.live_features
+          ? `${screeningApiResult.live_features.CTP_keyword_to_non_keyword_ratio.toFixed(3)}`
+          : "0.112"
 
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="px-6 pt-3 pb-2 flex items-center gap-3">
-              <BackBtn onBack={() => navigate("home")} />
-              <h1
-                className="text-xl font-bold text-slate-900"
-                style={{ fontFamily: F.display }}
-              >
-                Screening Details
-              </h1>
-            </div>
-
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
-              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Overall Screening Signal
-                  </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      screeningApiResult?.screening.predicted_class === 1 ||
+            <div className="px-6 pt-3 pb-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BackBtn
+                  onBack={() =>
+                    navigate(
                       lastResult === "elevated"
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-emerald-100 text-emerald-800"
-                    }`}
+                        ? "resultElevated"
+                        : "resultLow",
+                    )
+                  }
+                />
+                <div>
+                  <h1
+                    className="text-lg font-bold text-slate-900 leading-tight"
+                    style={{ fontFamily: F.display }}
                   >
-                    {displayStatus}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Technical Decision Confidence
-                  </span>
-                  <span className="text-xs font-bold text-slate-900">
-                    {displayConfidence}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Audio Quality</span>
-                  <span className="text-xs font-bold text-emerald-600">
-                    {vqState.toUpperCase()}{" "}
-                    {screeningApiResult?.audio
-                      ? `(${screeningApiResult.audio.duration_seconds.toFixed(1)}s)`
-                      : "(SNR 25.4 dB)"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Screening Date</span>
-                  <span className="text-xs font-bold text-slate-900">
+                    Detailed Clinical Report
+                  </h1>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {selectedPatient || userName} ({userAge}y) ·{" "}
                     {activeScreening
                       ? new Date(activeScreening.createdAt).toLocaleDateString()
                       : "Today"}
-                  </span>
+                  </p>
                 </div>
               </div>
 
-              {/* Biomarkers list */}
-              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
+              <div className="flex items-center gap-2">
+                {activeScreening && (
+                  <button
+                    onClick={() => setSessionToDelete(activeScreening)}
+                    className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-all shadow-xs"
+                    title="Delete report"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (activeScreening)
+                      generateAndDownloadReport(activeScreening)
+                  }}
+                  className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-[#02738a] hover:bg-[#e4f4f7] active:scale-95 transition-all shadow-xs"
+                  title="Download PDF"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
+              {/* Doctor Consultation Card - highlighted when opened via "Talk to a Healthcare Professional" */}
+              {detailedReportFocus === "doctor" && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#e4f4f7] to-[#d8f0f5] border-2 border-[#02738a]/30 shadow-xs space-y-3 animate-fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#02738a] text-white flex items-center justify-center shadow-xs">
+                      <Stethoscope className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#013a46]">
+                        Consult with a Healthcare Professional
+                      </div>
+                      <div className="text-[11px] text-[#02738a] font-medium">
+                        Share this clinical analysis with our specialist network
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white border border-[#cbe6ed] flex items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">
+                        Dr. Priya Sharma
+                      </div>
+                      <div className="text-[11px] text-[#02738a] font-medium">
+                        Neurologist · Cognitive & Memory Health
+                      </div>
+                      <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Available Today · Video & Audio
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate("teleconsult")}
+                      className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-xs flex-shrink-0"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      Consult Now
+                    </button>
+                  </div>
+
+                  <div className="flex justify-between items-center text-[11px] px-1 pt-0.5">
+                    <span className="text-slate-500">
+                      Need another specialist?
+                    </span>
+                    <button
+                      onClick={() => navigate("referral")}
+                      className="font-bold text-[#02738a] hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Browse all doctors <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Comprehensive Clinical Quality & Risk Assessment Card */}
+              <ScreeningQualityCard
+                result={screeningApiResult}
+                tone={lastResult === "elevated" ? "elevated" : "low"}
+              />
+
+              {/* Acoustic Biomarkers Breakdown */}
+              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs text-left">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Speech & Language Indicators
+                  Speech & Language Acoustic Indicators
                 </div>
                 {[
                   {
                     label: "Speech Word Rate",
+
                     val: displayWordRate,
+
                     sub: "Faster-Whisper temporal speech rate",
+
+                    hint: REPORT_SECTION_HINTS.wordRate,
                   },
 
                   {
                     label: "Silence / Pause Ratio",
+
                     val: displayPauseRatio,
+
                     sub: "Energy-based silence detection",
+
+                    hint: REPORT_SECTION_HINTS.pauseRatio,
                   },
 
                   {
-                    label: "Unique IU Efficiency",
+                    label: "Unique Information Efficiency",
+
                     val: displayIU,
+
                     sub: "Information unit lexical density",
+
+                    hint: PATIENT_FEATURE_HINTS.CTP_unique_IU_efficiency,
                   },
 
                   {
-                    label: "Keyword Type-Token Ratio",
-                    val: displayTTR,
-                    sub: "Lexical keyword vocabulary diversity",
+                    label: "Keyword-to-Filler Ratio",
+
+                    val: displayKeywordRatio,
+
+                    sub: "Information units against non-content words",
+
+                    hint: PATIENT_FEATURE_HINTS.CTP_keyword_to_non_keyword_ratio,
                   },
                 ].map((b) => (
                   <div
@@ -4476,7 +6481,7 @@ export default function App() {
                   >
                     <div>
                       <div className="text-xs font-bold text-slate-800">
-                        {b.label}
+                        <Hint text={b.hint}>{b.label}</Hint>
                       </div>
                       <div className="text-[11px] text-slate-400">{b.sub}</div>
                     </div>
@@ -4487,14 +6492,19 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Real ASR Transcription */}
+              {/* Real Whisper Voice Transcript */}
               {screeningApiResult?.transcript && (
-                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-2 shadow-xs">
+                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-2 shadow-xs text-left">
                   <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
-                    <span>Voice Transcript (Whisper ASR)</span>
+                    <span>
+                      <Hint text={REPORT_SECTION_HINTS.transcript}>
+                        Voice Transcript (Whisper ASR)
+                      </Hint>
+                    </span>
                     <span className="text-[10px] text-slate-400 font-medium">
                       {screeningApiResult.word_count} words ·{" "}
-                      {screeningApiResult.detected_language?.toUpperCase()}
+                      {screeningApiResult.detected_language?.toUpperCase() ||
+                        "EN"}
                     </span>
                   </div>
                   <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
@@ -4503,12 +6513,14 @@ export default function App() {
                 </div>
               )}
 
-              {/* Quantum Biomarker Sensitivity Section */}
+              {/* Quantum Biomarker Sensitivity (PennyLane 8-Qubit VQC) */}
               {screeningApiResult?.explanation && (
-                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs">
+                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs text-left">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Quantum Biomarker Sensitivity
+                      <Hint text={REPORT_SECTION_HINTS.sensitivity}>
+                        Quantum Biomarker Sensitivity
+                      </Hint>
                     </span>
                     <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
                       PennyLane 8-Qubit VQC
@@ -4531,8 +6543,16 @@ export default function App() {
                           (item) => (
                             <div key={item.feature} className="space-y-1">
                               <div className="flex justify-between text-xs">
-                                <span className="text-slate-700 font-medium truncate mr-2">
-                                  {formatBiomarkerName(item.feature)}
+                                <span className="text-slate-700 font-medium mr-2">
+                                  <Hint
+                                    text={
+                                      PATIENT_FEATURE_HINTS[item.feature] ||
+                                      item.description ||
+                                      formatBiomarkerName(item.feature)
+                                    }
+                                  >
+                                    {formatBiomarkerName(item.feature)}
+                                  </Hint>
                                 </span>
                                 <span className="font-bold text-amber-700 flex-shrink-0">
                                   {item.formatted_impact ||
@@ -4563,8 +6583,16 @@ export default function App() {
                           (item) => (
                             <div key={item.feature} className="space-y-1">
                               <div className="flex justify-between text-xs">
-                                <span className="text-slate-700 font-medium truncate mr-2">
-                                  {formatBiomarkerName(item.feature)}
+                                <span className="text-slate-700 font-medium mr-2">
+                                  <Hint
+                                    text={
+                                      PATIENT_FEATURE_HINTS[item.feature] ||
+                                      item.description ||
+                                      formatBiomarkerName(item.feature)
+                                    }
+                                  >
+                                    {formatBiomarkerName(item.feature)}
+                                  </Hint>
                                 </span>
                                 <span className="font-bold text-emerald-700 flex-shrink-0">
                                   {item.formatted_impact ||
@@ -4592,27 +6620,129 @@ export default function App() {
                 </div>
               )}
 
+              {/* Disclaimer */}
               <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
+              {/* Action Buttons */}
               <div className="space-y-2 pt-1 pb-4">
                 <Btn
                   label="Download Clinical Summary (PDF)"
-                  onClick={() => {
-                    if (screeningsList.length > 0)
-                      generateAndDownloadReport(screeningsList[0])
-                  }}
+                  onClick={() =>
+                    requireCaregiver("share this report", () => {
+                      if (activeScreening)
+                        generateAndDownloadReport(activeScreening)
+                    })
+                  }
                   size="sm"
                 />
+                {detailedReportFocus !== "doctor" && (
+                  <Btn
+                    label="Talk to a Healthcare Professional"
+                    onClick={() => navigate("referral")}
+                    variant="secondary"
+                    size="sm"
+                  />
+                )}
                 <Btn
-                  label="Consult Healthcare Professional"
-                  onClick={() => navigate("referral")}
+                  label="Return to Screening Summary"
+                  onClick={() =>
+                    navigate(
+                      lastResult === "elevated"
+                        ? "resultElevated"
+                        : "resultLow",
+                    )
+                  }
                   variant="ghost"
                   size="sm"
                 />
               </div>
             </div>
+            {/* Delete Confirmation Modal */}
+            {sessionToDelete && (
+              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
+                <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-[#d7eaef] space-y-4 animate-scale-up text-left">
+                  <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-2 mb-2 sm:hidden" />
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3
+                        className="text-lg font-bold text-slate-900 leading-tight"
+                        style={{ fontFamily: F.display }}
+                      >
+                        Delete Report?
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        This report will be permanently removed.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">
+                        {sessionToDelete.patientName}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {new Date(sessionToDelete.createdAt).toLocaleDateString(
+                          "en-IN",
+
+                          {
+                            day: "numeric",
+
+                            month: "short",
+
+                            year: "numeric",
+                          },
+                        )}{" "}
+                        · {sessionToDelete.durationSeconds}s recording
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        sessionToDelete.mlResult.screeningRisk === "elevated"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {sessionToDelete.mlResult.screeningRisk.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Are you sure you want to delete this screening session?
+                    Audio recordings and AI biomarker data for this session will
+                    be permanently erased.
+                  </p>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => handleDeleteSession(sessionToDelete)}
+                      className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>
+                        {isDeletingSession
+                          ? "Deleting..."
+                          : "Yes, Delete Report"}
+                      </span>
+                    </button>
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => setSessionToDelete(null)}
+                      className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm active:scale-[0.98] transition-all cursor-pointer"
+                    >
+                      Cancel / Keep Report
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <HomeIndicator />
           </div>
         )
@@ -4636,25 +6766,37 @@ export default function App() {
               {[
                 {
                   name: "Dr. Priya Sharma",
+
                   role: t(lang, "neurologist"),
+
                   spec: "Cognitive & Memory Health",
+
                   wait: "Today",
+
                   rating: "4.9",
                 },
 
                 {
                   name: "Dr. Rajesh Varma",
+
                   role: t(lang, "generalPhysician"),
+
                   spec: "Primary Healthcare",
+
                   wait: "Today",
+
                   rating: "4.8",
                 },
 
                 {
                   name: "Sunita Kumari",
+
                   role: t(lang, "healthWorkerRole"),
+
                   spec: "Community Health Center",
+
                   wait: "Available Now",
+
                   rating: "4.9",
                 },
               ].map((doc) => (
@@ -4748,8 +6890,11 @@ export default function App() {
 
                 {
                   icon: X,
+
                   label: "End Call",
+
                   bg: "bg-red-600 text-white",
+
                   fn: () => navigate("home"),
                 },
               ].map((btn) => {
@@ -4780,217 +6925,449 @@ export default function App() {
           </div>
         )
 
-      case "doctorDash":
+      case "doctorDash": {
+        const stats = getDoctorStats()
+
+        const filteredPatients = DOCTOR_PATIENT_PROFILES.filter((p) => {
+          if (doctorFilterTab !== "all" && p.risk !== doctorFilterTab)
+            return false
+
+          if (!doctorSearchQuery.trim()) return true
+
+          const q = doctorSearchQuery.toLowerCase()
+
+          return (
+            p.name.toLowerCase().includes(q) ||
+            p.lang.toLowerCase().includes(q) ||
+            p.chiefComplaint.toLowerCase().includes(q) ||
+            p.clinicalImpression.toLowerCase().includes(q) ||
+            p.protocolMode.toLowerCase().includes(q) ||
+            String(p.age).includes(q)
+          )
+        })
+
         return (
           <div className="h-full flex flex-col bg-[#021820] text-white min-h-0 overflow-hidden">
             <StatusBar light />
-            <div className="px-6 pt-3 pb-3 space-y-3">
+
+            {/* Clinical Hub Top Header */}
+            <div className="px-5 pt-3 pb-3 space-y-3 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <img
-                    src="/logo.jpeg"
-                    alt="SwarSanket Logo"
-                    className="w-8 h-8 rounded-xl object-contain border border-[#02738a]/40"
-                  />
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#02738a] to-[#013a46] p-0.5 border border-[#38bdf8]/40 shadow-sm flex items-center justify-center">
+                    <Stethoscope className="w-5 h-5 text-[#38bdf8]" />
+                  </div>
                   <div>
-                    <h1
-                      className="text-xl font-bold text-white"
-                      style={{ fontFamily: F.display }}
-                    >
-                      Doctor Clinical Hub
-                    </h1>
-                    <p className="text-[11px] text-[#38bdf8]">
-                      SwarSanket AI Diagnostics
+                    <div className="flex items-center gap-1.5">
+                      <h1
+                        className="text-lg font-bold text-white tracking-tight"
+                        style={{ fontFamily: F.display }}
+                      >
+                        Doctor Clinical Hub
+                      </h1>
+                      <span className="px-1.5 py-0.5 rounded-full bg-[#02738a]/40 border border-[#02738a] text-[10px] font-semibold text-[#7dd3fc]">
+                        v2.4 Pro
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Dr. Sunita Sharma, MD · SwarSanket AI Diagnostics
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => navigate("home")}
-                  className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] text-xs font-semibold text-slate-200 hover:bg-[#073c4b] transition-colors"
+                  className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] text-xs font-semibold text-slate-200 hover:bg-[#073c4b] active:scale-95 transition-all"
                 >
-                  Exit
+                  Exit Hub
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { l: "Patients", v: "4" },
-
-                  { l: "Elevated", v: "2", c: "text-amber-400" },
-
-                  { l: "Accuracy", v: "93%", c: "text-[#38bdf8]" },
-                ].map((s) => (
+              {/* Key Clinical Metric Stat Cards */}
+              <div className="grid grid-cols-4 gap-2">
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-[#094250] text-center">
                   <div
-                    key={s.l}
-                    className="p-3 rounded-2xl bg-[#03232c] border border-[#094250] text-center"
+                    className="text-lg font-bold text-white"
+                    style={{ fontFamily: F.display }}
                   >
-                    <div
-                      className={`text-xl font-bold ${s.c || "text-white"}`}
-                      style={{ fontFamily: F.display }}
-                    >
-                      {s.v}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      {s.l}
-                    </div>
+                    {stats.total}
                   </div>
-                ))}
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
+                    Patients
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-rose-500/30 text-center">
+                  <div
+                    className="text-lg font-bold text-rose-400"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {stats.elevated}
+                  </div>
+                  <div className="text-[10px] text-rose-300/80 uppercase tracking-wider mt-0.5">
+                    Priority
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-sky-500/30 text-center">
+                  <div
+                    className="text-lg font-bold text-sky-400"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {stats.moderate}
+                  </div>
+                  <div className="text-[10px] text-sky-300/80 uppercase tracking-wider mt-0.5">
+                    Monitor
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#03232c] border border-emerald-500/30 text-center">
+                  <div
+                    className="text-lg font-bold text-emerald-400"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {stats.low}
+                  </div>
+                  <div className="text-[10px] text-emerald-300/80 uppercase tracking-wider mt-0.5">
+                    Stable
+                  </div>
+                </div>
+              </div>
+
+              {/* Patient Search Input */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search patient, language, or clinical case..."
+                  value={doctorSearchQuery}
+                  onChange={(e) => setDoctorSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl bg-[#042833] border border-[#0d4f5e] text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#38bdf8] transition-colors"
+                />
+                {doctorSearchQuery && (
+                  <button
+                    onClick={() => setDoctorSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Case Classification Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
+                <button
+                  onClick={() => setDoctorFilterTab("all")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap ${
+                    doctorFilterTab === "all"
+                      ? "bg-[#02738a] text-white shadow-xs"
+                      : "bg-[#042a35] text-slate-300 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  All ({DOCTOR_PATIENT_PROFILES.length})
+                </button>
+                <button
+                  onClick={() => setDoctorFilterTab("elevated")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    doctorFilterTab === "elevated"
+                      ? "bg-rose-500/25 text-rose-300 border border-rose-500/50"
+                      : "bg-[#042a35] text-rose-300/80 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                  Priority / High ({stats.elevated})
+                </button>
+                <button
+                  onClick={() => setDoctorFilterTab("moderate")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    doctorFilterTab === "moderate"
+                      ? "bg-sky-500/25 text-sky-300 border border-sky-500/50"
+                      : "bg-[#042a35] text-sky-300/80 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                  Monitoring ({stats.moderate})
+                </button>
+                <button
+                  onClick={() => setDoctorFilterTab("low")}
+                  className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    doctorFilterTab === "low"
+                      ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
+                      : "bg-[#042a35] text-emerald-300/80 hover:bg-[#073c4b]"
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  Stable Control ({stats.low})
+                </button>
               </div>
             </div>
 
-            <div className="flex-1 rounded-t-3xl bg-[#f3f9fb] text-slate-900 flex flex-col min-h-0 overflow-hidden">
-              <div className="px-6 pt-4 pb-2 flex items-center justify-between">
-                <h2
-                  className="text-xs font-bold uppercase tracking-wider text-slate-600"
-                  style={{ fontFamily: F.display }}
-                >
-                  Recent Patient Screenings
-                </h2>
+            {/* Patient Registry List Container */}
+            <div className="flex-1 rounded-t-3xl bg-[#f3f9fb] text-slate-900 flex flex-col min-h-0 overflow-hidden shadow-inner">
+              <div className="px-5 pt-3.5 pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2
+                    className="text-xs font-bold uppercase tracking-wider text-slate-600"
+                    style={{ fontFamily: F.display }}
+                  >
+                    Clinical Case Registry
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold">
+                    {filteredPatients.length} of{" "}
+                    {DOCTOR_PATIENT_PROFILES.length} Cases
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Tap card for deep analysis
+                </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-4 space-y-3">
-                {[
-                  {
-                    name: "Rama Devi",
-                    age: 72,
-                    risk: "elevated",
-                    date: "28 Aug 2026",
-                    lang: "Hindi",
-                    wpm: 68,
-                  },
+              <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-5 space-y-2.5">
+                {filteredPatients.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 space-y-2">
+                    <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
+                    <p className="text-sm font-medium">
+                      No patient records match the selected filter.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setDoctorFilterTab("all")
 
-                  {
-                    name: "Suresh Kumar",
-                    age: 68,
-                    risk: "low",
-                    date: "15 Aug 2026",
-                    lang: "Hindi",
-                    wpm: 92,
-                  },
-
-                  {
-                    name: "Meera Bai",
-                    age: 80,
-                    risk: "elevated",
-                    date: "12 Aug 2026",
-                    lang: "Bengali",
-                    wpm: 60,
-                  },
-
-                  {
-                    name: "Lakshmi Devi",
-                    age: 75,
-                    risk: "low",
-                    date: "09 Aug 2026",
-                    lang: "Hindi",
-                    wpm: 88,
-                  },
-                ].map((p) => (
-                  <div
-                    key={p.name}
-                    onClick={() => {
-                      setSelectedPatient(p.name)
-
-                      navigate("doctorPatient")
-                    }}
-                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all"
-                  >
-                    <div>
-                      <div
-                        className="font-bold text-sm text-slate-900"
-                        style={{ fontFamily: F.display }}
-                      >
-                        {p.name}, {p.age}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {p.lang} · {p.date} · {p.wpm} WPM
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                          p.risk === "elevated"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-emerald-100 text-emerald-800"
-                        }`}
-                      >
-                        {p.risk.toUpperCase()}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </div>
+                        setDoctorSearchQuery("")
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#02738a] text-white text-xs font-bold hover:bg-[#015364]"
+                    >
+                      Reset Filters
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  filteredPatients.map((p) => {
+                    const isElevated = p.risk === "elevated"
+
+                    const isModerate = p.risk === "moderate"
+
+                    const badgeStyle = isElevated
+                      ? "bg-rose-100 text-rose-800 border-rose-200"
+                      : isModerate
+                        ? "bg-sky-100 text-sky-800 border-sky-200"
+                        : "bg-emerald-100 text-emerald-800 border-emerald-200"
+
+                    const borderAccent = isElevated
+                      ? "border-l-4 border-l-rose-500"
+                      : isModerate
+                        ? "border-l-4 border-l-sky-500"
+                        : "border-l-4 border-l-emerald-500"
+
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedPatient(p.name)
+
+                          navigate("doctorPatient")
+                        }}
+                        className={`p-3.5 rounded-2xl bg-white border border-[#d7eaef] ${borderAccent} hover:border-[#02738a] hover:shadow-md cursor-pointer transition-all active:scale-[0.99] space-y-2`}
+                      >
+                        {/* Top row: Name, age, gender & risk badge */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="font-bold text-sm text-slate-900"
+                                style={{ fontFamily: F.display }}
+                              >
+                                {p.name}, {p.age}y
+                              </span>
+                              <span className="text-[11px] font-medium text-slate-500">
+                                ({p.gender.charAt(0)})
+                              </span>
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                {p.lang}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                              {p.chiefComplaint}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${badgeStyle}`}
+                            >
+                              {p.riskScore}%{" "}
+                              {p.risk === "elevated"
+                                ? "HIGH"
+                                : p.risk === "moderate"
+                                  ? "MOD"
+                                  : "LOW"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bottom metrics row */}
+                        <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
+                          <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1 font-medium">
+                              <Activity className="w-3.5 h-3.5 text-[#02738a]" />
+                              {p.wpm} WPM
+                            </span>
+                            <span className="text-slate-300">·</span>
+                            <span className="text-slate-500">{p.date}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[#02738a] font-bold hover:underline text-[11px]">
+                            <span>View Deep Analysis</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
             <HomeIndicator />
           </div>
         )
+      }
 
-      case "doctorPatient":
+      case "doctorPatient": {
+        const patient = getDoctorPatient(selectedPatient)
+
+        const patientNotes = [
+          ...patient.initialNotes,
+
+          ...(doctorPatientNotes[patient.id] || []),
+        ]
+
+        const isElevated = patient.risk === "elevated"
+
+        const isModerate = patient.risk === "moderate"
+
+        const bannerBg = isElevated
+          ? "bg-gradient-to-r from-rose-50 to-amber-50 border-rose-200 text-rose-950"
+          : isModerate
+            ? "bg-gradient-to-r from-sky-50 to-indigo-50 border-sky-200 text-sky-950"
+            : "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-950"
+
+        const bannerIcon = isElevated ? (
+          <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0" />
+        ) : isModerate ? (
+          <Activity className="w-6 h-6 text-sky-600 shrink-0" />
+        ) : (
+          <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+        )
+
+        const chartStrokeColor = isElevated
+          ? "#e11d48"
+          : isModerate
+            ? "#0284c7"
+            : "#059669"
+
+        const chartGradientId = `grad_${patient.id}`
+
         return (
           <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
             <StatusBar />
-            <div className="px-6 pt-3 pb-2 flex items-center justify-between">
+
+            {/* Header */}
+            <div className="px-5 pt-3 pb-2 flex items-center justify-between border-b border-[#d7eaef]/60 bg-white/70 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-3">
                 <BackBtn onBack={() => navigate("doctorDash")} />
                 <div>
-                  <h1
-                    className="text-lg font-bold text-slate-900"
-                    style={{ fontFamily: F.display }}
-                  >
-                    {selectedPatient}, 72
-                  </h1>
-                  <p className="text-xs text-slate-500">
-                    Patient Longitudinal Report
+                  <div className="flex items-center gap-2">
+                    <h1
+                      className="text-base font-bold text-slate-900"
+                      style={{ fontFamily: F.display }}
+                    >
+                      {patient.name}, {patient.age}y
+                    </h1>
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#e4f4f7] text-[#015364]">
+                      {patient.gender} · {patient.lang}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Clinical Evaluation · {patient.date}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  if (screeningsList.length > 0)
-                    generateAndDownloadReport(screeningsList[0])
-                }}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-              >
-                Print Report
-              </button>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    if (screeningsList.length > 0) {
+                      generateAndDownloadReport(screeningsList[0])
+                    } else {
+                      window.print()
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Print Report</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
-              {/* Risk Banner */}
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+            {/* Scrollable Clinical Content */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-5 py-3 space-y-3.5">
+              {/* Screening Outcome Classification Banner */}
+              <div
+                className={`p-3.5 rounded-2xl border ${bannerBg} shadow-xs flex items-center justify-between gap-3`}
+              >
                 <div className="space-y-0.5">
-                  <div className="text-xs font-bold text-amber-800 uppercase tracking-wider">
-                    Screening Outcome
+                  <div className="text-[10px] font-bold uppercase tracking-wider opacity-75">
+                    Screening Outcome Classification
                   </div>
-                  <div className="text-base font-bold text-amber-900">
-                    Elevated Cognitive Risk (88%)
+                  <div
+                    className="text-base font-extrabold"
+                    style={{ fontFamily: F.display }}
+                  >
+                    {patient.statusLabel}
+                  </div>
+                  <div className="text-[11px] opacity-85">
+                    Speech Rate: <strong>{patient.wpm} WPM</strong> · Protocol:{" "}
+                    {patient.protocolMode}
                   </div>
                 </div>
-                <AlertTriangle className="w-6 h-6 text-amber-600" />
+                {bannerIcon}
               </div>
 
-              {/* Recharts Longitudinal Trend */}
-              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Longitudinal Risk Score Trend (%)
+              {/* Case Presentation & Clinical Impression */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <Stethoscope className="w-3.5 h-3.5 text-[#02738a]" />
+                  <span>Clinical Presentation & Impression</span>
                 </div>
-                <div className="h-36 w-full">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-700 space-y-1">
+                  <div className="font-semibold text-slate-800">
+                    Chief Presentation:
+                  </div>
+                  <p className="italic text-slate-600">
+                    "{patient.chiefComplaint}"
+                  </p>
+                </div>
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {patient.clinicalImpression}
+                </p>
+              </div>
+
+              {/* Longitudinal Risk Score Trend */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Longitudinal Risk Score Trend (%)
+                  </div>
+                  <span className="text-[11px] font-semibold text-[#02738a]">
+                    4-Month Assessment Window
+                  </span>
+                </div>
+                <div className="h-40 w-full pt-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={[
-                        { month: "Jun", risk: 22 },
-
-                        { month: "Jul", risk: 25 },
-
-                        { month: "Aug", risk: 38 },
-
-                        { month: "Sep", risk: 88 },
-                      ]}
+                      data={patient.trendData}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
-                          id="patientRiskGrad"
+                          id={chartGradientId}
                           x1="0"
                           y1="0"
                           x2="0"
@@ -4998,102 +7375,380 @@ export default function App() {
                         >
                           <stop
                             offset="5%"
-                            stopColor="#02738a"
-                            stopOpacity={0.4}
+                            stopColor={chartStrokeColor}
+                            stopOpacity={0.35}
                           />
                           <stop
                             offset="95%"
-                            stopColor="#02738a"
+                            stopColor={chartStrokeColor}
                             stopOpacity={0.02}
                           />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-                      <Tooltip />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fontSize: 11, fill: "#64748b" }}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        tick={{ fontSize: 11, fill: "#64748b" }}
+                        unit="%"
+                      />
+                      <Tooltip
+                        formatter={(val: any) => [
+                          `${val}% Risk`,
+
+                          "Cognitive Risk Score",
+                        ]}
+                        contentStyle={{
+                          backgroundColor: "#021820",
+
+                          borderColor: "#094250",
+
+                          borderRadius: "12px",
+
+                          color: "#fff",
+
+                          fontSize: "12px",
+                        }}
+                      />
                       <Area
                         type="monotone"
                         dataKey="risk"
-                        stroke="#02738a"
-                        fill="url(#patientRiskGrad)"
+                        stroke={chartStrokeColor}
+                        fill={`url(#${chartGradientId})`}
                         strokeWidth={2.5}
+                        isAnimationActive={false}
+                        dot={{
+                          r: 4,
+
+                          fill: chartStrokeColor,
+
+                          strokeWidth: 1.5,
+
+                          stroke: "#fff",
+                        }}
+                        activeDot={{ r: 6 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+                <div className="pt-1 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>
+                    Baseline: <strong>{patient.trendData[0]?.risk}%</strong> (
+                    {patient.trendData[0]?.month})
+                  </span>
+                  <span>
+                    Latest:{" "}
+                    <strong>
+                      {patient.trendData[patient.trendData.length - 1]?.risk}%
+                    </strong>{" "}
+                    ({patient.trendData[patient.trendData.length - 1]?.month})
+                  </span>
+                  <span
+                    className={`font-bold ${
+                      isElevated
+                        ? "text-rose-600"
+                        : isModerate
+                          ? "text-sky-600"
+                          : "text-emerald-600"
+                    }`}
+                  >
+                    {patient.trendData[patient.trendData.length - 1]?.risk -
+                      patient.trendData[0]?.risk >=
+                    0
+                      ? "+"
+                      : ""}
+                    {patient.trendData[patient.trendData.length - 1]?.risk -
+                      patient.trendData[0]?.risk}
+                    % Net Shift
+                  </span>
+                </div>
               </div>
 
-              {/* Dual-Engine ML Model Scores */}
-              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Dual-Engine ML Analysis
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between font-medium">
-                    <span>Classical (Xception + XGBoost):</span>
-                    <span className="font-bold text-[#02738a]">
-                      84% Risk (AUC 0.91)
-                    </span>
+              {/* Dual-Engine ML Analysis */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Dual-Engine AI Biomarker Analysis
                   </div>
-                  <div className="flex justify-between font-medium">
-                    <span>Quantum-Hybrid (PennyLane QNN):</span>
-                    <span className="font-bold text-[#02738a]">
-                      89% Risk (AUC 0.93)
-                    </span>
-                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                    Concordance: 96%
+                  </span>
                 </div>
-              </div>
 
-              {/* Quantum Biomarker Sensitivity */}
-              <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Quantum Biomarker Sensitivity (8-Qubit VQC)
-                </div>
-                {[
-                  { factor: "Speech Pause Duration (>1.2s)", weight: 38 },
-
-                  { factor: "Vocal Pitch Jitter (3.2%)", weight: 30 },
-
-                  { factor: "Phonetic Latency Delay", weight: 22 },
-
-                  { factor: "Semantic Recall Variance", weight: 10 },
-                ].map((s) => (
-                  <div key={s.factor} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-700 font-medium">
-                        {s.factor}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Classical Pipeline
+                    </div>
+                    <div
+                      className="text-xs font-medium text-slate-700 truncate"
+                      title={patient.classicalModel.name}
+                    >
+                      {patient.classicalModel.name}
+                    </div>
+                    <div className="flex items-baseline gap-1.5 pt-1">
+                      <span className="text-base font-extrabold text-[#02738a]">
+                        {patient.classicalModel.score}%
                       </span>
-                      <span className="font-bold text-[#02738a]">
-                        +{s.weight}%
+                      <span className="text-[10px] text-slate-500">
+                        (AUC {patient.classicalModel.auc})
                       </span>
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#02738a] to-[#015364] rounded-full"
-                        style={{ width: `${s.weight * 2}%` }}
-                      />
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#e8f5f8] border border-[#bce3eb] space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#02738a]">
+                      Quantum QNN Pipeline
+                    </div>
+                    <div
+                      className="text-xs font-medium text-slate-800 truncate"
+                      title={patient.quantumModel.name}
+                    >
+                      {patient.quantumModel.name}
+                    </div>
+                    <div className="flex items-baseline gap-1.5 pt-1">
+                      <span className="text-base font-extrabold text-[#02738a]">
+                        {patient.quantumModel.score}%
+                      </span>
+                      <span className="text-[10px] text-slate-600">
+                        (AUC {patient.quantumModel.auc})
+                      </span>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
 
-              <div className="pt-2 pb-4">
+              {/* Quantum Biomarker Sensitivity (8-Qubit VQC) */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Quantum Biomarker Sensitivity (8-Qubit VQC)
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-500">
+                    Gradient Attribution
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {patient.vqcSensitivity.map((s) => {
+                    const isPositive = s.impact >= 0
+
+                    return (
+                      <div key={s.factor} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-800 font-semibold">
+                            {s.factor}
+                          </span>
+                          <span
+                            className={`font-bold ${
+                              isPositive ? "text-rose-600" : "text-emerald-600"
+                            }`}
+                          >
+                            {isPositive ? `+${s.impact}%` : `${s.impact}%`}
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              isPositive
+                                ? "bg-gradient-to-r from-amber-500 to-rose-600"
+                                : "bg-gradient-to-r from-teal-400 to-emerald-600"
+                            }`}
+                            style={{
+                              width: `${Math.min(Math.abs(s.impact) * 2.2, 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-tight">
+                          {s.clinicalMeaning}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Acoustic Biomarkers vs. Healthy Reference Range Table */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Acoustic Biomarkers vs. Reference Range
+                  </div>
+                  <span className="text-[10px] font-medium text-slate-500">
+                    Age-Matched Normal Interval
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase">
+                        <th className="pb-1.5 font-bold">Biomarker</th>
+                        <th className="pb-1.5 font-bold">Patient</th>
+                        <th className="pb-1.5 font-bold">Normal Range</th>
+                        <th className="pb-1.5 font-bold text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {patient.acousticComparison.map((row) => (
+                        <tr key={row.metric} className="hover:bg-slate-50">
+                          <td className="py-2 text-slate-800 font-medium">
+                            {row.metric}
+                            <div className="text-[10px] text-slate-400 font-normal">
+                              {row.note}
+                            </div>
+                          </td>
+                          <td className="py-2 font-bold text-slate-900">
+                            {row.patientValue}
+                          </td>
+                          <td className="py-2 text-slate-500 text-[11px]">
+                            {row.normalRange}
+                          </td>
+                          <td className="py-2 text-right">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                row.status === "normal"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-rose-100 text-rose-800"
+                              }`}
+                            >
+                              {row.status.toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Prescribed Next Steps & Recommendations */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <FileText className="w-3.5 h-3.5 text-[#02738a]" />
+                  <span>Clinical Next Steps & Care Protocol</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-700 leading-relaxed">
+                  {patient.clinicalRecommendation}
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  {patient.prescribedNextSteps.map((step, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 text-xs text-slate-700"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#02738a] mt-0.5 shrink-0" />
+                      <span>{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Interactive Doctor's Clinical Notes */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+                    <Edit3 className="w-3.5 h-3.5 text-[#02738a]" />
+                    <span>Doctor's Longitudinal Notes</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {patientNotes.length} Logged
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {patientNotes.map((note, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 flex items-start gap-2"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#02738a] mt-1.5 shrink-0" />
+                      <p className="flex-1">{note}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add new note input */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Append clinical observation..."
+                    value={newDoctorNoteText}
+                    onChange={(e) => setNewDoctorNoteText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newDoctorNoteText.trim()) {
+                        const note = newDoctorNoteText.trim()
+
+                        setDoctorPatientNotes((prev) => ({
+                          ...prev,
+
+                          [patient.id]: [...(prev[patient.id] || []), note],
+                        }))
+
+                        setNewDoctorNoteText("")
+                      }
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#02738a]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newDoctorNoteText.trim()) {
+                        const note = newDoctorNoteText.trim()
+
+                        setDoctorPatientNotes((prev) => ({
+                          ...prev,
+
+                          [patient.id]: [...(prev[patient.id] || []), note],
+                        }))
+
+                        setNewDoctorNoteText("")
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-[#02738a] hover:bg-[#015364] text-white text-xs font-bold active:scale-95 transition-all"
+                  >
+                    Add Note
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 pb-5 space-y-2">
                 <Btn
-                  label="Download Printable Medical Report"
+                  label="Download Printable Clinical Dossier"
                   onClick={() => {
-                    if (screeningsList.length > 0)
+                    if (screeningsList.length > 0) {
                       generateAndDownloadReport(screeningsList[0])
+                    } else {
+                      window.print()
+                    }
                   }}
                 />
+                <button
+                  onClick={() => navigate("teleconsult")}
+                  className="w-full py-3 rounded-2xl bg-white border border-[#02738a] text-[#02738a] hover:bg-[#e4f4f7] font-bold text-xs shadow-xs active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                >
+                  <Video className="w-4 h-4" />
+                  <span>Initiate Teleconsultation for {patient.name}</span>
+                </button>
+                <button
+                  onClick={() => navigate("doctorDash")}
+                  className="w-full py-2.5 rounded-2xl text-slate-500 hover:text-slate-800 font-medium text-xs text-center transition-colors"
+                >
+                  ← Return to Clinical Case Registry
+                </button>
               </div>
             </div>
+
             <HomeIndicator />
           </div>
         )
+      }
 
       case "history":
         return (
-          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden relative">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center justify-between">
               <h1
@@ -5109,6 +7764,14 @@ export default function App() {
                 View Trends →
               </button>
             </div>
+
+            {/* Notification Toast */}
+            {historyToast && (
+              <div className="mx-6 mb-2 p-2.5 rounded-xl bg-slate-900 text-white text-xs font-medium text-center shadow-lg animate-fade-in flex items-center justify-center gap-2">
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{historyToast}</span>
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-3 pb-4">
               {screeningsList.length === 0 ? (
@@ -5127,12 +7790,16 @@ export default function App() {
                 screeningsList.map((s) => (
                   <div
                     key={s.id}
-                    onClick={() => navigate("screeningDetails")}
-                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all"
+                    onClick={() => {
+                      setSelectedScreeningId(s.id)
+
+                      navigate("screeningDetails")
+                    }}
+                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all group"
                   >
-                    <div>
+                    <div className="min-w-0 flex-1 pr-2">
                       <div
-                        className="font-bold text-sm text-slate-900"
+                        className="font-bold text-sm text-slate-900 truncate"
                         style={{ fontFamily: F.display }}
                       >
                         {s.patientName} · {s.durationSeconds}s
@@ -5140,12 +7807,14 @@ export default function App() {
                       <div className="text-xs text-slate-500 mt-0.5">
                         {new Date(s.createdAt).toLocaleDateString("en-IN", {
                           day: "numeric",
+
                           month: "short",
+
                           year: "numeric",
                         })}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                           s.mlResult.screeningRisk === "elevated"
@@ -5155,12 +7824,110 @@ export default function App() {
                       >
                         {s.mlResult.screeningRisk.toUpperCase()}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+
+                          setSessionToDelete(s)
+                        }}
+                        className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors active:scale-90"
+                        title="Delete this report"
+                        aria-label={`Delete report for ${s.patientName}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
                 ))
               )}
             </div>
+
+            {/* Delete Confirmation Modal / Bottom Sheet */}
+            {sessionToDelete && (
+              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
+                <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-[#d7eaef] space-y-4 animate-scale-up text-left">
+                  <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-2 mb-2 sm:hidden" />
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3
+                        className="text-lg font-bold text-slate-900 leading-tight"
+                        style={{ fontFamily: F.display }}
+                      >
+                        Delete Report?
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        This report will be permanently removed.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Target Report Details Card */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">
+                        {sessionToDelete.patientName}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {new Date(sessionToDelete.createdAt).toLocaleDateString(
+                          "en-IN",
+
+                          {
+                            day: "numeric",
+
+                            month: "short",
+
+                            year: "numeric",
+                          },
+                        )}{" "}
+                        · {sessionToDelete.durationSeconds}s recording
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        sessionToDelete.mlResult.screeningRisk === "elevated"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {sessionToDelete.mlResult.screeningRisk.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Are you sure you want to delete this screening session?
+                    Audio recordings and AI biomarker data for this session will
+                    be permanently erased.
+                  </p>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => handleDeleteSession(sessionToDelete)}
+                      className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>
+                        {isDeletingSession
+                          ? "Deleting..."
+                          : "Yes, Delete Report"}
+                      </span>
+                    </button>
+                    <button
+                      disabled={isDeletingSession}
+                      onClick={() => setSessionToDelete(null)}
+                      className="w-full py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm active:scale-[0.98] transition-all"
+                    >
+                      Cancel / Keep Report
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <BottomNav active="history" navigate={navigate} lang={lang} />
             <HomeIndicator />
@@ -5291,15 +8058,21 @@ export default function App() {
                 {[
                   {
                     name: "Rama Devi",
+
                     age: 72,
+
                     relation: "Mother",
+
                     status: "Follow-up Recommended",
                   },
 
                   {
                     name: "Suresh Kumar",
+
                     age: 68,
+
                     relation: "Father",
+
                     status: "Normal",
                   },
                 ].map((m) => (
@@ -5392,22 +8165,31 @@ export default function App() {
                 {[
                   {
                     name: "Rama Devi",
+
                     age: 72,
+
                     village: "Rampur",
+
                     status: "completed",
                   },
 
                   {
                     name: "Suresh Kumar",
+
                     age: 68,
+
                     village: "Rampur",
+
                     status: "completed",
                   },
 
                   {
                     name: "Lakshmi Bai",
+
                     age: 75,
+
                     village: "Kashipur",
+
                     status: "pending",
                   },
                 ].map((p) => (
@@ -5453,7 +8235,7 @@ export default function App() {
 
       case "help":
         return (
-          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden relative">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center gap-3">
               <BackBtn onBack={() => navigate("home")} />
@@ -5467,54 +8249,512 @@ export default function App() {
 
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-3 pb-4">
               {[
-                { icon: Volume2, key: "helpListen", descKey: "helpListenDesc" },
+                {
+                  icon: Volume2,
 
-                { icon: Users, key: "helpAssist", descKey: "helpAssistDesc" },
+                  key: "helpListen",
+
+                  descKey: "helpListenDesc",
+
+                  action: () => setActiveHelpModal("listen"),
+                },
+
+                {
+                  icon: Users,
+
+                  key: "helpAssist",
+
+                  descKey: "helpAssistDesc",
+
+                  action: () => navigate("caregiver"),
+                },
 
                 {
                   icon: Globe,
+
                   key: "helpLang",
+
                   descKey: "helpLangDesc",
-                  to: "language" as Screen,
+
+                  action: () => navigate("language"),
                 },
 
                 {
                   icon: Phone,
+
                   key: "helpContact",
+
                   descKey: "helpContactDesc",
-                  to: "referral" as Screen,
+
+                  action: () => setActiveHelpModal("contact"),
                 },
 
-                { icon: Info, key: "helpHow", descKey: "helpHowDesc" },
+                {
+                  icon: Info,
 
-                { icon: Wifi, key: "helpOffline", descKey: "helpOfflineDesc" },
+                  key: "helpHow",
+
+                  descKey: "helpHowDesc",
+
+                  action: () => setActiveHelpModal("how"),
+                },
+
+                {
+                  icon: Wifi,
+
+                  key: "helpOffline",
+
+                  descKey: "helpOfflineDesc",
+
+                  action: () => setActiveHelpModal("offline"),
+                },
               ].map((h) => {
                 const Icon = h.icon
 
                 return (
                   <button
                     key={h.key}
-                    onClick={() => (h.to ? navigate(h.to) : null)}
-                    className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center gap-3.5 text-left shadow-xs hover:border-[#02738a] active:scale-95 transition-all"
+                    onClick={h.action}
+                    className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] flex items-center justify-between text-left shadow-xs hover:border-[#02738a] hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div
-                        className="font-bold text-sm text-slate-900"
-                        style={{ fontFamily: F.display }}
-                      >
-                        {t(lang, h.key)}
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center flex-shrink-0 group-hover:bg-[#02738a] group-hover:text-white transition-colors">
+                        <Icon className="w-5 h-5" />
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        {t(lang, h.descKey)}
+                      <div>
+                        <div
+                          className="font-bold text-sm text-slate-900"
+                          style={{ fontFamily: F.display }}
+                        >
+                          {t(lang, h.key)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {t(lang, h.descKey)}
+                        </div>
                       </div>
                     </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#02738a] transition-colors" />
                   </button>
                 )
               })}
             </div>
+
+            {/* Help Modals */}
+            {activeHelpModal && (
+              <div className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex flex-col justify-end p-4 animate-fade-in">
+                <div
+                  className="fixed inset-0"
+                  onClick={() => {
+                    stopSpeech()
+
+                    setIsListeningAudio(false)
+
+                    setActiveHelpModal(null)
+                  }}
+                />
+                <div className="relative z-10 w-full max-w-sm mx-auto bg-white rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto border border-[#d7eaef] animate-fade-in-up">
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center">
+                        {activeHelpModal === "listen" && (
+                          <Volume2 className="w-5 h-5" />
+                        )}
+                        {activeHelpModal === "contact" && (
+                          <Phone className="w-5 h-5" />
+                        )}
+                        {activeHelpModal === "how" && (
+                          <Info className="w-5 h-5" />
+                        )}
+                        {activeHelpModal === "offline" && (
+                          <Wifi className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div>
+                        <h3
+                          className="font-bold text-sm text-slate-900"
+                          style={{ fontFamily: F.display }}
+                        >
+                          {activeHelpModal === "listen" &&
+                            "Listen to Instructions"}
+                          {activeHelpModal === "contact" && "Contact & Support"}
+                          {activeHelpModal === "how" && "How Voice Check Works"}
+                          {activeHelpModal === "offline" &&
+                            "Offline Screening Mode"}
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          {activeHelpModal === "listen" &&
+                            "Voice guidance in your language"}
+                          {activeHelpModal === "contact" &&
+                            "National helplines & clinic care"}
+                          {activeHelpModal === "how" &&
+                            "Clinical AI acoustic methodology"}
+                          {activeHelpModal === "offline" &&
+                            "Zero-data loss field recording"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        stopSpeech()
+
+                        setIsListeningAudio(false)
+
+                        setActiveHelpModal(null)
+                      }}
+                      className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Modal 1: Listen to Instructions */}
+                  {activeHelpModal === "listen" && (
+                    <div className="space-y-3.5">
+                      <div className="p-4 rounded-2xl bg-gradient-to-br from-[#02738a] to-[#013a46] text-white space-y-3 shadow-md">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-cyan-200 uppercase tracking-wider">
+                            Interactive Audio Guide
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold text-white">
+                            {LANGUAGES.find((l) => l.code === lang)?.name ||
+                              "English"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-sm text-white">
+                              {isListeningAudio
+                                ? "Playing Voice Instructions..."
+                                : "Tap to Hear Instructions"}
+                            </div>
+                            <div className="text-xs text-cyan-100/80">
+                              Natural speech pacing and task instructions
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (isListeningAudio) {
+                                stopSpeech()
+
+                                setIsListeningAudio(false)
+                              } else {
+                                setIsListeningAudio(true)
+
+                                const promptText =
+                                  lang === "hi"
+                                    ? "नमस्ते। इस आवाज़ जांच में, आप एक चित्र देखेंगे और 45 से 60 सेकंड तक अपनी सामान्य गति से बोलेंगे। शांत जगह पर बैठें और स्पष्ट बोलें।"
+                                    : lang === "bn"
+                                      ? "নমস্কার। এই স্ক্রিনিংয়ে আপনি একটি ছবি দেখবেন এবং স্বাভাবিক গতিতে ৪৫ থেকে ৬০ সেকেন্ড বলবেন।"
+                                      : "Hello. In this voice check, you will view a picture and describe what you see in your own words. Please sit in a quiet room and speak naturally at your normal pace for 45 to 60 seconds."
+
+                                speakText(promptText, lang)
+
+                                setTimeout(
+                                  () => setIsListeningAudio(false),
+
+                                  8000,
+                                )
+                              }
+                            }}
+                            className="w-12 h-12 rounded-2xl bg-white text-[#015364] flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer"
+                          >
+                            {isListeningAudio ? (
+                              <Pause className="w-5 h-5 text-rose-600" />
+                            ) : (
+                              <Play className="w-5 h-5 text-[#02738a] ml-0.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Soundwave animation */}
+                        {isListeningAudio && (
+                          <div className="flex items-center justify-center gap-1.5 py-1">
+                            {[10, 24, 16, 32, 20, 28, 14, 22].map((h, i) => (
+                              <div
+                                key={i}
+                                className="w-1 bg-cyan-300 rounded-full animate-pulse"
+                                style={{
+                                  height: h,
+
+                                  animationDelay: `${i * 100}ms`,
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5">
+                        <div className="font-bold text-slate-900">
+                          Recommended Steps:
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
+                          <li>
+                            Sit comfortably in a room with low background noise.
+                          </li>
+                          <li>
+                            Hold the phone approximately 6 inches from your
+                            mouth.
+                          </li>
+                          <li>
+                            Speak naturally in your native language without
+                            rushing.
+                          </li>
+                        </ul>
+                      </div>
+
+                      <Btn
+                        label="Start Voice Check Now"
+                        onClick={() => {
+                          stopSpeech()
+
+                          setIsListeningAudio(false)
+
+                          setActiveHelpModal(null)
+
+                          navigate("instruction")
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Modal 2: Contact Support */}
+                  {activeHelpModal === "contact" && (
+                    <div className="space-y-3">
+                      <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                            National 24/7 Helpline
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-[10px] font-bold text-emerald-900">
+                            Toll-Free
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-emerald-950">
+                            Tele-MANAS National Programme
+                          </div>
+                          <p className="text-[11px] text-emerald-800">
+                            Ministry of Health &amp; Family Welfare, Govt. of
+                            India. Available 24/7 in 20+ languages.
+                          </p>
+                        </div>
+                        <a
+                          href="tel:14416"
+                          className="w-full py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Call 14416 (Toll-Free)</span>
+                        </a>
+                      </div>
+
+                      <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div className="font-bold text-xs text-slate-900">
+                          Clinical &amp; Specialist Support
+                        </div>
+                        <div className="space-y-1.5">
+                          <button
+                            onClick={() => {
+                              setActiveHelpModal(null)
+
+                              navigate("teleconsult")
+                            }}
+                            className="w-full py-2 rounded-xl bg-[#02738a] hover:bg-[#015364] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            <span>Schedule Doctor Teleconsultation</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveHelpModal(null)
+
+                              navigate("referral")
+                            }}
+                            className="w-full py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                          >
+                            <Stethoscope className="w-3.5 h-3.5 text-[#02738a]" />
+                            <span>Locate Memory Clinic Centers</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <a
+                        href="mailto:support@swarsanket.ai"
+                        className="block text-center text-xs font-bold text-[#02738a] hover:underline pt-1"
+                      >
+                        Email Technical Support: support@swarsanket.ai
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Modal 3: How Voice Check Works */}
+                  {activeHelpModal === "how" && (
+                    <div className="space-y-3">
+                      <div className="space-y-2 text-xs">
+                        {[
+                          {
+                            step: "1",
+
+                            title: "Standardized Picture Description",
+
+                            desc: "You look at an everyday visual scene and speak naturally for 45–60 seconds in your mother tongue.",
+                          },
+
+                          {
+                            step: "2",
+
+                            title: "Acoustic Biomarker Analysis",
+
+                            desc: "The system analyzes pause frequency (>1.2s), speech velocity (WPM), and pitch perturbation without storing raw words.",
+                          },
+
+                          {
+                            step: "3",
+
+                            title: "Quantum-Hybrid QNN (8-Qubit VQC)",
+
+                            desc: "Evaluates subtle non-linear speech timing patterns using PennyLane quantum neural circuits with 94%+ concordance.",
+                          },
+
+                          {
+                            step: "4",
+
+                            title: "Privacy First & Zero Cloud Retention",
+
+                            desc: "Voice data is processed into mathematical vectors. Raw speech is never permanently retained or sold.",
+                          },
+                        ].map((item) => (
+                          <div
+                            key={item.step}
+                            className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-[#02738a] text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {item.step}
+                            </span>
+                            <div>
+                              <div className="font-bold text-slate-800 text-xs">
+                                {item.title}
+                              </div>
+                              <div className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                                {item.desc}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <Btn
+                        label="Try Voice Check Now"
+                        onClick={() => {
+                          setActiveHelpModal(null)
+
+                          navigate("instruction")
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Modal 4: What if I don't have internet? */}
+                  {activeHelpModal === "offline" && (
+                    <div className="space-y-3">
+                      {/* Connection status pill */}
+                      <div
+                        className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+                          isOffline
+                            ? "bg-amber-50 border-amber-200 text-amber-950"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-950"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                              isOffline
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {isOffline ? (
+                              <WifiOff className="w-4 h-4" />
+                            ) : (
+                              <Wifi className="w-4 h-4" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs">
+                              {isOffline
+                                ? "Offline Mode Active"
+                                : "Online Connection Active"}
+                            </div>
+                            <div className="text-[10px] opacity-80">
+                              {isOffline
+                                ? "Screenings will save locally"
+                                : "Direct cloud ML analysis"}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setIsOffline(!isOffline)}
+                          className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white shadow-xs border border-slate-200 hover:bg-slate-50 transition-colors"
+                        >
+                          {isOffline ? "Go Online" : "Go Offline"}
+                        </button>
+                      </div>
+
+                      {/* Explanation */}
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2">
+                        <div className="font-bold text-slate-900">
+                          How Offline Screening Works:
+                        </div>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                          SwarSanket is designed for rural health camps and
+                          remote areas with weak or no mobile signal.
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
+                          <li>
+                            Your speech audio is encrypted and stored safely
+                            inside local <strong>IndexedDB storage</strong> on
+                            your device.
+                          </li>
+                          <li>
+                            You will receive immediate local audio quality
+                            feedback.
+                          </li>
+                          <li>
+                            When internet connectivity is restored, your queued
+                            screenings sync automatically.
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Queue status */}
+                      <div className="p-2.5 rounded-xl bg-[#e4f4f7] border border-[#bce3eb] flex items-center justify-between text-xs">
+                        <span className="text-[#015364] font-medium">
+                          Pending Sync Queue:
+                        </span>
+                        <span className="font-bold text-[#02738a]">
+                          {syncQueue.length} screenings
+                        </span>
+                      </div>
+
+                      <Btn
+                        label={
+                          isOffline
+                            ? "Start Offline Screening"
+                            : "Start Screening"
+                        }
+                        onClick={() => {
+                          setActiveHelpModal(null)
+
+                          navigate("instruction")
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <BottomNav active="help" navigate={navigate} lang={lang} />
             <HomeIndicator />
@@ -5542,7 +8782,9 @@ export default function App() {
                 <button
                   onClick={() => {
                     setEditName(userName)
+
                     setEditAge(String(userAge))
+
                     setIsEditingProfile(true)
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#e3f4f7] text-[#01586a] border border-[#c2e7ef] text-xs font-bold shadow-2xs active:scale-95 transition-all"
@@ -5588,7 +8830,9 @@ export default function App() {
                 <button
                   onClick={() => {
                     setEditName(userName)
+
                     setEditAge(String(userAge))
+
                     setIsEditingProfile(true)
                   }}
                   className="px-3 py-1.5 rounded-2xl bg-[#f2f9fb] border border-[#d2ebf1] text-[#02738a] hover:bg-[#e4f4f7] text-xs font-bold transition-colors shrink-0"
@@ -5690,12 +8934,15 @@ export default function App() {
                     <button
                       onClick={() => {
                         const next = !caregiverAlerts
+
                         setCaregiverAlerts(next)
+
                         setSettingsToast(
                           next
                             ? "Caregiver alerts enabled"
                             : "Caregiver alerts paused",
                         )
+
                         setTimeout(() => setSettingsToast(null), 2500)
                       }}
                       className={`w-12 h-6 rounded-full transition-colors relative shrink-0 p-0.5 ${
@@ -5734,7 +8981,9 @@ export default function App() {
                       <button
                         onClick={() => {
                           setTtsSpeed("slow")
+
                           setSettingsToast("Voice speed set to Relaxed (0.8x)")
+
                           setTimeout(() => setSettingsToast(null), 2500)
                         }}
                         className={`px-3 py-1 rounded-lg transition-all ${
@@ -5748,7 +8997,9 @@ export default function App() {
                       <button
                         onClick={() => {
                           setTtsSpeed("normal")
+
                           setSettingsToast("Voice speed set to Standard (1.0x)")
+
                           setTimeout(() => setSettingsToast(null), 2500)
                         }}
                         className={`px-3 py-1 rounded-lg transition-all ${
@@ -5767,10 +9018,14 @@ export default function App() {
                     <button
                       onClick={() => {
                         setIsTestingAudio(true)
+
                         speakText(
                           `Hello ${userName}. SwarSanket voice guidance is working clearly.`,
+
                           lang,
+
                           () => setIsTestingAudio(true),
+
                           () => setIsTestingAudio(false),
                         )
                       }}
@@ -5808,10 +9063,13 @@ export default function App() {
                     <button
                       onClick={() => {
                         const next = !remindersEnabled
+
                         setRemindersEnabled(next)
+
                         setSettingsToast(
                           next ? "Reminders turned on" : "Reminders paused",
                         )
+
                         setTimeout(() => setSettingsToast(null), 2500)
                       }}
                       className={`w-12 h-6 rounded-full transition-colors relative shrink-0 p-0.5 ${
@@ -5881,12 +9139,15 @@ export default function App() {
                       onClick={() => {
                         if (screeningsList.length > 0) {
                           generateAndDownloadReport(screeningsList[0])
+
                           setSettingsToast("Clinical PDF report downloaded!")
+
                           setTimeout(() => setSettingsToast(null), 3000)
                         } else {
                           setSettingsToast(
                             "No screening records found to export.",
                           )
+
                           setTimeout(() => setSettingsToast(null), 3000)
                         }
                       }}
@@ -5921,6 +9182,49 @@ export default function App() {
                   stored on your device under DPDP guidelines.
                 </p>
               </div>
+
+              {/* Switching people is NOT gated: handing the phone to a spouse
+                  is an everyday act, and a PIN prompt here would block the very
+                  thing the photo picker exists to make easy. */}
+              <button
+                onClick={onSwitchMember}
+                className="w-full rounded-2xl border-2 border-[#cbe6ed] bg-[#eefafc] px-4 py-3.5 text-sm font-bold text-[#01586a] transition-colors hover:bg-[#e0f4f8] active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ fontFamily: F.display }}
+              >
+                <Users className="h-4 w-4" />
+                Switch Person
+              </button>
+
+              {/* Resetting the family PIN is itself gated by the current PIN.
+                  A caregiver who has genuinely forgotten it can still clear it by
+                  signing out, which is the deliberate recovery route: a person,
+                  not a security question. */}
+              <button
+                onClick={() =>
+                  requireCaregiver("change the family PIN", () => {
+                    clearCaregiverPin()
+
+                    setSettingsToast(
+                      "Family PIN cleared. The next protected action will set a new one.",
+                    )
+
+                    setTimeout(() => setSettingsToast(null), 4000)
+                  })
+                }
+                className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ fontFamily: F.display }}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Change Family PIN
+              </button>
+
+              <button
+                onClick={onLogout}
+                className="w-full rounded-2xl border-2 border-rose-200 bg-rose-50 px-4 py-3.5 text-sm font-bold text-rose-700 transition-colors hover:bg-rose-100 active:scale-[0.98]"
+                style={{ fontFamily: F.display }}
+              >
+                Logout
+              </button>
             </div>
 
             {/* Edit Profile Modal */}
@@ -6006,11 +9310,17 @@ export default function App() {
                     <button
                       onClick={() => {
                         const trimmedName = editName.trim() || "Rama Devi"
+
                         const parsedAge = parseInt(editAge, 10) || 72
+
                         setUserName(trimmedName)
+
                         setUserAge(parsedAge)
+
                         setIsEditingProfile(false)
+
                         setSettingsToast("Patient profile updated!")
+
                         setTimeout(() => setSettingsToast(null), 3000)
                       }}
                       className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#02738a] to-[#01586a] hover:from-[#02849f] hover:to-[#02738a] text-white font-bold text-xs shadow-md shadow-[#02738a]/20 transition-all"
@@ -6047,12 +9357,20 @@ export default function App() {
                       Cancel
                     </button>
                     <button
-                      onClick={async () => {
-                        await clearAllScreenings()
-                        setScreeningsList([])
+                      onClick={() => {
                         setShowClearConfirm(false)
-                        setSettingsToast("Local screening history cleared!")
-                        setTimeout(() => setSettingsToast(null), 3000)
+
+                        requireCaregiver("delete all saved screenings", () => {
+                          void (async () => {
+                            await clearAllScreenings()
+
+                            setScreeningsList([])
+
+                            setSettingsToast("Local screening history cleared!")
+
+                            setTimeout(() => setSettingsToast(null), 3000)
+                          })()
+                        })
                       }}
                       className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all"
                     >
@@ -6067,6 +9385,93 @@ export default function App() {
             <HomeIndicator />
           </div>
         )
+
+      case "needMoreSpeech": {
+        const req = screeningApiResult?.sample_requirements
+
+        return (
+          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+            <StatusBar />
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4 animate-fade-in">
+              <div className="flex flex-col items-center justify-center pt-4 gap-3 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-sky-50 border border-sky-200 text-[#02738a] flex items-center justify-center shadow-xs">
+                  <Mic className="w-9 h-9" />
+                </div>
+                <h1
+                  className="text-2xl font-bold text-slate-900"
+                  style={{ fontFamily: F.display }}
+                >
+                  A Little More, Please
+                </h1>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  We need a bit more speech before we can look at it properly.
+                </p>
+              </div>
+
+              {req && (
+                <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Words recorded</span>
+                    <span className="font-bold text-slate-900">
+                      {req.words_recorded} of {req.words_required} needed
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#02738a]"
+                      style={{
+                        width: `${Math.min(100, (req.words_recorded / req.words_required) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-slate-500">Time recorded</span>
+                    <span className="font-bold text-slate-900">
+                      {req.seconds_recorded.toFixed(0)}s of{" "}
+                      {req.seconds_required.toFixed(0)}s needed
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {screeningApiResult?.transcript && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-1.5">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    What we heard
+                  </div>
+                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
+                    "{screeningApiResult.transcript}"
+                  </p>
+                </div>
+              )}
+
+              <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 text-xs text-[#015364] leading-relaxed">
+                <span className="font-bold">Tip:</span> describe everyone in the
+                picture, what each person is doing, and what is happening around
+                them. Take your time — there is no rush, and nothing here is a
+                test you can fail.
+              </div>
+
+              <div className="w-full space-y-2.5 pt-1 pb-4">
+                <Btn
+                  label="Try Again"
+                  onClick={() => {
+                    setRecordingContext("pictureDesc")
+
+                    navigate("instruction")
+                  }}
+                />
+                <Btn
+                  label={t(lang, "done")}
+                  onClick={() => navigate("home")}
+                  variant="ghost"
+                />
+              </div>
+            </div>
+            <HomeIndicator />
+          </div>
+        )
+      }
 
       case "offlineSaved":
         return (
@@ -6157,12 +9562,76 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Start from Beginning / Registration Button */}
+          <div className="relative">
+            <div className="flex items-center rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:border-[#38bdf8]/60 shadow-md transition-all">
+              <button
+                onClick={() => handleStartFromBeginning("splash")}
+                title="Start from Beginning (Splash / Registration flow)"
+                className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 text-slate-200 hover:text-white active:scale-95 transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#38bdf8]" />
+                <span>Start from Beginning</span>
+              </button>
+              <button
+                onClick={() => setShowRestartMenu(!showRestartMenu)}
+                title="Choose start point"
+                className="px-1.5 py-1.5 border-l border-[#0d4f5e] text-slate-400 hover:text-white hover:bg-[#073c4b] rounded-r-xl transition-colors"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </div>
+
+            {showRestartMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowRestartMenu(false)}
+                />
+                <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-64 rounded-2xl bg-[#03222a] border border-[#0d4f5e] shadow-2xl p-1.5 z-50 animate-fade-in text-xs space-y-1">
+                  <button
+                    onClick={() => handleStartFromBeginning("splash")}
+                    className="w-full px-3 py-2 rounded-xl text-left hover:bg-[#073c4b] text-slate-200 hover:text-white transition-colors flex items-center gap-2.5"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#38bdf8] shrink-0" />
+                    <div>
+                      <div className="font-bold text-white">
+                        Full Beginning (Splash)
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Language, Welcome &amp; Consent
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleStartFromBeginning("profile")}
+                    className="w-full px-3 py-2 rounded-xl text-left hover:bg-[#073c4b] text-slate-200 hover:text-white transition-colors flex items-center gap-2.5"
+                  >
+                    <User className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="font-bold text-white">
+                        Registration Page (Profile)
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Direct Patient Profile &amp; Age Setup
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <button
-            onClick={() => setShowApkModal(true)}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+            onClick={() => navigate("home")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
+              screen !== "doctorDash" && screen !== "doctorPatient"
+                ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
+                : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
+            }`}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download APK</span>
+            <User className="w-3.5 h-3.5" />
+            <span>Patient View</span>
           </button>
 
           <button
@@ -6182,8 +9651,16 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => navigate("doctorDash")}
-            className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200 text-xs font-bold flex items-center gap-1"
+            onClick={() =>
+              requireCaregiver("open the clinician view", () =>
+                navigate("doctorDash"),
+              )
+            }
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
+              screen === "doctorDash" || screen === "doctorPatient"
+                ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
+                : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
+            }`}
           >
             <Stethoscope className="w-3.5 h-3.5 text-[#38bdf8]" />
             <span>Doctor View</span>
@@ -6206,8 +9683,8 @@ export default function App() {
       <div
         className={`nv-app-shell relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all duration-300 ${
           fullScreenMode
-            ? "w-full max-w-2xl h-[92vh] rounded-3xl border border-[#0d4f5e] mt-14 sm:mt-16"
-            : "w-full max-w-[390px] h-[844px] max-h-[calc(100vh-4.8rem)] rounded-none sm:rounded-[48px] border-0 sm:border-[8px] border-[#07252f] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(2,115,138,0.15)] ring-1 ring-[#0d4f5e]/30 mt-12 sm:mt-16"
+            ? "w-full max-w-2xl h-[92vh] rounded-3xl border border-[#0d4f5e] mt-16 sm:mt-20"
+            : "w-full max-w-[390px] h-[844px] max-h-[calc(100vh-5.5rem)] rounded-none sm:rounded-[48px] border-0 sm:border-[8px] border-[#07252f] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(2,115,138,0.15)] ring-1 ring-[#0d4f5e]/30 mt-16 sm:mt-20"
         }`}
       >
         {/* Dynamic Island on Mockup (Hidden on fullScreenMode and mobile viewports) */}
@@ -6225,6 +9702,23 @@ export default function App() {
         >
           {renderScreen()}
         </div>
+
+        {/* Caregiver gate for destructive or outbound actions. Inside the phone
+            frame so it overlays the device, not the desktop chrome. */}
+        {pendingGatedAction && (
+          <CaregiverGate
+            action={pendingGatedAction.label}
+            onUnlocked={() => {
+              const action = pendingGatedAction
+
+              setPendingGatedAction(null)
+
+              action.run()
+            }}
+            onCancel={() => setPendingGatedAction(null)}
+            fontFamily={F.display}
+          />
+        )}
       </div>
 
       {/* APK & PWA Download Modal */}
@@ -6233,5 +9727,176 @@ export default function App() {
         onClose={() => setShowApkModal(false)}
       />
     </div>
+  )
+}
+
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("swarsanket-demo-session") === "active"
+    } catch {
+      return false
+    }
+  })
+
+  const [authenticatedName, setAuthenticatedName] = useState<string>(
+    () => readDemoUser()?.fullName || "Participant",
+  )
+
+  // Household identity. The caregiver signs in once; after that the person being
+
+  // screened identifies themselves by tapping their photo, never by a credential.
+
+  const [members, setMembers] = useState<HouseholdMember[] | null>(null)
+
+  const [activeMember, setActiveMember] = useState<HouseholdMember | null>(null)
+
+  const [showAddMember, setShowAddMember] = useState(false)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    let alive = true
+
+    listMembers()
+
+      .then((list) => {
+        if (!alive) return
+
+        setMembers(list)
+
+        const storedId = getActiveMemberId()
+
+        const stored = list.find((m) => m.id === storedId)
+
+        // One member means there is nothing to disambiguate, so the picker is
+
+        // skipped entirely - a single-user household never sees an identity step.
+
+        const auto = stored ?? (list.length === 1 ? list[0] : null)
+
+        if (auto) {
+          setActiveMember(auto)
+
+          setActiveMemberId(auto.id)
+        }
+      })
+
+      .catch(() => {
+        if (alive) setMembers([])
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [isAuthenticated])
+
+  const handleMemberSaved = (member: HouseholdMember) => {
+    setShowAddMember(false)
+
+    setMembers((prev) => (prev ? [...prev, member] : [member]))
+
+    if (member.isPatient) {
+      setActiveMember(member)
+
+      setActiveMemberId(member.id)
+    }
+  }
+
+  const handleSwitchMember = () => {
+    clearActiveMember()
+
+    setActiveMember(null)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("swarsanket-demo-session")
+
+    // Signing out should return to the start of the flow, not resume someone
+
+    // else mid-screening.
+
+    clearSession()
+
+    clearActiveMember()
+
+    setActiveMember(null)
+
+    setIsAuthenticated(false)
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <DemoAuth
+        onAuthenticated={(fullName) => {
+          setAuthenticatedName(
+            fullName || readDemoUser()?.fullName || "Participant",
+          )
+
+          setIsAuthenticated(true)
+        }}
+      />
+    )
+  }
+
+  // Caregiver is signed in but nobody has been enrolled yet: the caregiver adds
+
+  // the first person here, with the patient present but not asked to do anything.
+
+  if (members !== null && members.length === 0) {
+    return (
+      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
+        <MemberPicker
+          title="Who will be using this app?"
+          subtitle="Add the person who will take the voice check."
+          onSelect={() => undefined}
+          onAddMember={() => setShowAddMember(true)}
+          fontFamily={F.display}
+        />
+        {showAddMember && (
+          <AddMemberSheet
+            languages={LANGUAGES}
+            onSaved={handleMemberSaved}
+            onCancel={() => setShowAddMember(false)}
+            fontFamily={F.display}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // More than one person shares the device and we do not yet know which is here.
+
+  if (members !== null && members.length > 0 && !activeMember) {
+    return (
+      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
+        <MemberPicker
+          onSelect={(member) => {
+            setActiveMember(member)
+
+            setActiveMemberId(member.id)
+          }}
+          onAddMember={() => setShowAddMember(true)}
+          fontFamily={F.display}
+        />
+        {showAddMember && (
+          <AddMemberSheet
+            languages={LANGUAGES}
+            onSaved={handleMemberSaved}
+            onCancel={() => setShowAddMember(false)}
+            fontFamily={F.display}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <SwarSanketApp
+      authenticatedName={activeMember?.displayName || authenticatedName}
+      activeMember={activeMember}
+      onSwitchMember={handleSwitchMember}
+      onLogout={handleLogout}
+    />
   )
 }
