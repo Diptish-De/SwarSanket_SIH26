@@ -25,6 +25,9 @@ import torch
 import torch.nn as nn
 import pennylane as qml
 
+# Restrict PyTorch and BLAS to 1 thread to stay within 512 MB RAM on multi-core hosts
+torch.set_num_threads(1)
+
 # ---------------------------------------------------------------------------
 # Paths and Configuration
 # ---------------------------------------------------------------------------

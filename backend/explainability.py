@@ -6,9 +6,14 @@ Quantum-Classical Hybrid model (PyTorch + PennyLane).
 
 Methodology:
   - Differentiable input sensitivity (Gradient * Input attribution):
-      Attribution_i = (dP / dx_i) * x_norm_i
-  - Quantifies the directional contribution of each of the 22 acoustic
-    and linguistic biomarkers toward the final screening probability.
+      Attribution_i = E_dropout[(dP / dx_i)] * x_norm_i
+  - Gradients are averaged over the same Monte Carlo Dropout passes used for
+    inference, so the attribution describes the reported predictive mean rather
+    than a separate deterministic forward pass.
+  - Attributions are L1-normalised to relative shares of the total sensitivity.
+    They rank and proportion the biomarkers driving the score; they are a
+    sensitivity decomposition, not an additive reconstruction of the probability,
+    and no margin-reconstruction claim is made.
   - Generates patient-safe, non-causal explanations.
 """
 
@@ -21,6 +26,7 @@ from typing import Dict, List, Any, Optional, Union
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
 
 from model_loader import (
     model,
@@ -41,38 +47,55 @@ SCIENTIFIC_FRAMING_DISCLAIMER = (
 # Plain English descriptions for the 22 production features
 FEATURE_DESCRIPTIONS = {
     "CTP_F0 SD(st)": "Pitch variability / fundamental frequency standard deviation in semitones",
-    "CTP_DPI(ms)": "Duration of pause and silence phonation intervals in milliseconds",
-    "CTP_RST(-/s)": "Response and speech timing rate per second",
+    "CTP_DPI(ms)": "Mean duration of acoustic pause intervals in milliseconds",
+    "CTP_RST(-/s)": "Phonation rate: syllables produced per second of active speech",
     "CTP_EST": "Estimated speech timing and acoustic pacing marker",
-    "CTP_Voiced Rate(1/s)": "Voiced speech frame generation rate per second",
+    "CTP_Voiced Rate(1/s)": "Words produced per second of active speech time, excluding pauses",
     "CTP_Hesitation Ratio": "Proportion of recording duration occupied by acoustic hesitation and pauses",
     "CTP_Energy Mean(Pa^2·s)": "Acoustic signal energy and voice loudness distribution",
     "CTP_verb_num": "Total count of lexical and auxiliary action verbs spoken",
     "CTP_noun_ratio": "Proportion of spoken words classified as nouns and entities",
     "CTP_Pronouns_ratio": "Proportion of spoken words classified as pronouns",
     "CTP_noun to verb": "Ratio of noun entities to action verbs in spoken sentences",
-    "CTP_Word Rate(-/s)": "Speech production rate (words spoken per second)",
+    "CTP_Word Rate(-/s)": "Words spoken per second across the whole recording, pauses included",
     "CTP_Noun No Phrase Rate": "Syntactic noun phrase pacing rate without modifier expansion",
     "CTP_Verb phrase type proportion": "Syntactic complexity proportion of verb-headed phrases",
     "CTP_Prep phrase type proportion": "Prepositional phrase syntactic density",
     "CTP_Prep average phrase type length 1": "Average length and depth of prepositional clauses",
-    "CTP_num_unique_IU": "Total number of distinct cognitive Information Units communicated",
+    "CTP_num_unique_IU": "Distinct task-relevant semantic Information Units communicated",
     "CTP_num_unique_keywords": "Count of unique core vocabulary content keywords",
-    "CTP_unique_IU_densitys": "Information unit density relative to total spoken word count",
-    "CTP_total_IU_density": "Total cognitive information content density across utterances",
+    "CTP_unique_IU_densitys": "Distinct Information Units per word of a standard-length description",
+    "CTP_total_IU_density": "Total Information Unit mentions per word of a standard-length description",
     "CTP_keyword_to_non_keyword_ratio": "Ratio of informative content keywords to function filler words",
-    "CTP_unique_IU_efficiency": "Lexical efficiency in delivering unique informational units",
+    "CTP_unique_IU_efficiency": "Unique content vocabulary per word of a standard-length description",
 }
 
 
 def explain_single_prediction(
     input_df: pd.DataFrame,
     top_k: int = 5,
-    apply_imputation: bool = False,
+    n_passes: int = 30,
+    reference_probability: Optional[float] = None,
+    measured_features: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Computes biomarker feature attributions for a single sample using
     Gradient * Normalized Input backpropagation through the Quantum-Hybrid model.
+
+    Args:
+        input_df: single-row frame holding the 22-feature production contract.
+        top_k: how many contributions to surface per direction.
+        n_passes: Monte Carlo Dropout passes to average gradients over. Must match
+            the inference regime for the attribution to describe the reported score.
+        reference_probability: the probability actually reported to the caller. When
+            given it is echoed back as the explained probability, so the explanation
+            and the screening result can never describe two different numbers.
+        measured_features: features actually extracted from this recording. Anything
+            outside this list is a median-imputed constant - identical for every
+            patient - and is excluded from the ranked contributions, because
+            presenting a constant as "a biomarker influencing your result" tells the
+            reader something about the model's defaults, not about themselves. Their
+            attribution is still returned in shap_contributions for engineering use.
     """
     if not isinstance(input_df, pd.DataFrame):
         raise TypeError(f"Expected pandas DataFrame, got {type(input_df).__name__}")
@@ -100,23 +123,38 @@ def explain_single_prediction(
     else:
         scaled_arr = scaler.transform(features_arr)
 
-    # Autograd backpropagation for gradient attribution
+    # Monte Carlo Dropout gradient attribution.
+    # Dropout stays stochastic while BatchNorm running statistics are frozen, exactly
+    # as in run_monte_carlo_inference, so the averaged gradient is the sensitivity of
+    # the Monte Carlo predictive mean rather than of a single deterministic pass.
+    passes = max(1, int(n_passes))
+    model.train()
+    for module in model.modules():
+        if isinstance(module, nn.BatchNorm1d):
+            module.eval()
+
+    grad_accum = np.zeros(scaled_arr.shape[1], dtype=np.float64)
+    prob_accum = 0.0
+    for _ in range(passes):
+        x_tensor = torch.tensor(scaled_arr, dtype=torch.float64, requires_grad=True)
+        p = model(x_tensor)
+        model.zero_grad(set_to_none=True)
+        p.backward()
+        if x_tensor.grad is not None:
+            grad_accum += x_tensor.grad.detach().cpu().numpy().ravel()
+        prob_accum += float(p.item())
+
     model.eval()
-    x_tensor = torch.tensor(scaled_arr, dtype=torch.float64, requires_grad=True)
+    model.zero_grad(set_to_none=True)
 
-    prob = model(x_tensor)
-    prob.backward()
-
-    # Input * Gradient attribution: (dP/dx_i) * x_i
-    if x_tensor.grad is not None:
-        grad = x_tensor.grad.detach().cpu().numpy().ravel()
-    else:
-        grad = np.zeros_like(scaled_arr.ravel())
+    grad = grad_accum / passes
+    mc_mean_probability = prob_accum / passes
     scaled_vals = scaled_arr.ravel()
     raw_attributions = grad * scaled_vals
 
-    # Compute normalized relative attributions so that clinical factors reflect meaningful proportions
-    # rather than saturating to +0.000 when output sigmoid approaches boundary (1.0 or 0.0)
+    # L1-normalise into relative shares of total sensitivity. Raw gradients vanish when
+    # the output sigmoid saturates, which would collapse every contribution to +0.000;
+    # the normalised form preserves the ranking and the relative weight of each biomarker.
     abs_sum = float(np.sum(np.abs(raw_attributions)))
     if abs_sum > 1e-12:
         normalized_attributions = raw_attributions / abs_sum
@@ -127,9 +165,13 @@ def explain_single_prediction(
     for idx, col in enumerate(production_features):
         shap_contributions[col] = round(float(normalized_attributions[idx]), 4)
 
-    # Rank top positive (pushing toward elevated risk) and negative (pushing toward low risk)
+    # Rank top positive (pushing toward elevated risk) and negative (pushing toward low risk),
+    # over measured features only.
+    measured = set(measured_features) if measured_features is not None else set(production_features)
+    imputed_constants = [c for c in production_features if c not in measured]
+
     sorted_features = sorted(
-        shap_contributions.items(),
+        ((col, val) for col, val in shap_contributions.items() if col in measured),
         key=lambda item: abs(item[1]),
         reverse=True,
     )
@@ -152,7 +194,7 @@ def explain_single_prediction(
         elif contrib < 0 and len(top_neg) < top_k:
             top_neg.append(item_entry)
 
-    reconstructed_prob = float(prob.item())
+    explained_probability = float(reference_probability) if reference_probability is not None else mc_mean_probability
 
     # Build patient-friendly clinical explanations
     explanation_sentences = []
@@ -172,13 +214,24 @@ def explain_single_prediction(
     )
 
     return {
+        # Decision boundary of the output sigmoid, the reference the score is read against.
         "base_value": 0.5,
         "method": "PennyLane 8-Qubit Variational Quantum Circuit Gradient Sensitivity",
-        "attribution_type": "quantum_gradient_attribution",
+        "attribution_type": "mc_dropout_quantum_gradient_attribution",
+        "mc_passes": passes,
+        # Net signed direction of the normalised sensitivities. This is a directional
+        # summary, NOT an additive decomposition of the probability margin.
+        "net_attribution_direction": round(float(np.sum(normalized_attributions)), 4),
         "shap_margin_sum": round(float(np.sum(normalized_attributions)), 4),
-        "reconstructed_probability": round(reconstructed_prob, 4),
-        "reconstruction_error": 0.0,
+        "explained_probability": round(explained_probability, 4),
+        "reconstructed_probability": round(explained_probability, 4),
         "shap_contributions": shap_contributions,
+        # Features never extracted from audio; held at their training median for every
+        # patient. Excluded from the ranked contributions above.
+        "imputed_constant_features": imputed_constants,
+        "imputed_constant_attribution_share": round(
+            float(sum(abs(shap_contributions[c]) for c in imputed_constants)), 4
+        ),
         "top_positive_contributions": top_pos,
         "top_negative_contributions": top_neg,
         "human_readable_explanation": human_explanation,

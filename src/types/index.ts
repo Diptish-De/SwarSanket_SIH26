@@ -1,6 +1,6 @@
 // ─── SwarSanket System Types & Data Contracts ─────────────────────────────────
 
-export type Screen = "splash" | "language" | "welcome" | "consent" | "profile" | "home" | "voiceIntro" | "instruction" | "recording" | "voiceQuality" | "recordingReview" | "pictureDesc" | "memory" | "conversation" | "completion" | "processing" | "resultLow" | "resultElevated" | "resultUncertain" | "screeningDetails" | "shareWithDoctor" | "offlineSaved" | "syncStatus" | "caregiverAlert" | "referral" | "teleconsult" | "privacyScreen" | "reminder" | "doctorDash" | "doctorPatient" | "doctorReport" | "history" | "trend" | "help" | "caregiver" | "healthWorker" | "settings" | "errorScreen" | "emptyHistory"
+export type Screen = "splash" | "language" | "welcome" | "consent" | "profile" | "home" | "voiceIntro" | "instruction" | "recording" | "voiceQuality" | "recordingReview" | "pictureDesc" | "memory" | "conversation" | "completion" | "processing" | "needMoreSpeech" | "resultLow" | "resultElevated" | "resultUncertain" | "screeningDetails" | "shareWithDoctor" | "offlineSaved" | "syncStatus" | "caregiverAlert" | "referral" | "teleconsult" | "privacyScreen" | "reminder" | "doctorDash" | "doctorPatient" | "doctorReport" | "history" | "trend" | "help" | "caregiver" | "healthWorker" | "settings" | "errorScreen" | "emptyHistory"
 
 export type RecordingContext = "freeSpeech" | "pictureDesc" | "memoryRecall" | "conversation"
 
@@ -37,13 +37,27 @@ export interface AcousticBiomarkers {
 
   pausePatternRatio: number // percentage
 
+  /** Standard deviation of F0 across voiced frames, in Hz. */
+
   pitchVariationHz: number
 
-  jitterPercent: number // vocal frequency perturbation
+  /** Mean fundamental frequency across voiced frames, in Hz. */
+
+  f0MeanHz?: number
+
+  jitterPercent: number // vocal frequency perturbation, RAP
 
   shimmerDb: number // vocal amplitude perturbation
 
   hnrDb: number // Harmonics-to-Noise Ratio
+
+  /**
+   * Whether the three perturbation measures above were actually measured.
+   * False means the recording held too little voiced speech, and they must be
+   * reported as unavailable rather than printed as numbers.
+   */
+
+  voiceQualityMeasured?: boolean
 }
 
 export interface MLInferenceResult {
@@ -76,6 +90,30 @@ export interface MLInferenceResult {
 
     weight: number
   }[]
+
+  /**
+   * Monte Carlo Dropout predictive standard deviation (epistemic uncertainty).
+   * Persisted alongside confidence so a stored result cannot be read back as more
+   * settled than it was. Optional: absent on demo seeds and pre-existing records.
+   */
+
+  uncertaintyStd?: number
+
+  /** Which protocol the recording was scored under by the backend. */
+
+  iuScoringMode?: "canonical" | "proxy" | "empty"
+
+  /** Canonical Information Units recognised in the description. */
+
+  matchedInformationUnits?: number
+
+  /**
+   * How many of the 22 biomarkers fell outside the training support and were held
+   * at the +/-3 sigma boundary. A non-zero count means the score is lower quality
+   * than its confidence figure suggests.
+   */
+
+  clampedFeatureCount?: number
 }
 
 export interface ScreeningSession {

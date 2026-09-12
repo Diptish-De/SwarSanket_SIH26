@@ -12,14 +12,28 @@ from main import app
 
 client = TestClient(app)
 
+def _collect(directory):
+    return (
+        list(directory.glob("*.webm"))
+        + list(directory.glob("*.m4a"))
+        + list(directory.glob("*.wav"))
+    )
+
+
 AUDIO_DIR = BACKEND_DIR / "uploads"
-audio_files = list(AUDIO_DIR.glob("*.webm")) + list(AUDIO_DIR.glob("*.m4a")) + list(AUDIO_DIR.glob("*.wav"))
+audio_files = _collect(AUDIO_DIR)
 
 if not audio_files:
     AUDIO_DIR = BACKEND_DIR / "test_audio"
-    audio_files = list(AUDIO_DIR.glob("*.webm")) + list(AUDIO_DIR.glob("*.m4a")) + list(AUDIO_DIR.glob("*.wav"))
+    audio_files = _collect(AUDIO_DIR)
 
-test_audio_path = audio_files[0]
+# The pipeline now refuses to score a sample too short to estimate the ratio
+# features from, so the contract test needs a recording long enough to pass the
+# gate. Largest file is the best available proxy for longest.
+by_size = sorted(audio_files, key=lambda p: p.stat().st_size, reverse=True)
+long_candidates = _collect(BACKEND_DIR / "test_audio") + by_size
+test_audio_path = max(long_candidates, key=lambda p: p.stat().st_size)
+short_audio_path = min(by_size, key=lambda p: p.stat().st_size)
 
 print("=" * 80)
 print("SwarSanket Quantum-Hybrid FastAPI Endpoint Integration Verification")
@@ -52,6 +66,16 @@ assert res_analyze_1.status_code == 200, f"Expected 200, got {res_analyze_1.stat
 data_1 = res_analyze_1.json()
 assert data_1.get("success") is True, "success is not True"
 assert "transcript" in data_1 and len(data_1["transcript"]) > 0, "Transcript is missing or empty"
+
+if data_1.get("sample_sufficient") is False:
+    req = data_1.get("sample_requirements", {})
+    raise AssertionError(
+        "No recording long enough to exercise the scoring contract: best candidate gave "
+        f"{req.get('words_recorded')} words / {req.get('seconds_recorded')}s, need "
+        f"{req.get('words_required')} words / {req.get('seconds_required')}s. "
+        "Add a longer sample to backend/test_audio/."
+    )
+
 assert "production_features" in data_1, "production_features missing"
 assert len(data_1["production_features"]) == 22, f"Expected 22 production features, got {len(data_1['production_features'])}"
 
@@ -78,6 +102,75 @@ assert 0.0 <= prob_1 <= 1.0, f"Invalid probability: {prob_1}"
 assert uncertainty_1 is not None and uncertainty_1 >= 0.0, "Invalid uncertainty_std"
 assert "not a diagnosis" in interp_1.lower(), "Interpretation does not contain disclaimer 'not a diagnosis'"
 print("  [PASS] POST /api/analyze-audio contract verified.")
+
+# ─── TEST B2: Cross-lingual calibration contract ──────────────────────────────
+print("\n[Test B2] Testing cross-lingual calibration reporting...")
+lang_cal = data_1.get("language_calibration")
+assert lang_cal is not None, "Response missing 'language_calibration'"
+assert lang_cal["status"] in ("calibrated", "uncalibrated"), f"Bad status: {lang_cal['status']}"
+assert isinstance(lang_cal["is_calibrated"], bool), "is_calibrated must be a bool"
+print(f"  Detected language:  {data_1.get('detected_language')}")
+print(f"  Calibration status: {lang_cal['status']} (quality={lang_cal.get('profile_quality')})")
+print(f"  Adjusted features:  {len(lang_cal['adjusted_features'])}")
+
+# An uncalibrated language must NOT be given a clinical risk tier.
+if not lang_cal["is_calibrated"]:
+    assert screening_1.get("risk_tier") is None, (
+        "A risk tier was reported for a language with no reference profile"
+    )
+    print("  [PASS] Risk tier correctly withheld for uncalibrated language.")
+else:
+    assert screening_1.get("risk_tier"), "Calibrated result is missing a risk tier"
+    print(f"  [PASS] Risk tier reported for calibrated language: {screening_1['risk_tier']}")
+
+# Median-imputed constants must not be presented as measured biomarkers.
+expl_b2 = data_1.get("explanation", {})
+imputed = set(expl_b2.get("imputed_constant_features", []))
+assert imputed, "Explanation did not report which features are imputed constants"
+ranked = [i["feature"] for i in expl_b2.get("top_positive_contributions", [])] + [
+    i["feature"] for i in expl_b2.get("top_negative_contributions", [])
+]
+leaked = imputed.intersection(ranked)
+assert not leaked, f"Median-imputed constants shown as biomarkers: {sorted(leaked)}"
+print(f"  [PASS] {len(imputed)} imputed constants excluded from ranked biomarkers.")
+
+# ─── TEST B3: Short recordings are refused, not scored ────────────────────────
+print("\n[Test B3] Testing minimum-sample gate on a short recording...")
+
+# Walk from the smallest file upward until one actually contains speech; the very
+# smallest uploads are silence tests, which are rejected earlier by a different path.
+short_result = None
+for candidate in sorted(by_size, key=lambda p: p.stat().st_size):
+    with open(candidate, "rb") as f:
+        candidate_bytes = f.read()
+    res_c = client.post(
+        "/api/analyze-audio",
+        files={"audio": (candidate.name, io.BytesIO(candidate_bytes), "audio/webm")},
+    )
+    if res_c.status_code == 200 and res_c.json().get("success"):
+        short_result = (candidate, res_c.json())
+        break
+
+assert short_result is not None, "No recording with audible speech found for the sample-gate test"
+short_path, data_short = short_result
+print(f"  Short sample:      {short_path.name}")
+print(f"  Words:             {data_short.get('word_count')}")
+print(f"  sample_sufficient: {data_short.get('sample_sufficient')}")
+
+if data_short.get("sample_sufficient") is False:
+    req_s = data_short["sample_requirements"]
+    assert (
+        req_s["words_recorded"] < req_s["words_required"]
+        or req_s["seconds_recorded"] < req_s["seconds_required"]
+    ), "Sample marked insufficient but meets both thresholds"
+    assert data_short["screening"]["probability"] is None, "A probability was reported for an insufficient sample"
+    assert data_short["screening"]["risk_tier"] is None, "A risk tier was reported for an insufficient sample"
+    assert "production_features" not in data_short, "Feature vector built for an insufficient sample"
+    print(f"  Requirements:      {req_s['words_recorded']}/{req_s['words_required']} words, "
+          f"{req_s['seconds_recorded']}/{req_s['seconds_required']}s")
+    print("  [PASS] Short recording refused without a fabricated score.")
+else:
+    print("  [SKIP] Smallest speech recording still clears the minimum-sample gate.")
 
 # ─── TEST C: Error Handling on Invalid / Empty Upload ──────────────────────────
 print("\n[Test C] Testing error handling on empty audio file...")

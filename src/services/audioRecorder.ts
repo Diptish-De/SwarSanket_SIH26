@@ -362,17 +362,27 @@ export interface ExplainabilityData {
 
   attribution_type?: string
 
+  mc_passes?: number
+
+  net_attribution_direction?: number
+
   shap_margin_sum: number
 
   reconstructed_probability: number
 
-  reconstruction_error: number
+  explained_probability?: number
 
   top_positive_contributions: ShapFactorContribution[]
 
   top_negative_contributions: ShapFactorContribution[]
 
   shap_contributions: Record<string, number>
+
+  /** Never measured from audio; identical for every patient. Not shown to users. */
+
+  imputed_constant_features?: string[]
+
+  imputed_constant_attribution_share?: number
 
   human_readable_explanation: string
 
@@ -404,12 +414,54 @@ export interface ScreeningApiResponse {
     silence_percentage: number
   }
 
+  /**
+   * Measured fundamental frequency and voice perturbation.
+   *
+   * `measured: false` means the recording held too little voiced speech to
+   * estimate these. Callers must show them as unavailable in that case - a zero
+   * here is the absence of a reading, not a reading of zero.
+   */
+
+  voice_quality?: {
+    measured: boolean
+
+    f0_mean_hz: number
+
+    f0_sd_hz: number
+
+    f0_sd_semitones: number
+
+    jitter_local_percent: number
+
+    jitter_rap_percent: number
+
+    shimmer_local_db: number
+
+    hnr_db: number
+
+    voiced_ratio: number
+
+    cycles_analyzed: number
+  }
+
   live_features: {
+    "CTP_F0 SD(st)": number
+
+    "CTP_DPI(ms)": number
+
+    "CTP_RST(-/s)": number
+
+    CTP_EST: number
+
+    "CTP_Voiced Rate(1/s)": number
+
+    "CTP_Hesitation Ratio": number
+
+    "CTP_Energy Mean(Pa^2·s)": number
+
+    CTP_verb_num: number
+
     CTP_noun_ratio: number
-
-    CTP_verb_ratio: number
-
-    CTP_adv_ratio: number
 
     CTP_Pronouns_ratio: number
 
@@ -417,43 +469,153 @@ export interface ScreeningApiResponse {
 
     "CTP_Word Rate(-/s)": number
 
-    CTP_unique_IU_efficiency: number
+    "CTP_Noun No Phrase Rate": number
 
-    "CTP_ keyword_TTR": number
+    "CTP_Verb phrase type proportion": number
+
+    "CTP_Prep phrase type proportion": number
+
+    "CTP_Prep average phrase type length 1": number
+
+    CTP_num_unique_IU: number
+
+    CTP_num_unique_keywords: number
+
+    CTP_unique_IU_densitys: number
+
+    CTP_total_IU_density: number
+
+    CTP_keyword_to_non_keyword_ratio: number
+
+    CTP_unique_IU_efficiency: number
   }
 
   production_features: Record<string, {
-    raw_value: number | null
-
-    imputed_value: number
+    value: number
 
     is_live_extracted: boolean
 
-    shap_contribution?: number
+    attribution: number
   }>
 
-  imputation: {
-    live_feature_count: number
+  /**
+   * False when the recording was too short to estimate the ratio features from.
+   * The screening block then carries no probability and no risk tier.
+   */
 
-    imputed_feature_count: number
+  sample_sufficient?: boolean
 
-    total_feature_count: number
+  sample_requirements?: {
+    words_recorded: number
 
-    imputation_note: string
+    words_required: number
+
+    seconds_recorded: number
+
+    seconds_required: number
+  }
+
+  /**
+   * Cross-lingual correction status. The model's lexical features were fitted on
+   * Chinese ASR corpora; a language without a reference profile cannot be scored
+   * comparably, and no risk tier is reported for it.
+   */
+
+  language_calibration?: {
+    status: "calibrated" | "uncalibrated"
+
+    language: string
+
+    is_calibrated: boolean
+
+    profile_quality: "provisional" | "validated" | null
+
+    profile_sample_size?: number
+
+    adjusted_features: {
+      feature: string
+
+      raw_value: number
+
+      calibrated_value: number
+
+      speaker_z_in_own_language: number
+    }[]
+
+    note: string
+
+    available_languages: string[]
+  }
+
+  /** Feature values before cross-lingual calibration and support clamping. */
+
+  raw_features?: Record<string, number>
+
+  /**
+   * Provenance for how the 22-feature vector was scored against the training
+   * distribution. "canonical" means the utterance matched the standardized
+   * picture-description Information Unit lexicon; "proxy" means it was scored
+   * as conversational speech.
+   */
+
+  feature_calibration?: {
+    iu_scoring_mode: "canonical" | "proxy" | "empty"
+
+    matched_information_units: string[]
+
+    density_word_base: number
+
+    task_reference_word_count: number
+
+    calibration_sigma: number
+
+    clamped_features: {
+      feature: string
+
+      raw_value: number
+
+      calibrated_value: number
+
+      training_z_score: number
+    }[]
   }
 
   screening: {
-    predicted_class: 0 | 1
+    model_name?: string
 
-    probability: number
+    predicted_class: 0 | 1 | null
 
-    probability_percent: number
+    probability: number | null
+
+    probability_percent: number | null
 
     technical_confidence_percent: number
+
+    /** Monte Carlo Dropout predictive standard deviation (epistemic uncertainty). */
+
+    uncertainty_std: number
+
+    predictive_entropy?: number
+
+    /** Null when the language is uncalibrated or the sample was too short. */
+
+    risk_tier?: string | null
 
     status: string
 
     interpretation: string
+
+    quantum_specs?: {
+      qubits: number
+
+      entangling_layers: number
+
+      mc_dropout_passes: number
+
+      benchmark_auc: number
+
+      benchmark_accuracy: number
+    }
   }
 
   explanation?: ExplainabilityData
