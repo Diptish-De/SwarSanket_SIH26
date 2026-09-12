@@ -4,10 +4,15 @@ import { ScreeningSession } from "../types"
 
 export function generateAndDownloadReport(session: ScreeningSession): void {
   // Ambient noise measured before recording. Every acoustic biomarker below
+
   // degrades with background noise, so a clinician reading a borderline result
+
   // needs to know whether it was captured in a quiet room or beside a fan.
+
   // Absent on sessions recorded before the pre-flight existed.
+
   const snr = session.tasks[0]?.snrEstimateDb
+
   const recordingConditions =
     typeof snr === "number" && Number.isFinite(snr)
       ? `${

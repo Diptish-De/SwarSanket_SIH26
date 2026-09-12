@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
+
 import { CheckCircle2, Ear, Loader2, RefreshCw, Volume2 } from "lucide-react"
+
 import { measureAmbientNoise, NoiseReading } from "../services/noiseCheck"
 
 /**
@@ -14,95 +16,139 @@ import { measureAmbientNoise, NoiseReading } from "../services/noiseCheck"
  *   - The instruction is to stay quiet, phrased as something being done FOR the
  *     person rather than a test they might fail.
  */
+
 export default function NoiseCheckCard({
   onDone,
+
   onSkip,
+
   fontFamily,
+
   labels,
 }: {
   onDone: (reading: NoiseReading) => void
+
   onSkip: () => void
+
   fontFamily?: string
+
   labels?: {
     title?: string
+
     instruction?: string
+
     listening?: string
+
     continueAnyway?: string
+
     checkAgain?: string
+
     begin?: string
   }
 }) {
   const [reading, setReading] = useState<NoiseReading | null>(null)
+
   const [progress, setProgress] = useState(0)
+
   const [level, setLevel] = useState(-100)
+
   const [running, setRunning] = useState(false)
+
   const cancelled = useRef(false)
 
   const t = {
     title: labels?.title ?? "Checking the room",
+
     instruction:
       labels?.instruction ?? "Please stay quiet for a moment while we listen.",
+
     listening: labels?.listening ?? "Listening…",
+
     continueAnyway: labels?.continueAnyway ?? "Continue Anyway",
+
     checkAgain: labels?.checkAgain ?? "Check Again",
+
     begin: labels?.begin ?? "Start Recording",
   }
 
   const run = async () => {
     setRunning(true)
+
     setReading(null)
+
     setProgress(0)
 
     const result = await measureAmbientNoise(3000, (fraction, db) => {
       if (cancelled.current) return
+
       setProgress(fraction)
+
       setLevel(db)
     })
 
     if (cancelled.current) return
+
     setReading(result)
+
     setRunning(false)
   }
 
   useEffect(() => {
     cancelled.current = false
+
     void run()
+
     return () => {
       cancelled.current = true
     }
+
     // Runs once on mount; re-checking is driven by the button.
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Map dBFS onto a bar. -70 is inaudible, -30 is loud; anything outside clamps.
+
   const meterWidth = Math.max(0, Math.min(100, ((level + 70) / 40) * 100))
 
   const tone =
     reading?.verdict === "quiet"
       ? {
           bg: "bg-emerald-50",
+
           border: "border-emerald-200",
+
           text: "text-emerald-700",
+
           bar: "bg-emerald-500",
         }
       : reading?.verdict === "fair"
         ? {
             bg: "bg-amber-50",
+
             border: "border-amber-200",
+
             text: "text-amber-700",
+
             bar: "bg-amber-500",
           }
         : reading?.verdict === "noisy"
           ? {
               bg: "bg-rose-50",
+
               border: "border-rose-200",
+
               text: "text-rose-700",
+
               bar: "bg-rose-500",
             }
           : {
               bg: "bg-slate-50",
+
               border: "border-slate-200",
+
               text: "text-slate-600",
+
               bar: "bg-slate-400",
             }
 

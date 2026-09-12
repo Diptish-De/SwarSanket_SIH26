@@ -142,7 +142,9 @@ import {
 } from "./services/household"
 
 import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
+
 import NoiseCheckCard from "./components/NoiseCheckCard"
+
 import { NoiseReading } from "./services/noiseCheck"
 
 import { MODEL_EVAL } from "./services/modelEval"
@@ -3855,8 +3857,11 @@ function SwarSanketApp({
   )
 
   // Ambient noise pre-flight. The reading is kept on the session because a
+
   // result recorded in a noisy room needs that context attached to it when a
+
   // clinician reads it later, not just at the moment of recording.
+
   const [noiseReading, setNoiseReading] = useState<NoiseReading | null>(null)
 
   const [showNoiseCheck, setShowNoiseCheck] = useState(false)
@@ -4467,6 +4472,7 @@ function SwarSanketApp({
             quality: vqState,
 
             // Projected SNR from the pre-flight, when one was taken.
+
             snrEstimateDb: noiseReading?.projectedSnrDb,
 
             timestamp: new Date().toISOString(),
