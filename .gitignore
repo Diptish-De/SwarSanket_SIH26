@@ -34,3 +34,9 @@ env/
 
 # Editor
 .vscode/
+
+# This project installs with pnpm, and Vercel builds from pnpm-lock.yaml.
+# A second lockfile is what breaks deploys: `npm install` updates only this file,
+# pnpm-lock.yaml silently goes stale, and the next build fails frozen-lockfile.
+package-lock.json
+yarn.lock
