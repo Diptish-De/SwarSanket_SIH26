@@ -1,41 +1,33 @@
-# figma-make-app
+# SwarSanket (स्वरसंकेत) — Engineering Guidelines
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+React 19 + Vite + Tailwind CSS v4 web application, FastAPI + PennyLane backend, and Flutter mobile application.
 
-## Development Server
+## Development Servers
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+- **Frontend**: Vite development server runs on `http://localhost:8443` (`npm run dev`).
+- **Backend**: FastAPI server runs on `http://localhost:8001` (`python backend/main.py` or `npm run backend`).
+- **Mobile**: Flutter app located in `mobile/`.
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+## Architecture & Code Rules
 
-## Project Structure
+### Frontend & UI (React 19 + Vite + Tailwind v4)
+- **Styling**: Tailwind CSS v4 through `@tailwindcss/vite` configured in `vite.config.ts`. Global theme is in `src/index.css`. No `tailwind.config.js` needed.
+- **Patient vs Doctor Separation**:
+  - The phone mockup is strictly a **patient wellness** application (Home, History, Profile).
+  - Do NOT put doctor dashboards, EHR patient rosters, or clinical inspection tables inside the patient's phone frame view.
+  - Doctor View is accessible only from the top desktop toolbar (`doctorDash` screen).
+- **Strings**: Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings.
+- **Components**: Export components as default exports.
 
-This is the canonical project structure. Start with task-relevant files below. Only follow imports or inspect other files when required, when a documented path is missing, or when the repository contradicts this guide.
+### Backend & Quantum ML (Python 3.11 + FastAPI + PennyLane)
+- **Quantum Hybrid**: 8-qubit PennyLane VQC with `AngleEmbedding` (rotation="Y") and `BasicEntanglerLayers` — 3 layers x 8 qubits, weight tensor shape `(3, 8)` (`backend/model_loader.py`). It is NOT `StronglyEntanglingLayers`, which would require a `(3, 8, 3)` weight tensor and will fail to load the checkpoint.
+- **Audio Decoding**: Use PyAV container decoding with explicit casting (see `backend/audio_analyzer.py` and `backend/speech_features.py`).
+- **Speech-to-Text**: Faster-Whisper with CPU fallback (`backend/screening_engine.py`).
 
-- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
-- `src/App.tsx` - Primary application component and the usual starting point for UI work
-- `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
-- `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
-- `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React, Tailwind CSS v4, and Figma Make plugins plus the `@` alias for `src`
-- `.mise.toml` - Toolchain versions for Node.js and pnpm
+### Git & Commit Hygiene
+- **No AI Co-Authorship Tags**: Never add `Co-Authored-By`, tool signatures, or synthetic contributor metadata to commit messages or PR descriptions. Commits must attribute team contributors only.
 
-## Dependencies
-
-- Runtime: React 19 and React DOM 19
-- Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
-- Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
-- Formatting: oxfmt
-
-## Styling
-
-This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin configured in `vite.config.ts`. `src/index.css` imports Tailwind with `@import 'tailwindcss';`. Use Tailwind utility classes directly in JSX and put global CSS or Tailwind v4 theme customization in `src/index.css`. This scaffold does not need a Tailwind config file or PostCSS config.
-
-`src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
-
-## Code quality
-
-- Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.
-- Ensure JSX tags are closed and braces are balanced.
-- Export components as default exports.
+### Verification before Finishing
+1. `npx tsc --noEmit` exits with code 0.
+2. `npx oxfmt src` has formatted modified files.
+3. `npm run build` succeeds cleanly.
