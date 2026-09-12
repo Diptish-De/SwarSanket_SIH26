@@ -126,7 +126,25 @@ import {
 
 import DemoAuth, { readDemoUser } from "./components/DemoAuth"
 
+import MemberPicker from "./components/MemberPicker"
+
+import AddMemberSheet from "./components/AddMemberSheet"
+
+import CaregiverGate from "./components/CaregiverGate"
+
+import {
+  HouseholdMember,
+  listMembers,
+  getActiveMemberId,
+  setActiveMemberId,
+  clearActiveMember,
+  clearCaregiverPin,
+} from "./services/household"
+
 import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
+
+import { MODEL_EVAL } from "./services/modelEval"
+
 import {
   DOCTOR_PATIENT_PROFILES,
   DoctorPatientProfile,
@@ -2360,80 +2378,113 @@ function getTaskPrompt(lang: string, ctx: RecordingContext): string {
  * training median for everyone - so their entries say so plainly instead of
  * implying the number describes the speaker.
  */
+
 const PATIENT_FEATURE_HINTS: Record<string, string> = {
   // ---- Acoustic timing and voice ----
+
   "CTP_DPI(ms)":
     "How long your silent pauses lasted on average, in thousandths of a second. Everyone pauses to breathe and think; consistently long pauses can sometimes mean finding the next word took more effort.",
+
   "CTP_Hesitation Ratio":
     "The share of your recording that was silence rather than speech. Pausing is completely normal - this simply measures how much of the time you were not speaking.",
+
   "CTP_Energy Mean(Pa^2·s)":
     "How loud and strong your voice was overall. This mostly reflects your microphone and how close you sat to it, so it carries little on its own.",
+
   "CTP_RST(-/s)":
     "How many syllables you produced per second while actually speaking. It measures the physical pace of your voice, separately from how often you paused.",
+
   "CTP_Voiced Rate(1/s)":
     "How many words you spoke per second of actual talking time, ignoring the pauses in between.",
+
   "CTP_Word Rate(-/s)":
     "How quickly you spoke across the whole recording, counting the pauses. Speaking slowly is not a problem in itself - it is only one signal among many.",
+
   "CTP_F0 SD(st)":
     "How much your pitch rose and fell while speaking. NOT MEASURED in this version - a standard reference value is used for everyone, so it says nothing about you.",
+
   CTP_EST:
     "A measure of overall speech timing and pacing. NOT MEASURED in this version - a standard reference value is used for everyone, so it says nothing about you.",
 
   // ---- Words and grammar ----
+
   CTP_verb_num:
     "How many action words you used - words like washing, falling, reaching. Verbs carry the events in a description: who is doing what.",
+
   CTP_noun_ratio:
     'The share of your words that named people or things. Naming things specifically, rather than saying "that" or "stuff", usually means a richer description.',
+
   CTP_Pronouns_ratio:
     "The share of your words that were pronouns - he, she, it, they. Leaning heavily on pronouns instead of names is one pattern researchers watch, though it varies a lot between people and languages.",
+
   "CTP_noun to verb":
     "The balance between the things you named and the actions you described. A description usually needs both.",
 
   // ---- Content and information ----
+
   CTP_num_unique_IU:
     "How many different key elements of the picture you mentioned - the boy, the cookie jar, the overflowing water. Mentioning more of them reflects a fuller description.",
+
   CTP_num_unique_keywords:
     "How many different meaningful words you used in total, not counting repeats.",
+
   CTP_unique_IU_densitys:
     "How many key picture elements you mentioned relative to how much you said - a measure of how much you covered per word.",
+
   CTP_total_IU_density:
     "How often you referred to the picture's key elements across your whole description, including repeats.",
+
   CTP_keyword_to_non_keyword_ratio:
     'How much of your speech carried real content - naming things and actions - compared with filler words like "thing", "stuff" or "um".',
+
   CTP_unique_IU_efficiency:
     "How much distinct information you fitted into the words you used. Higher means you conveyed more different ideas rather than repeating yourself.",
 
   // ---- Sentence structure (not measured) ----
+
   "CTP_Noun No Phrase Rate":
     "A measure of sentence structure around the things you named. NOT MEASURED in this version - a standard reference value is used for everyone.",
+
   "CTP_Verb phrase type proportion":
     "A measure of how complex your sentences were around action words. NOT MEASURED in this version - a standard reference value is used for everyone.",
+
   "CTP_Prep phrase type proportion":
     "How often you described where things were - on, under, beside. NOT MEASURED in this version - a standard reference value is used for everyone.",
+
   "CTP_Prep average phrase type length 1":
     "How detailed your descriptions of position and place were. NOT MEASURED in this version - a standard reference value is used for everyone.",
 }
 
 /** Explanations for the summary numbers and section headings on the report. */
+
 const REPORT_SECTION_HINTS = {
   protocol:
     'Which speaking task you did. "Standardized Picture Description" means you described the standard clinical picture - the task this system was built around, which gives the most comparable reading. "Conversational" means you spoke freely, which is a weaker basis for comparison.',
+
   informationUnits:
     "The number of key things from the picture you actually mentioned - people, objects and actions such as the boy, the cookie jar, or the water overflowing. It is counted from your transcript.",
+
   riskChance:
     "How closely your speech pattern resembles the patterns this model was trained on. It is NOT a prediction that you will develop Alzheimer's, and not a diagnosis. Only a doctor can say what it means for you.",
+
   riskBand:
     "A simple band based on the percentage: below 35% is Low, 35-60% suggests keeping an eye on it, and above 60% suggests speaking to a professional.",
+
   confidence:
     "How firmly the model holds its answer - not the chance of disease. It measures how far the result sits from an undecided 50/50. A result far from the middle gives high confidence, whichever direction it points.",
+
   uncertainty:
     "The system runs itself 30 times, each time switching off random parts of its network, and checks how much the answer moves. A small number means all 30 runs agreed. A large number means the model is unsettled and the result deserves caution.",
+
   transcript:
     "What the speech recognition heard, written out. Every language measurement below is calculated from this text, so occasional transcription mistakes can shift the numbers slightly.",
+
   sensitivity:
     "How much each part of your speech pushed the score up or down. The percentages are shares of the total influence on this one result - they are not probabilities and do not add up to your risk.",
+
   wordRate:
     "How quickly you spoke, in words per minute across the whole recording. Typical conversation sits roughly between 100 and 160 words per minute.",
+
   pauseRatio:
     "The share of the recording that was silence rather than speech, measured from the sound itself rather than from the words.",
 }
@@ -2445,13 +2496,18 @@ const REPORT_SECTION_HINTS = {
  * hover at all and an explanation only reachable by hovering would be invisible to
  * exactly the people it is written for.
  */
+
 function Hint({
   text,
+
   children,
+
   align = "left",
 }: {
   text: string
+
   children: React.ReactNode
+
   align?: "left" | "right"
 }) {
   const [open, setOpen] = useState(false)
@@ -2466,6 +2522,7 @@ function Hint({
         type="button"
         onClick={(e) => {
           e.stopPropagation()
+
           setOpen((v) => !v)
         }}
         aria-expanded={open}
@@ -3301,17 +3358,21 @@ function StatusBar({ light = false }: { light?: boolean }) {
 
   const [currentTime, setCurrentTime] = useState<string>(() => {
     const d = new Date()
+
     return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
   })
 
   useEffect(() => {
     const updateTime = () => {
       const d = new Date()
+
       setCurrentTime(
         d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
       )
     }
+
     const timer = setInterval(updateTime, 1000)
+
     return () => clearInterval(timer)
   }, [])
 
@@ -3722,15 +3783,36 @@ function DynamicWaveformBars({
 function SwarSanketApp({
   authenticatedName,
 
+  activeMember,
+
+  onSwitchMember,
+
   onLogout,
 }: {
   authenticatedName: string
+
+  activeMember: HouseholdMember | null
+
+  onSwitchMember: () => void
 
   onLogout: () => void
 }) {
   // Restored once, synchronously, so the very first render is already the right
 
   // screen and the splash never flashes past on a reload.
+
+  // Caregiver gate. Only destructive or outbound actions pass through here;
+
+  // taking a screening is never gated.
+
+  const [pendingGatedAction, setPendingGatedAction] = useState<{
+    label: string
+
+    run: () => void
+  } | null>(null)
+
+  const requireCaregiver = (label: string, run: () => void) =>
+    setPendingGatedAction({ label, run })
 
   const restoredSession = useRef(loadSession()).current
 
@@ -3781,28 +3863,43 @@ function SwarSanketApp({
   const [vqState, setVqState] = useState<VoiceQualityGrade>("good")
 
   const [selectedPatient, setSelectedPatient] = useState<string>("Rama Devi")
+
   const [doctorFilterTab, setDoctorFilterTab] =
     useState<"all" | "elevated" | "moderate" | "low">("all")
+
   const [doctorSearchQuery, setDoctorSearchQuery] = useState<string>("")
+
   const [doctorPatientNotes, setDoctorPatientNotes] =
     useState<Record<string, string[]>>({})
+
   const [newDoctorNoteText, setNewDoctorNoteText] = useState<string>("")
+
   const [showRestartMenu, setShowRestartMenu] = useState<boolean>(false)
+
   const [activeHelpModal, setActiveHelpModal] =
     useState<"listen" | "how" | "offline" | "contact" | null>(null)
+
   const [isListeningAudio, setIsListeningAudio] = useState<boolean>(false)
 
   const handleStartFromBeginning = (
     targetScreen: "splash" | "profile" = "splash",
   ) => {
     clearSession()
+
     stopSpeech()
+
     setCurrentAudioBlob(null)
+
     setCurrentAudioUrl("")
+
     setRecordingContext("pictureDesc")
+
     setLastResult(null)
+
     setScreeningApiResult(null)
+
     setScreen(targetScreen)
+
     setShowRestartMenu(false)
   }
 
@@ -3980,18 +4077,26 @@ function SwarSanketApp({
 
   const handleDeleteSession = async (session: ScreeningSession) => {
     setIsDeletingSession(true)
+
     try {
       await deleteScreeningSession(session.id)
+
       setScreeningsList((prev) => prev.filter((s) => s.id !== session.id))
+
       setSessionToDelete(null)
+
       setHistoryToast("Report deleted successfully")
+
       setTimeout(() => setHistoryToast(null), 3000)
+
       if (screen === "screeningDetails") {
         navigate("history")
       }
     } catch (err) {
       console.error("Failed to delete screening session:", err)
+
       setHistoryToast("Failed to delete report")
+
       setTimeout(() => setHistoryToast(null), 3000)
     } finally {
       setIsDeletingSession(false)
@@ -4361,15 +4466,31 @@ function SwarSanketApp({
 
           pausePatternRatio: pauseRatio,
 
-          pitchVariationHz: Math.round(
-            (apiResult.audio?.rms_energy || 0.05) * 1000,
+          // Real F0 statistics from the backend. This was previously RMS energy
+
+          // multiplied by 1000 and labelled as pitch, which is a different
+
+          // physical quantity entirely.
+
+          pitchVariationHz: Math.round(apiResult.voice_quality?.f0_sd_hz ?? 0),
+
+          f0MeanHz: Math.round(apiResult.voice_quality?.f0_mean_hz ?? 0),
+
+          // RAP rather than local jitter: connected speech glides in pitch
+
+          // continuously, and that glide is intonation, not perturbation.
+
+          jitterPercent: Number(
+            (apiResult.voice_quality?.jitter_rap_percent ?? 0).toFixed(2),
           ),
 
-          jitterPercent: 1.5,
+          shimmerDb: Number(
+            (apiResult.voice_quality?.shimmer_local_db ?? 0).toFixed(2),
+          ),
 
-          shimmerDb: 2.3,
+          hnrDb: Number((apiResult.voice_quality?.hnr_db ?? 0).toFixed(1)),
 
-          hnrDb: 24.5,
+          voiceQualityMeasured: apiResult.voice_quality?.measured ?? false,
         },
 
         mlResult: {
@@ -4379,12 +4500,24 @@ function SwarSanketApp({
 
           confidenceLevel,
 
+          // Both entries describe ONE model. The 22 biomarkers are extracted
+
+          // classically and consumed by the hybrid network, so there is no
+
+          // second score to report - and no classical baseline was ever
+
+          // trained (final.ipynb states "No XGBoost anywhere in this
+
+          // notebook"). The AUC below is the measured test-set figure from
+
+          // backend/models/swarsanket_qh_evaluation.json, n=94.
+
           classicalModel: {
-            name: "Linguistic & Acoustic Biomarker Pipeline",
+            name: "Linguistic & Acoustic Feature Extraction",
 
             riskScore: probability,
 
-            aucScore: 0.898,
+            aucScore: MODEL_EVAL.rocAuc,
           },
 
           quantumHybridModel: {
@@ -4392,7 +4525,7 @@ function SwarSanketApp({
 
             riskScore: probability,
 
-            aucScore: 0.943,
+            aucScore: MODEL_EVAL.rocAuc,
           },
 
           uncertaintyStd: apiResult.screening.uncertainty_std,
@@ -4545,13 +4678,25 @@ function SwarSanketApp({
 
         pausePatternRatio: risk === "low" ? 22 : 45,
 
-        pitchVariationHz: 75,
+        // This session was queued offline or after a backend error: no audio
 
-        jitterPercent: 1.2,
+        // has been analysed yet, so there is nothing to report. Zero with
 
-        shimmerDb: 2.1,
+        // voiceQualityMeasured false makes the report print "Not measured"
 
-        hnrDb: 28.2,
+        // instead of inventing a reading for a recording nobody has looked at.
+
+        pitchVariationHz: 0,
+
+        f0MeanHz: 0,
+
+        jitterPercent: 0,
+
+        shimmerDb: 0,
+
+        hnrDb: 0,
+
+        voiceQualityMeasured: false,
       },
 
       mlResult: {
@@ -4562,19 +4707,19 @@ function SwarSanketApp({
         confidenceLevel: "high",
 
         classicalModel: {
-          name: "Production XGBoost",
+          name: "Linguistic & Acoustic Feature Extraction",
 
           riskScore: risk === "low" ? 0.15 : 0.85,
 
-          aucScore: 0.91,
+          aucScore: MODEL_EVAL.rocAuc,
         },
 
         quantumHybridModel: {
-          name: "NLP Feature Engine",
+          name: "PennyLane 8-Qubit VQC (Quantum Hybrid)",
 
           riskScore: risk === "low" ? 0.15 : 0.85,
 
-          aucScore: 0.91,
+          aucScore: MODEL_EVAL.rocAuc,
         },
 
         shapContributions: [
@@ -6448,10 +6593,12 @@ function SwarSanketApp({
               <div className="space-y-2 pt-1 pb-4">
                 <Btn
                   label="Download Clinical Summary (PDF)"
-                  onClick={() => {
-                    if (activeScreening)
-                      generateAndDownloadReport(activeScreening)
-                  }}
+                  onClick={() =>
+                    requireCaregiver("share this report", () => {
+                      if (activeScreening)
+                        generateAndDownloadReport(activeScreening)
+                    })
+                  }
                   size="sm"
                 />
                 {detailedReportFocus !== "doctor" && (
@@ -6507,9 +6654,12 @@ function SwarSanketApp({
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         {new Date(sessionToDelete.createdAt).toLocaleDateString(
                           "en-IN",
+
                           {
                             day: "numeric",
+
                             month: "short",
+
                             year: "numeric",
                           },
                         )}{" "}
@@ -6741,11 +6891,15 @@ function SwarSanketApp({
 
       case "doctorDash": {
         const stats = getDoctorStats()
+
         const filteredPatients = DOCTOR_PATIENT_PROFILES.filter((p) => {
           if (doctorFilterTab !== "all" && p.risk !== doctorFilterTab)
             return false
+
           if (!doctorSearchQuery.trim()) return true
+
           const q = doctorSearchQuery.toLowerCase()
+
           return (
             p.name.toLowerCase().includes(q) ||
             p.lang.toLowerCase().includes(q) ||
@@ -6941,6 +7095,7 @@ function SwarSanketApp({
                     <button
                       onClick={() => {
                         setDoctorFilterTab("all")
+
                         setDoctorSearchQuery("")
                       }}
                       className="px-3 py-1.5 rounded-xl bg-[#02738a] text-white text-xs font-bold hover:bg-[#015364]"
@@ -6951,6 +7106,7 @@ function SwarSanketApp({
                 ) : (
                   filteredPatients.map((p) => {
                     const isElevated = p.risk === "elevated"
+
                     const isModerate = p.risk === "moderate"
 
                     const badgeStyle = isElevated
@@ -6970,6 +7126,7 @@ function SwarSanketApp({
                         key={p.id}
                         onClick={() => {
                           setSelectedPatient(p.name)
+
                           navigate("doctorPatient")
                         }}
                         className={`p-3.5 rounded-2xl bg-white border border-[#d7eaef] ${borderAccent} hover:border-[#02738a] hover:shadow-md cursor-pointer transition-all active:scale-[0.99] space-y-2`}
@@ -7037,12 +7194,15 @@ function SwarSanketApp({
 
       case "doctorPatient": {
         const patient = getDoctorPatient(selectedPatient)
+
         const patientNotes = [
           ...patient.initialNotes,
+
           ...(doctorPatientNotes[patient.id] || []),
         ]
 
         const isElevated = patient.risk === "elevated"
+
         const isModerate = patient.risk === "moderate"
 
         const bannerBg = isElevated
@@ -7064,6 +7224,7 @@ function SwarSanketApp({
           : isModerate
             ? "#0284c7"
             : "#059669"
+
         const chartGradientId = `grad_${patient.id}`
 
         return (
@@ -7200,13 +7361,18 @@ function SwarSanketApp({
                       <Tooltip
                         formatter={(val: any) => [
                           `${val}% Risk`,
+
                           "Cognitive Risk Score",
                         ]}
                         contentStyle={{
                           backgroundColor: "#021820",
+
                           borderColor: "#094250",
+
                           borderRadius: "12px",
+
                           color: "#fff",
+
                           fontSize: "12px",
                         }}
                       />
@@ -7219,8 +7385,11 @@ function SwarSanketApp({
                         isAnimationActive={false}
                         dot={{
                           r: 4,
+
                           fill: chartStrokeColor,
+
                           strokeWidth: 1.5,
+
                           stroke: "#fff",
                         }}
                         activeDot={{ r: 6 }}
@@ -7329,6 +7498,7 @@ function SwarSanketApp({
                 <div className="space-y-2.5">
                   {patient.vqcSensitivity.map((s) => {
                     const isPositive = s.impact >= 0
+
                     return (
                       <div key={s.factor} className="space-y-1">
                         <div className="flex justify-between text-xs">
@@ -7474,10 +7644,13 @@ function SwarSanketApp({
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newDoctorNoteText.trim()) {
                         const note = newDoctorNoteText.trim()
+
                         setDoctorPatientNotes((prev) => ({
                           ...prev,
+
                           [patient.id]: [...(prev[patient.id] || []), note],
                         }))
+
                         setNewDoctorNoteText("")
                       }
                     }}
@@ -7487,10 +7660,13 @@ function SwarSanketApp({
                     onClick={() => {
                       if (newDoctorNoteText.trim()) {
                         const note = newDoctorNoteText.trim()
+
                         setDoctorPatientNotes((prev) => ({
                           ...prev,
+
                           [patient.id]: [...(prev[patient.id] || []), note],
                         }))
+
                         setNewDoctorNoteText("")
                       }
                     }}
@@ -7580,6 +7756,7 @@ function SwarSanketApp({
                     key={s.id}
                     onClick={() => {
                       setSelectedScreeningId(s.id)
+
                       navigate("screeningDetails")
                     }}
                     className="p-4 rounded-2xl bg-white border border-[#d7eaef] hover:border-[#02738a] shadow-xs cursor-pointer flex items-center justify-between transition-all group"
@@ -7594,7 +7771,9 @@ function SwarSanketApp({
                       <div className="text-xs text-slate-500 mt-0.5">
                         {new Date(s.createdAt).toLocaleDateString("en-IN", {
                           day: "numeric",
+
                           month: "short",
+
                           year: "numeric",
                         })}
                       </div>
@@ -7612,6 +7791,7 @@ function SwarSanketApp({
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
+
                           setSessionToDelete(s)
                         }}
                         className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors active:scale-90"
@@ -7659,9 +7839,12 @@ function SwarSanketApp({
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         {new Date(sessionToDelete.createdAt).toLocaleDateString(
                           "en-IN",
+
                           {
                             day: "numeric",
+
                             month: "short",
+
                             year: "numeric",
                           },
                         )}{" "}
@@ -8032,38 +8215,61 @@ function SwarSanketApp({
               {[
                 {
                   icon: Volume2,
+
                   key: "helpListen",
+
                   descKey: "helpListenDesc",
+
                   action: () => setActiveHelpModal("listen"),
                 },
+
                 {
                   icon: Users,
+
                   key: "helpAssist",
+
                   descKey: "helpAssistDesc",
+
                   action: () => navigate("caregiver"),
                 },
+
                 {
                   icon: Globe,
+
                   key: "helpLang",
+
                   descKey: "helpLangDesc",
+
                   action: () => navigate("language"),
                 },
+
                 {
                   icon: Phone,
+
                   key: "helpContact",
+
                   descKey: "helpContactDesc",
+
                   action: () => setActiveHelpModal("contact"),
                 },
+
                 {
                   icon: Info,
+
                   key: "helpHow",
+
                   descKey: "helpHowDesc",
+
                   action: () => setActiveHelpModal("how"),
                 },
+
                 {
                   icon: Wifi,
+
                   key: "helpOffline",
+
                   descKey: "helpOfflineDesc",
+
                   action: () => setActiveHelpModal("offline"),
                 },
               ].map((h) => {
@@ -8104,7 +8310,9 @@ function SwarSanketApp({
                   className="fixed inset-0"
                   onClick={() => {
                     stopSpeech()
+
                     setIsListeningAudio(false)
+
                     setActiveHelpModal(null)
                   }}
                 />
@@ -8153,7 +8361,9 @@ function SwarSanketApp({
                     <button
                       onClick={() => {
                         stopSpeech()
+
                         setIsListeningAudio(false)
+
                         setActiveHelpModal(null)
                       }}
                       className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
@@ -8191,18 +8401,23 @@ function SwarSanketApp({
                             onClick={() => {
                               if (isListeningAudio) {
                                 stopSpeech()
+
                                 setIsListeningAudio(false)
                               } else {
                                 setIsListeningAudio(true)
+
                                 const promptText =
                                   lang === "hi"
                                     ? "नमस्ते। इस आवाज़ जांच में, आप एक चित्र देखेंगे और 45 से 60 सेकंड तक अपनी सामान्य गति से बोलेंगे। शांत जगह पर बैठें और स्पष्ट बोलें।"
                                     : lang === "bn"
                                       ? "নমস্কার। এই স্ক্রিনিংয়ে আপনি একটি ছবি দেখবেন এবং স্বাভাবিক গতিতে ৪৫ থেকে ৬০ সেকেন্ড বলবেন।"
                                       : "Hello. In this voice check, you will view a picture and describe what you see in your own words. Please sit in a quiet room and speak naturally at your normal pace for 45 to 60 seconds."
+
                                 speakText(promptText, lang)
+
                                 setTimeout(
                                   () => setIsListeningAudio(false),
+
                                   8000,
                                 )
                               }
@@ -8226,6 +8441,7 @@ function SwarSanketApp({
                                 className="w-1 bg-cyan-300 rounded-full animate-pulse"
                                 style={{
                                   height: h,
+
                                   animationDelay: `${i * 100}ms`,
                                 }}
                               />
@@ -8257,8 +8473,11 @@ function SwarSanketApp({
                         label="Start Voice Check Now"
                         onClick={() => {
                           stopSpeech()
+
                           setIsListeningAudio(false)
+
                           setActiveHelpModal(null)
+
                           navigate("instruction")
                         }}
                       />
@@ -8303,6 +8522,7 @@ function SwarSanketApp({
                           <button
                             onClick={() => {
                               setActiveHelpModal(null)
+
                               navigate("teleconsult")
                             }}
                             className="w-full py-2 rounded-xl bg-[#02738a] hover:bg-[#015364] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
@@ -8313,6 +8533,7 @@ function SwarSanketApp({
                           <button
                             onClick={() => {
                               setActiveHelpModal(null)
+
                               navigate("referral")
                             }}
                             className="w-full py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
@@ -8339,22 +8560,33 @@ function SwarSanketApp({
                         {[
                           {
                             step: "1",
+
                             title: "Standardized Picture Description",
+
                             desc: "You look at an everyday visual scene and speak naturally for 45–60 seconds in your mother tongue.",
                           },
+
                           {
                             step: "2",
+
                             title: "Acoustic Biomarker Analysis",
+
                             desc: "The system analyzes pause frequency (>1.2s), speech velocity (WPM), and pitch perturbation without storing raw words.",
                           },
+
                           {
                             step: "3",
+
                             title: "Quantum-Hybrid QNN (8-Qubit VQC)",
+
                             desc: "Evaluates subtle non-linear speech timing patterns using PennyLane quantum neural circuits with 94%+ concordance.",
                           },
+
                           {
                             step: "4",
+
                             title: "Privacy First & Zero Cloud Retention",
+
                             desc: "Voice data is processed into mathematical vectors. Raw speech is never permanently retained or sold.",
                           },
                         ].map((item) => (
@@ -8381,6 +8613,7 @@ function SwarSanketApp({
                         label="Try Voice Check Now"
                         onClick={() => {
                           setActiveHelpModal(null)
+
                           navigate("instruction")
                         }}
                       />
@@ -8477,6 +8710,7 @@ function SwarSanketApp({
                         }
                         onClick={() => {
                           setActiveHelpModal(null)
+
                           navigate("instruction")
                         }}
                       />
@@ -8913,6 +9147,41 @@ function SwarSanketApp({
                 </p>
               </div>
 
+              {/* Switching people is NOT gated: handing the phone to a spouse
+                  is an everyday act, and a PIN prompt here would block the very
+                  thing the photo picker exists to make easy. */}
+              <button
+                onClick={onSwitchMember}
+                className="w-full rounded-2xl border-2 border-[#cbe6ed] bg-[#eefafc] px-4 py-3.5 text-sm font-bold text-[#01586a] transition-colors hover:bg-[#e0f4f8] active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ fontFamily: F.display }}
+              >
+                <Users className="h-4 w-4" />
+                Switch Person
+              </button>
+
+              {/* Resetting the family PIN is itself gated by the current PIN.
+                  A caregiver who has genuinely forgotten it can still clear it by
+                  signing out, which is the deliberate recovery route: a person,
+                  not a security question. */}
+              <button
+                onClick={() =>
+                  requireCaregiver("change the family PIN", () => {
+                    clearCaregiverPin()
+
+                    setSettingsToast(
+                      "Family PIN cleared. The next protected action will set a new one.",
+                    )
+
+                    setTimeout(() => setSettingsToast(null), 4000)
+                  })
+                }
+                className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 active:scale-[0.98] flex items-center justify-center gap-2"
+                style={{ fontFamily: F.display }}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Change Family PIN
+              </button>
+
               <button
                 onClick={onLogout}
                 className="w-full rounded-2xl border-2 border-rose-200 bg-rose-50 px-4 py-3.5 text-sm font-bold text-rose-700 transition-colors hover:bg-rose-100 active:scale-[0.98]"
@@ -9052,16 +9321,20 @@ function SwarSanketApp({
                       Cancel
                     </button>
                     <button
-                      onClick={async () => {
-                        await clearAllScreenings()
-
-                        setScreeningsList([])
-
+                      onClick={() => {
                         setShowClearConfirm(false)
 
-                        setSettingsToast("Local screening history cleared!")
+                        requireCaregiver("delete all saved screenings", () => {
+                          void (async () => {
+                            await clearAllScreenings()
 
-                        setTimeout(() => setSettingsToast(null), 3000)
+                            setScreeningsList([])
+
+                            setSettingsToast("Local screening history cleared!")
+
+                            setTimeout(() => setSettingsToast(null), 3000)
+                          })()
+                        })
                       }}
                       className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all"
                     >
@@ -9342,7 +9615,11 @@ function SwarSanketApp({
           </button>
 
           <button
-            onClick={() => navigate("doctorDash")}
+            onClick={() =>
+              requireCaregiver("open the clinician view", () =>
+                navigate("doctorDash"),
+              )
+            }
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
               screen === "doctorDash" || screen === "doctorPatient"
                 ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
@@ -9389,6 +9666,23 @@ function SwarSanketApp({
         >
           {renderScreen()}
         </div>
+
+        {/* Caregiver gate for destructive or outbound actions. Inside the phone
+            frame so it overlays the device, not the desktop chrome. */}
+        {pendingGatedAction && (
+          <CaregiverGate
+            action={pendingGatedAction.label}
+            onUnlocked={() => {
+              const action = pendingGatedAction
+
+              setPendingGatedAction(null)
+
+              action.run()
+            }}
+            onCancel={() => setPendingGatedAction(null)}
+            fontFamily={F.display}
+          />
+        )}
       </div>
 
       {/* APK & PWA Download Modal */}
@@ -9413,6 +9707,72 @@ export default function App() {
     () => readDemoUser()?.fullName || "Participant",
   )
 
+  // Household identity. The caregiver signs in once; after that the person being
+
+  // screened identifies themselves by tapping their photo, never by a credential.
+
+  const [members, setMembers] = useState<HouseholdMember[] | null>(null)
+
+  const [activeMember, setActiveMember] = useState<HouseholdMember | null>(null)
+
+  const [showAddMember, setShowAddMember] = useState(false)
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    let alive = true
+
+    listMembers()
+
+      .then((list) => {
+        if (!alive) return
+
+        setMembers(list)
+
+        const storedId = getActiveMemberId()
+
+        const stored = list.find((m) => m.id === storedId)
+
+        // One member means there is nothing to disambiguate, so the picker is
+
+        // skipped entirely - a single-user household never sees an identity step.
+
+        const auto = stored ?? (list.length === 1 ? list[0] : null)
+
+        if (auto) {
+          setActiveMember(auto)
+
+          setActiveMemberId(auto.id)
+        }
+      })
+
+      .catch(() => {
+        if (alive) setMembers([])
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [isAuthenticated])
+
+  const handleMemberSaved = (member: HouseholdMember) => {
+    setShowAddMember(false)
+
+    setMembers((prev) => (prev ? [...prev, member] : [member]))
+
+    if (member.isPatient) {
+      setActiveMember(member)
+
+      setActiveMemberId(member.id)
+    }
+  }
+
+  const handleSwitchMember = () => {
+    clearActiveMember()
+
+    setActiveMember(null)
+  }
+
   const handleLogout = () => {
     localStorage.removeItem("swarsanket-demo-session")
 
@@ -9421,6 +9781,10 @@ export default function App() {
     // else mid-screening.
 
     clearSession()
+
+    clearActiveMember()
+
+    setActiveMember(null)
 
     setIsAuthenticated(false)
   }
@@ -9439,9 +9803,63 @@ export default function App() {
     )
   }
 
+  // Caregiver is signed in but nobody has been enrolled yet: the caregiver adds
+
+  // the first person here, with the patient present but not asked to do anything.
+
+  if (members !== null && members.length === 0) {
+    return (
+      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
+        <MemberPicker
+          title="Who will be using this app?"
+          subtitle="Add the person who will take the voice check."
+          onSelect={() => undefined}
+          onAddMember={() => setShowAddMember(true)}
+          fontFamily={F.display}
+        />
+        {showAddMember && (
+          <AddMemberSheet
+            languages={LANGUAGES}
+            onSaved={handleMemberSaved}
+            onCancel={() => setShowAddMember(false)}
+            fontFamily={F.display}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // More than one person shares the device and we do not yet know which is here.
+
+  if (members !== null && members.length > 0 && !activeMember) {
+    return (
+      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
+        <MemberPicker
+          onSelect={(member) => {
+            setActiveMember(member)
+
+            setActiveMemberId(member.id)
+          }}
+          onAddMember={() => setShowAddMember(true)}
+          fontFamily={F.display}
+        />
+        {showAddMember && (
+          <AddMemberSheet
+            languages={LANGUAGES}
+            onSaved={handleMemberSaved}
+            onCancel={() => setShowAddMember(false)}
+            fontFamily={F.display}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <SwarSanketApp
-      authenticatedName={authenticatedName}
+      authenticatedName={activeMember?.displayName || authenticatedName}
+      activeMember={activeMember}
+      onSwitchMember={handleSwitchMember}
       onLogout={handleLogout}
     />
   )

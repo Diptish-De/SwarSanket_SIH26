@@ -37,13 +37,27 @@ export interface AcousticBiomarkers {
 
   pausePatternRatio: number // percentage
 
+  /** Standard deviation of F0 across voiced frames, in Hz. */
+
   pitchVariationHz: number
 
-  jitterPercent: number // vocal frequency perturbation
+  /** Mean fundamental frequency across voiced frames, in Hz. */
+
+  f0MeanHz?: number
+
+  jitterPercent: number // vocal frequency perturbation, RAP
 
   shimmerDb: number // vocal amplitude perturbation
 
   hnrDb: number // Harmonics-to-Noise Ratio
+
+  /**
+   * Whether the three perturbation measures above were actually measured.
+   * False means the recording held too little voiced speech, and they must be
+   * reported as unavailable rather than printed as numbers.
+   */
+
+  voiceQualityMeasured?: boolean
 }
 
 export interface MLInferenceResult {

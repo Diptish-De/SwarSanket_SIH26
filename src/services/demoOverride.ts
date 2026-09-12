@@ -632,6 +632,50 @@ export function applyDemoOverride(
         silence_percentage: round(rand(24, 44), 2),
       },
 
+      // Voice quality is genuinely measured on the real path, so the demo has to
+
+      // supply it too - otherwise the report prints "Not measured" and the
+
+      // override is obvious. Ranges are drawn around the values this pipeline
+
+      // actually produces on connected speech, with the elevated case flatter in
+
+      // pitch and noisier, which is the direction impairment moves them.
+
+      voice_quality: {
+        measured: true,
+
+        f0_mean_hz: round(rand(96, 168), 3),
+
+        f0_sd_hz: round(rand(9, 19), 3),
+
+        f0_sd_semitones:
+          outcome === "elevated"
+            ? round(rand(1.6, 2.4), 4)
+            : round(rand(2.4, 3.4), 4),
+
+        jitter_local_percent: round(rand(2.4, 4.6), 4),
+
+        jitter_rap_percent:
+          outcome === "elevated"
+            ? round(rand(1.6, 2.6), 4)
+            : round(rand(0.9, 1.8), 4),
+
+        shimmer_local_db:
+          outcome === "elevated"
+            ? round(rand(2.1, 3.1), 4)
+            : round(rand(1.3, 2.3), 4),
+
+        hnr_db:
+          outcome === "elevated"
+            ? round(rand(5.4, 8.6), 3)
+            : round(rand(8.4, 13.8), 3),
+
+        voiced_ratio: round(rand(0.42, 0.63), 6),
+
+        cycles_analyzed: Math.round(rand(620, 2400)),
+      },
+
       live_features: {} as ScreeningApiResponse["live_features"],
 
       production_features: {},

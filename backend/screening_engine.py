@@ -35,6 +35,7 @@ from model_loader import (
     run_monte_carlo_inference,
 )
 from audio_analyzer import decode_and_inspect_audio, analyze_silence_runs
+from voice_quality import analyze_voice_quality
 from language_calibration import calibrate_features, LANGUAGE_DEPENDENT_FEATURES
 from explainability import explain_single_prediction, SCIENTIFIC_FRAMING_DISCLAIMER
 
@@ -62,6 +63,7 @@ def get_whisper_model() -> WhisperModel:
 
 # Live-extractable features from audio + Faster-Whisper + spaCy
 LIVE_EXTRACTED_FEATURES = [
+    "CTP_F0 SD(st)",
     "CTP_DPI(ms)",
     "CTP_RST(-/s)",
     "CTP_Voiced Rate(1/s)",
@@ -468,6 +470,13 @@ def run_screening_pipeline(
         _rewind(audio_source)
         pause_stats = analyze_silence_runs(audio_source)
 
+        # Fundamental-frequency statistics and voice perturbation. CTP_F0 SD(st)
+        # was previously always the training median, so pitch variability - one of
+        # the 22 model inputs - contributed an identical constant for every
+        # speaker. It is measurable from the waveform and is now measured.
+        _rewind(audio_source)
+        voice_quality = analyze_voice_quality(audio_source)
+
         mean_pause_ms = pause_stats["mean_pause_ms"] or medians_dict.get("CTP_DPI(ms)", 401.99)
 
         # Hesitation Ratio is the proportion of the recording not occupied by phonation.
@@ -502,7 +511,14 @@ def run_screening_pipeline(
         num_unique_keywords = float(len(nlp_features["unique_keywords"]))
 
         live_features = {
-            "CTP_F0 SD(st)": medians_dict.get("CTP_F0 SD(st)", 5.554),
+            # Measured when the clip holds enough voiced speech; the training
+            # median otherwise. A clip with no voiced frames must not be scored
+            # as if its pitch variability were zero.
+            "CTP_F0 SD(st)": (
+                float(voice_quality["f0_sd_semitones"])
+                if voice_quality.get("measured")
+                else medians_dict.get("CTP_F0 SD(st)", 5.554)
+            ),
             "CTP_DPI(ms)": mean_pause_ms,
             "CTP_RST(-/s)": round(syllable_rate, 6),
             "CTP_EST": medians_dict.get("CTP_EST", 1.486),
@@ -589,13 +605,19 @@ def run_screening_pipeline(
         # Attributions are averaged over the same 30 Monte Carlo Dropout passes used
         # for inference, and anchored to the probability actually reported, so the
         # explanation describes the score the user is shown.
+        measured_this_run = [
+            f
+            for f in LIVE_EXTRACTED_FEATURES
+            if f != "CTP_F0 SD(st)" or voice_quality.get("measured")
+        ]
+
         df_for_explain = pd.DataFrame([live_features], columns=production_features)
         explanation = explain_single_prediction(
             df_for_explain,
             top_k=5,
             n_passes=inference_res["mc_passes"],
             reference_probability=prob,
-            measured_features=LIVE_EXTRACTED_FEATURES,
+            measured_features=measured_this_run,
         )
 
         # Feature dictionary for UI radar & reports
@@ -603,7 +625,7 @@ def run_screening_pipeline(
         for col in production_features:
             production_features_dict[col] = {
                 "value": round(float(live_features[col]), 6),
-                "is_live_extracted": col in LIVE_EXTRACTED_FEATURES,
+                "is_live_extracted": col in measured_this_run,
                 "attribution": explanation["shap_contributions"].get(col, 0.0),
             }
 
@@ -620,6 +642,10 @@ def run_screening_pipeline(
                 "peak_amplitude": audio_metrics.get("peak_amplitude", 0.0),
                 "silence_percentage": audio_metrics.get("silence_percentage", 0.0),
             },
+            # Measured voice quality. `measured: false` means the clip held too
+            # little voiced speech to estimate these; the UI must show them as
+            # unavailable rather than printing a zero as a reading.
+            "voice_quality": voice_quality,
             "sample_sufficient": True,
             "live_features": live_features,
             "raw_features": raw_features,
