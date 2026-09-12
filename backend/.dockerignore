@@ -1,0 +1,14 @@
+.venv
+venv
+ENV
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+test_audio
+uploads
+*.log
+.DS_Store
+.git
+.gitignore

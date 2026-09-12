@@ -5,6 +5,19 @@
 
 ---
 
+## 🚀 Live Demo
+
+👉 **[Open SwarSanket Web App](https://swarsanket.vercel.app)**
+
+### Backend
+
+The SwarSanket backend is deployed on Render and provides the voice-analysis API used by the web application.
+
+- Backend API: https://sih-26-swarsanket-backend.onrender.com
+- Health Check: https://sih-26-swarsanket-backend.onrender.com/api/health
+
+---
+
 ## ⚠️ Important Medical Disclaimer
 
 > **SCREENING SYSTEM ONLY — NOT A DIAGNOSTIC INSTRUMENT**  
