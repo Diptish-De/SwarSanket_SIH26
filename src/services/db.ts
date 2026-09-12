@@ -2,6 +2,8 @@ import { openDB, DBSchema, IDBPDatabase } from "idb"
 
 import { ScreeningSession, OfflineSyncItem } from "../types"
 
+import type { HouseholdMember } from "./household"
+
 interface SwarSanketDB extends DBSchema {
   screenings: {
     key: string
@@ -58,11 +60,23 @@ interface SwarSanketDB extends DBSchema {
 
     indexes: { "by-patient": string }
   }
+
+  household: {
+    key: string
+
+    value: HouseholdMember
+  }
 }
 
 const DB_NAME = "SwarSanket_DB"
 
-const DB_VERSION = 1
+// v2 adds the `household` store: members of the household who share this device,
+
+// so the patient can identify themselves by tapping their own photo instead of
+
+// recalling a credential.
+
+const DB_VERSION = 2
 
 let dbPromise: Promise<IDBPDatabase<SwarSanketDB>> | null = null
 
@@ -100,6 +114,14 @@ export function getDB(): Promise<IDBPDatabase<SwarSanketDB>> {
           })
 
           notesStore.createIndex("by-patient", "patientId")
+        }
+
+        // Added in v2. Guarded the same way as the others so an existing v1
+
+        // database upgrades in place without losing any stored screenings.
+
+        if (!db.objectStoreNames.contains("household")) {
+          db.createObjectStore("household", { keyPath: "id" })
         }
       },
     })
