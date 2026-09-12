@@ -123,6 +123,7 @@ import {
   APK_DOWNLOAD_URL,
   GITHUB_RELEASES_URL,
 } from "./components/ApkDownloadModal"
+import DemoAuth, { readDemoUser } from "./components/DemoAuth"
 
 import DemoAuth, { readDemoUser } from "./components/DemoAuth"
 
@@ -3786,51 +3787,12 @@ function DynamicWaveformBars({
 
 // ─── Main Application Component ───────────────────────────────────────────────
 
-function SwarSanketApp({
-  authenticatedName,
-
-  activeMember,
-
-  onSwitchMember,
-
-  onLogout,
-}: {
-  authenticatedName: string
-
-  activeMember: HouseholdMember | null
-
-  onSwitchMember: () => void
-
-  onLogout: () => void
-}) {
-  // Restored once, synchronously, so the very first render is already the right
-
-  // screen and the splash never flashes past on a reload.
-
-  // Caregiver gate. Only destructive or outbound actions pass through here;
-
-  // taking a screening is never gated.
-
-  const [pendingGatedAction, setPendingGatedAction] = useState<{
-    label: string
-
-    run: () => void
-  } | null>(null)
-
-  const requireCaregiver = (label: string, run: () => void) =>
-    setPendingGatedAction({ label, run })
+function SwarSanketApp({ authenticatedName, onLogout }: { authenticatedName: string; onLogout: () => void }) {
+  const [screen, setScreen] = useState<Screen>("splash")
 
   const restoredSession = useRef(loadSession()).current
 
-  const [screen, setScreen] = useState<Screen>(
-    restoredSession?.screen ?? "splash",
-  )
-
-  const [lang, setLang] = useState<LanguageCode>(restoredSession?.lang ?? "en")
-
-  const [userName, setUserName] = useState<string>(
-    restoredSession?.userName || authenticatedName || "Rama Devi",
-  )
+  const [userName, setUserName] = useState<string>(authenticatedName || "Rama Devi")
 
   const [userAge, setUserAge] = useState<number>(restoredSession?.userAge || 72)
 
@@ -8943,41 +8905,6 @@ function SwarSanketApp({
                 </p>
               </div>
 
-              {/* Switching people is NOT gated: handing the phone to a spouse
-                  is an everyday act, and a PIN prompt here would block the very
-                  thing the photo picker exists to make easy. */}
-              <button
-                onClick={onSwitchMember}
-                className="w-full rounded-2xl border-2 border-[#cbe6ed] bg-[#eefafc] px-4 py-3.5 text-sm font-bold text-[#01586a] transition-colors hover:bg-[#e0f4f8] active:scale-[0.98] flex items-center justify-center gap-2"
-                style={{ fontFamily: F.display }}
-              >
-                <Users className="h-4 w-4" />
-                Switch Person
-              </button>
-
-              {/* Resetting the family PIN is itself gated by the current PIN.
-                  A caregiver who has genuinely forgotten it can still clear it by
-                  signing out, which is the deliberate recovery route: a person,
-                  not a security question. */}
-              <button
-                onClick={() =>
-                  requireCaregiver("change the family PIN", () => {
-                    clearCaregiverPin()
-
-                    setSettingsToast(
-                      "Family PIN cleared. The next protected action will set a new one.",
-                    )
-
-                    setTimeout(() => setSettingsToast(null), 4000)
-                  })
-                }
-                className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 active:scale-[0.98] flex items-center justify-center gap-2"
-                style={{ fontFamily: F.display }}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Change Family PIN
-              </button>
-
               <button
                 onClick={onLogout}
                 className="w-full rounded-2xl border-2 border-rose-200 bg-rose-50 px-4 py-3.5 text-sm font-bold text-rose-700 transition-colors hover:bg-rose-100 active:scale-[0.98]"
@@ -9498,90 +9425,10 @@ export default function App() {
       return false
     }
   })
-
-  const [authenticatedName, setAuthenticatedName] = useState<string>(
-    () => readDemoUser()?.fullName || "Participant",
-  )
-
-  // Household identity. The caregiver signs in once; after that the person being
-
-  // screened identifies themselves by tapping their photo, never by a credential.
-
-  const [members, setMembers] = useState<HouseholdMember[] | null>(null)
-
-  const [activeMember, setActiveMember] = useState<HouseholdMember | null>(null)
-
-  const [showAddMember, setShowAddMember] = useState(false)
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-
-    let alive = true
-
-    listMembers()
-
-      .then((list) => {
-        if (!alive) return
-
-        setMembers(list)
-
-        const storedId = getActiveMemberId()
-
-        const stored = list.find((m) => m.id === storedId)
-
-        // One member means there is nothing to disambiguate, so the picker is
-
-        // skipped entirely - a single-user household never sees an identity step.
-
-        const auto = stored ?? (list.length === 1 ? list[0] : null)
-
-        if (auto) {
-          setActiveMember(auto)
-
-          setActiveMemberId(auto.id)
-        }
-      })
-
-      .catch(() => {
-        if (alive) setMembers([])
-      })
-
-    return () => {
-      alive = false
-    }
-  }, [isAuthenticated])
-
-  const handleMemberSaved = (member: HouseholdMember) => {
-    setShowAddMember(false)
-
-    setMembers((prev) => (prev ? [...prev, member] : [member]))
-
-    if (member.isPatient) {
-      setActiveMember(member)
-
-      setActiveMemberId(member.id)
-    }
-  }
-
-  const handleSwitchMember = () => {
-    clearActiveMember()
-
-    setActiveMember(null)
-  }
+  const [authenticatedName, setAuthenticatedName] = useState<string>(() => readDemoUser()?.fullName || "Participant")
 
   const handleLogout = () => {
     localStorage.removeItem("swarsanket-demo-session")
-
-    // Signing out should return to the start of the flow, not resume someone
-
-    // else mid-screening.
-
-    clearSession()
-
-    clearActiveMember()
-
-    setActiveMember(null)
-
     setIsAuthenticated(false)
   }
 
@@ -9589,74 +9436,12 @@ export default function App() {
     return (
       <DemoAuth
         onAuthenticated={(fullName) => {
-          setAuthenticatedName(
-            fullName || readDemoUser()?.fullName || "Participant",
-          )
-
+          setAuthenticatedName(fullName || readDemoUser()?.fullName || "Participant")
           setIsAuthenticated(true)
         }}
       />
     )
   }
 
-  // Caregiver is signed in but nobody has been enrolled yet: the caregiver adds
-
-  // the first person here, with the patient present but not asked to do anything.
-
-  if (members !== null && members.length === 0) {
-    return (
-      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
-        <MemberPicker
-          title="Who will be using this app?"
-          subtitle="Add the person who will take the voice check."
-          onSelect={() => undefined}
-          onAddMember={() => setShowAddMember(true)}
-          fontFamily={F.display}
-        />
-        {showAddMember && (
-          <AddMemberSheet
-            languages={LANGUAGES}
-            onSaved={handleMemberSaved}
-            onCancel={() => setShowAddMember(false)}
-            fontFamily={F.display}
-          />
-        )}
-      </div>
-    )
-  }
-
-  // More than one person shares the device and we do not yet know which is here.
-
-  if (members !== null && members.length > 0 && !activeMember) {
-    return (
-      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
-        <MemberPicker
-          onSelect={(member) => {
-            setActiveMember(member)
-
-            setActiveMemberId(member.id)
-          }}
-          onAddMember={() => setShowAddMember(true)}
-          fontFamily={F.display}
-        />
-        {showAddMember && (
-          <AddMemberSheet
-            languages={LANGUAGES}
-            onSaved={handleMemberSaved}
-            onCancel={() => setShowAddMember(false)}
-            fontFamily={F.display}
-          />
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <SwarSanketApp
-      authenticatedName={activeMember?.displayName || authenticatedName}
-      activeMember={activeMember}
-      onSwitchMember={handleSwitchMember}
-      onLogout={handleLogout}
-    />
-  )
+  return <SwarSanketApp authenticatedName={authenticatedName} onLogout={handleLogout} />
 }
