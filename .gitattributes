@@ -142,3 +142,13 @@ android/gradle/wrapper/gradle-wrapper.jar -filter -diff -merge
 *.stl                filter=lfs diff=lfs merge=lfs -text
 *.nc                 filter=lfs diff=lfs merge=lfs -text
 *.mat                filter=lfs diff=lfs merge=lfs -text
+
+# ---------------------------------------------------------------------------
+# Patch files
+# ---------------------------------------------------------------------------
+# Patches describe byte-exact context in the files they modify. With
+# core.autocrlf enabled git rewrites the patch's own line endings on checkout,
+# after which its context no longer matches the working tree and `git apply`
+# fails. Keeping them untranslated is what makes a committed patch reusable.
+*.patch              -text
+*.diff               -text
