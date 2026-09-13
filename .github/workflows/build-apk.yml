@@ -10,6 +10,18 @@ on:
 permissions:
   contents: write
 
+# One in-flight APK build per ref. A newer push supersedes an older one, so the
+# older build is cancelled rather than left to finish an artifact nobody wants.
+# This repository is private, which means every runner minute is billed against
+# the account's quota, and a run of six pushes to main would otherwise pay for
+# six builds to learn one answer.
+#
+# Tags are excluded from cancellation: a tag build publishes a release, so
+# losing it to a later push would drop the artifact that tag exists to produce.
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build-apk:
     name: Build & Release Android APK
