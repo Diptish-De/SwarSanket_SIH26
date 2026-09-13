@@ -1,6 +1,6 @@
 import React from "react"
 
-import { Home, Calendar, Activity, MessageSquare, User } from "lucide-react"
+import { Home, Activity, MessageSquare, User } from "lucide-react"
 
 import { AloisTab } from "./types"
 
@@ -13,8 +13,7 @@ interface AloisBottomNavProps {
 }
 
 /**
- * Alois Tab Bar Light — Figma node 1217:14344 / 848:32741.
- * 375 x 74pt, 5 equal columns with floating elevated active blue pill.
+ * Alois Tab Bar Light — 4 columns with floating elevated active blue pill.
  */
 
 export default function AloisBottomNav({
@@ -37,14 +36,6 @@ export default function AloisBottomNav({
       label: "Home",
 
       icon: <Home className="w-5 h-5" />,
-    },
-
-    {
-      id: "schedule",
-
-      label: "Schedule",
-
-      icon: <Calendar className="w-5 h-5" />,
     },
 
     {
@@ -78,14 +69,14 @@ export default function AloisBottomNav({
       className="sticky bottom-0 left-0 right-0 z-30 h-[74px] bg-[#F4F4F4] border-t border-[#E0E0E0] rounded-t-[24px] px-2 flex items-center justify-between shadow-[0_-4px_24px_rgba(0,0,0,0.06)] select-none"
     >
       {tabs.map((tab) => {
-        // Map sub-tabs like 'medications', 'appointments', 'doctorInfo' or 'dailyCare'
+        // Map sub-tabs like 'medications', 'appointments', 'doctorInfo' or 'dailyCare' to 'home'
         const isActive =
           activeTab === tab.id ||
-          (tab.id === "schedule" &&
-            (activeTab === "medications" ||
+          (tab.id === "home" &&
+            (activeTab === "dailyCare" ||
+              activeTab === "medications" ||
               activeTab === "appointments" ||
-              activeTab === "doctorInfo")) ||
-          (tab.id === "home" && activeTab === "dailyCare")
+              activeTab === "doctorInfo"))
 
         return (
           <button

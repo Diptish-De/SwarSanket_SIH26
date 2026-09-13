@@ -6,8 +6,6 @@ import { AloisTab } from "./types"
 
 import AloisHomeDashboard from "./AloisHomeDashboard"
 
-import AloisSchedule from "./AloisSchedule"
-
 import AloisAppointments from "./AloisAppointments"
 
 import AloisDoctorInfo from "./AloisDoctorInfo"
@@ -115,21 +113,6 @@ export default function AloisContainer({
             onOpenSafetyModal={() => setShowSafetyModal(true)}
             onOpenCognitiveModal={() => setShowCognitiveModal(true)}
             onViewReport={onViewReport}
-            fontFamily={fontFamily}
-          />
-        )}
-
-        {activeTab === "schedule" && (
-          <AloisSchedule
-            onBack={() => setActiveTab("home")}
-            onStartVoiceCheck={onStartVoiceCheck}
-            onOpenDoctorModal={() => setShowDoctorModal(true)}
-            onSelectDoctor={(id) => {
-              setSelectedDoctorId(id)
-              setActiveTab("doctorInfo")
-            }}
-            onOpenAppointments={() => setActiveTab("appointments")}
-            onOpenSettings={() => setActiveTab("profile")}
             fontFamily={fontFamily}
           />
         )}
