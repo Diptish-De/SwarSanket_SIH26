@@ -122,6 +122,13 @@ import { speakText, stopSpeech, isSpeaking } from "./services/tts"
 import { generateAndDownloadReport } from "./services/report"
 
 import {
+  getMyPatientProfile,
+  upsertMyPatientProfile,
+} from "./services/patientProfile"
+
+import { supabase } from "./services/supabase"
+
+import {
   ApkDownloadModal,
   APK_DOWNLOAD_URL,
   GITHUB_RELEASES_URL,
@@ -3800,6 +3807,10 @@ function DynamicWaveformBars({
 function SwarSanketApp({
   authenticatedName,
 
+  patientId,
+
+  patientProfile,
+
   activeMember,
 
   onSwitchMember,
@@ -3807,6 +3818,10 @@ function SwarSanketApp({
   onLogout,
 }: {
   authenticatedName: string
+
+  patientId: string
+
+  patientProfile: Partial<AloisAuthUser>
 
   activeMember: HouseholdMember | null
 
@@ -4333,6 +4348,30 @@ function SwarSanketApp({
         "voice_check.webm",
 
         240000,
+
+        patientId
+          ? {
+              patientId,
+
+              username: patientProfile.username,
+
+              fullName: patientProfile.fullName || userName,
+
+              age: Number.isFinite(Number(patientProfile.age))
+                ? Number(patientProfile.age)
+                : userAge,
+
+              gender: patientProfile.gender,
+
+              phone: patientProfile.phone,
+
+              caregiverName: patientProfile.caregiverName,
+
+              caregiverPhone: patientProfile.caregiverPhone,
+
+              caregiverEmail: patientProfile.caregiverEmail,
+            }
+          : undefined,
       )
 
       console.log("[SwarSanket] Analysis complete")
@@ -4463,6 +4502,8 @@ function SwarSanketApp({
 
       const newSession: ScreeningSession = {
         id: `sc_${Date.now()}`,
+
+        patientId,
 
         patientName: userName || "Participant",
 
@@ -4665,6 +4706,10 @@ function SwarSanketApp({
 
     isOffline,
 
+    patientId,
+
+    patientProfile,
+
     lang,
 
     userName,
@@ -4681,6 +4726,8 @@ function SwarSanketApp({
   const handleSaveCompletedSession = async (risk: ScreeningRisk) => {
     const newSession: ScreeningSession = {
       id: `sc_${Date.now()}`,
+
+      patientId,
 
       patientName: userName || "Rama Devi",
 
@@ -9506,36 +9553,117 @@ function SwarSanketApp({
   )
 }
 
+function createFallbackPatientId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID()
+  }
+
+  return `00000000-0000-4000-8000-${Date.now().toString().slice(-12).padStart(12, "0")}`
+}
+
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    try {
-      if (
-        typeof window !== "undefined" &&
-        (window.location.search.includes("login") ||
-          window.location.search.includes("auth") ||
-          window.location.hash === "#login")
-      ) {
-        return false
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+
+  const [authenticatedProfile, setAuthenticatedProfile] =
+    useState<Partial<AloisAuthUser>>(() => {
+      try {
+        const stored = localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+
+        const profile = stored
+          ? JSON.parse(stored) as Partial<AloisAuthUser>
+          : {}
+
+        return {
+          ...profile,
+          patientId: profile.patientId || createFallbackPatientId(),
+        }
+      } catch {
+        return { patientId: createFallbackPatientId() }
+      }
+    })
+
+  const [authenticatedName, setAuthenticatedName] = useState<string>(
+    authenticatedProfile.fullName || "Jerrold Harrington",
+  )
+
+  const [patientId, setPatientId] = useState<string>(
+    authenticatedProfile.patientId || "",
+  )
+
+  useEffect(() => {
+    if (!supabase) return
+
+    let alive = true
+
+    const hydrateAuthenticatedProfile = async (session: {
+      user: {
+        id: string
+        email?: string
+        user_metadata?: Record<string, unknown>
+      }
+    }) => {
+      try {
+        let profile = await getMyPatientProfile()
+
+        if (!profile) {
+          profile = await upsertMyPatientProfile({
+            username: String(session.user.user_metadata?.username || ""),
+            fullName: String(
+              session.user.user_metadata?.full_name ||
+                session.user.email ||
+                "Participant",
+            ),
+          })
+        }
+
+        if (!alive) return
+
+        const nextProfile: Partial<AloisAuthUser> = {
+          patientId: profile.id,
+          username: profile.username || "",
+          fullName: profile.full_name,
+          age: profile.age === null ? "" : String(profile.age),
+          gender: profile.gender || "",
+          phone: profile.phone || "",
+          caregiverName: profile.caregiver_name || "",
+          caregiverPhone: profile.caregiver_phone || "",
+          caregiverEmail: profile.caregiver_email || "",
+        }
+
+        setAuthenticatedProfile(nextProfile)
+        setAuthenticatedName(profile.full_name || "Participant")
+        setPatientId(profile.id)
+        setIsAuthenticated(true)
+      } catch {
+        if (alive) setIsAuthenticated(false)
+      }
+    }
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        setIsAuthenticated(false)
+        return
       }
 
-      return localStorage.getItem("alois-auth-session") === "active"
-    } catch {
-      return false
-    }
-  })
+      void hydrateAuthenticatedProfile(session)
+    })
 
-  const [authenticatedName, setAuthenticatedName] = useState<string>(() => {
-    try {
-      const stored = localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        setIsAuthenticated(false)
+        return
+      }
 
-      return stored
-        ? (JSON.parse(stored) as Partial<AloisAuthUser>).fullName ||
-            "Jerrold Harrington"
-        : "Jerrold Harrington"
-    } catch {
-      return "Jerrold Harrington"
+      void hydrateAuthenticatedProfile(session)
+    })
+
+    return () => {
+      alive = false
+      subscription.unsubscribe()
     }
-  })
+  }, [])
 
   // Household identity
 
@@ -9597,7 +9725,11 @@ export default function App() {
     setActiveMember(null)
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
+
     try {
       localStorage.removeItem("alois-auth-session")
     } catch {
@@ -9616,14 +9748,20 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <AloisAuthContainer
-        onAuthenticated={(fullName) => {
+        onAuthenticated={(user) => {
           try {
             localStorage.setItem("alois-auth-session", "active")
           } catch {
             // Ignore localStorage errors
           }
 
-          setAuthenticatedName(fullName || "Jerrold Harrington")
+          setAuthenticatedProfile(user)
+
+          setAuthenticatedName(
+            user.fullName || user.username || "Jerrold Harrington",
+          )
+
+          setPatientId(user.patientId)
 
           setIsAuthenticated(true)
         }}
@@ -9635,6 +9773,8 @@ export default function App() {
   return (
     <SwarSanketApp
       authenticatedName={activeMember?.displayName || authenticatedName}
+      patientId={patientId}
+      patientProfile={authenticatedProfile}
       activeMember={activeMember}
       onSwitchMember={handleSwitchMember}
       onLogout={handleLogout}

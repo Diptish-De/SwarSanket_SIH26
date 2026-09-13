@@ -2,7 +2,13 @@ import React, { useEffect, useState } from "react"
 
 import { Delete, Eye, EyeOff } from "lucide-react"
 
+import { upsertMyPatientProfile } from "../../../services/patientProfile"
+
+import { isSupabaseConfigured, supabase } from "../../../services/supabase"
+
 export interface AloisAuthUser {
+  patientId: string
+
   username: string
 
   fullName: string
@@ -31,7 +37,7 @@ export interface AloisAuthUser {
 }
 
 interface AloisAuthContainerProps {
-  onAuthenticated: (fullName: string, caregiverName?: string) => void
+  onAuthenticated: (user: AloisAuthUser) => void
 
   fontFamily?: string
 }
@@ -41,6 +47,25 @@ type AuthScreen = "you" | "caregiver" | "caregiverVerify" | "register"
 export const ALOIS_USER_STORAGE_KEY = "alois-user-profile"
 
 export const ALOIS_AUTH_SESSION_KEY = "alois-auth-session"
+
+function createPatientId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID()
+  }
+
+  return `00000000-0000-4000-8000-${Date.now().toString().slice(-12).padStart(12, "0")}`
+}
+
+function getStoredPatientId(): string {
+  try {
+    const stored = localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+    const user = stored ? JSON.parse(stored) as Partial<AloisAuthUser> : null
+
+    return user?.patientId || createPatientId()
+  } catch {
+    return createPatientId()
+  }
+}
 
 function AloisLogo() {
   return (
@@ -64,9 +89,9 @@ export default function AloisAuthContainer({
 }: AloisAuthContainerProps) {
   const [screen, setScreen] = useState<AuthScreen>("you")
 
-  const [username, setUsername] = useState("jerrold")
+  const [email, setEmail] = useState("")
 
-  const [password, setPassword] = useState("password123")
+  const [password, setPassword] = useState("")
 
   const [showPassword, setShowPassword] = useState(false)
 
@@ -78,10 +103,16 @@ export default function AloisAuthContainer({
 
   const [resendCountdown, setResendCountdown] = useState(56)
 
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  const [isBusy, setIsBusy] = useState(false)
+
   const [formData, setFormData] = useState<AloisAuthUser>({
+    patientId: getStoredPatientId(),
+
     username: "",
 
-    fullName: "Jerrold Harrington",
+    fullName: "",
 
     gender: "",
 
@@ -116,20 +147,123 @@ export default function AloisAuthContainer({
     return () => window.clearInterval(timer)
   }, [screen, resendCountdown])
 
-  const handleFinishLogin = (user = formData) => {
+  const completeAuthentication = (user: AloisAuthUser) => {
+    const authenticatedUser = {
+      ...user,
+
+      patientId: user.patientId || createPatientId(),
+    }
+
     try {
-      localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(user))
+      localStorage.setItem(
+        ALOIS_USER_STORAGE_KEY,
+
+        JSON.stringify(authenticatedUser),
+      )
 
       localStorage.setItem(ALOIS_AUTH_SESSION_KEY, "active")
     } catch {
       // Ignore storage errors and continue into the app.
     }
 
-    onAuthenticated(
-      user.fullName || user.username || "Jerrold Harrington",
+    onAuthenticated(authenticatedUser)
+  }
 
-      user.caregiverName || "Marcus Harrington",
-    )
+  const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value.trim())
+
+  const authenticateWithSupabase = async (
+    user: AloisAuthUser,
+    registration: boolean,
+  ): Promise<boolean> => {
+    if (!supabase || !isSupabaseConfigured()) {
+      setAuthError("Supabase authentication is not configured.")
+      return true
+    }
+
+    const normalizedEmail = registration
+      ? (user.email || formData.email || "").trim()
+      : email.trim()
+
+    if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+      setAuthError("Please enter a valid email address.")
+      return true
+    }
+
+    if (!password.trim()) {
+      setAuthError("Please enter your password.")
+      return true
+    }
+
+    setIsBusy(true)
+    setAuthError(null)
+
+    try {
+      const authResult = registration
+        ? await supabase.auth.signUp({
+            email: normalizedEmail,
+            password,
+            options: {
+              data: {
+                username: user.username || normalizedEmail,
+                full_name: user.fullName || user.username || normalizedEmail,
+              },
+            },
+          })
+        : await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          })
+
+      if (authResult.error) {
+        const message =
+          authResult.error.message.includes("Invalid login") ||
+          authResult.error.message.includes("invalid") ||
+          authResult.error.message.includes("password")
+            ? "Invalid email or password."
+            : authResult.error.message
+
+        throw new Error(message)
+      }
+
+      if (registration && !authResult.data.user) {
+        setAuthError("Unable to create your account right now. Please try again.")
+        return true
+      }
+
+      if (!registration && !authResult.data.session) {
+        setAuthError("Please confirm your email before signing in.")
+        return true
+      }
+
+      await upsertMyPatientProfile({
+        patientId: user.patientId,
+        username: user.username || normalizedEmail,
+        fullName: user.fullName || user.username || normalizedEmail,
+        age: Number.isFinite(Number(user.age)) ? Number(user.age) : undefined,
+        gender: user.gender,
+        phone: user.phone,
+        caregiverName: user.caregiverName,
+        caregiverPhone: user.caregiverPhone,
+        caregiverEmail: user.caregiverEmail,
+      })
+
+      completeAuthentication(user)
+      return true
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to authenticate with Supabase."
+
+      setAuthError(message === "AuthApiError" ? "Invalid email or password." : message)
+      return true
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  const handleFinishLogin = async (user = formData, registration = false) => {
+    await authenticateWithSupabase(user, registration)
   }
 
   const handleKeypadPress = (value: string) => {
@@ -188,6 +322,9 @@ export default function AloisAuthContainer({
                 <p className="text-[13px] text-[#525252] mt-0.5">
                   Choose who is signing in
                 </p>
+                {authError && (
+                  <p className="text-[12px] text-rose-600 mt-2">{authError}</p>
+                )}
               </div>
 
               <div className="flex border-b border-[#E0E0E0] mb-6">
@@ -220,12 +357,12 @@ export default function AloisAuthContainer({
               {screen === "you" && (
                 <div className="space-y-4">
                   <label className="text-[12px] font-medium text-[#525252] block">
-                    Username
+                    Email
                     <input
-                      type="text"
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      placeholder="Enter your username"
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="Enter your email"
                       className={`${inputClass} mt-1.5`}
                     />
                   </label>
@@ -259,7 +396,8 @@ export default function AloisAuthContainer({
 
                   <button
                     type="button"
-                    onClick={() => handleFinishLogin()}
+                    onClick={() => void handleFinishLogin()}
+                    disabled={isBusy}
                     className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
                   >
                     Login
@@ -309,7 +447,8 @@ export default function AloisAuthContainer({
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleFinishLogin()}
+                    onClick={() => void handleFinishLogin()}
+                    disabled={isBusy}
                     className="w-full py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
                   >
                     Verify
@@ -323,27 +462,16 @@ export default function AloisAuthContainer({
                   <div className="grid grid-cols-3 gap-1 pt-2">
                     {[
                       "1",
-
                       "2",
-
                       "3",
-
                       "4",
-
                       "5",
-
                       "6",
-
                       "7",
-
                       "8",
-
                       "9",
-
                       "",
-
                       "0",
-
                       "backspace",
                     ].map((key, index) =>
                       key ? (
@@ -395,9 +523,22 @@ export default function AloisAuthContainer({
                 <p className="text-[13px] text-[#525252] mt-0.5">
                   Create your account
                 </p>
+                {authError && (
+                  <p className="text-[12px] text-rose-600 mt-2">{authError}</p>
+                )}
               </div>
 
               <div className="space-y-3.5">
+                <label className="text-[12px] font-medium text-[#525252] block">
+                  Email
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(event) => updateForm("email", event.target.value)}
+                    placeholder="Enter your email"
+                    className={`${inputClass} mt-1.5`}
+                  />
+                </label>
                 <label className="text-[12px] font-medium text-[#525252] block">
                   Username
                   <input
@@ -492,12 +633,15 @@ export default function AloisAuthContainer({
                 <button
                   type="button"
                   onClick={() => {
-                    handleFinishLogin({
-                      ...formData,
-
-                      fullName: formData.username,
-                    })
+                    void handleFinishLogin(
+                      {
+                        ...formData,
+                        fullName: formData.username,
+                      },
+                      true,
+                    )
                   }}
+                  disabled={isBusy}
                   className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
                 >
                   Register
