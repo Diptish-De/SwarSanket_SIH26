@@ -1,21 +1,12 @@
 import React, { useState, useEffect } from "react"
 import {
-  ChevronLeft,
-  Fingerprint,
-  Check,
-  ShieldCheck,
-  Calendar,
-  Upload,
-  ArrowRight,
+  Calendar as CalendarIcon,
   Eye,
   EyeOff,
-  Sparkles,
-  Heart,
-  Globe,
-  Phone,
-  User,
-  CheckCircle2,
-  Lock,
+  Fingerprint,
+  Check,
+  ArrowLeft,
+  Delete,
 } from "lucide-react"
 
 export interface AloisAuthUser {
@@ -30,7 +21,6 @@ export interface AloisAuthUser {
   caregiverName: string
   caregiverEmail: string
   caregiverPhone: string
-  caregiverRelation: string
 }
 
 interface AloisAuthContainerProps {
@@ -38,163 +28,198 @@ interface AloisAuthContainerProps {
   fontFamily?: string
 }
 
-type AuthScreen = "login" | "register" | "setup1" | "setup2" | "setup3" | "setup4" | "success"
-
-type LoginTab = "credential" | "biometric" | "caregiver"
+type AuthScreen = "credential" | "biometric" | "caregiver" | "caregiverVerify" | "register" | "setup1" | "setup2" | "setup3" | "setup4" | "success"
 
 export const ALOIS_USER_STORAGE_KEY = "alois-user-profile"
 
+/**
+ * Concentric circular blue ring logo matching Figma node 96:732 / 1049:48629.
+ */
+function AloisLogo() {
+  return (
+    <div className="w-10 h-10 flex items-center justify-center mx-auto mb-3">
+      <svg
+        width="36"
+        height="36"
+        viewBox="0 0 36 36"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="18" cy="18" r="14" stroke="#0F62FE" strokeWidth="4.5" />
+        <circle cx="18" cy="18" r="5" fill="#0F62FE" />
+      </svg>
+    </div>
+  )
+}
+
+/**
+ * Alois Authentication & Account Setup Suite — exact pixel-matching replica of
+ * Figma node 1049:48629 / 96:732 / 206:2535 / 207:2205 / 222:13056 / 210:2277 /
+ * 289:12988 / 307:13054 / 307:14675 / 308:14734 / 222:13264.
+ */
 export default function AloisAuthContainer({
   onAuthenticated,
   fontFamily = "'Outfit', sans-serif",
 }: AloisAuthContainerProps) {
-  const [screen, setScreen] = useState<AuthScreen>("login")
-  const [loginTab, setLoginTab] = useState<LoginTab>("credential")
+  const [screen, setScreen] = useState<AuthScreen>("credential")
 
   // Login credentials
   const [username, setUsername] = useState("jerrold")
   const [password, setPassword] = useState("password123")
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(true)
+  const [rememberMe, setRememberMe] = useState(false)
 
-  // Registration & Account Setup State
+  // Registration
   const [regUsername, setRegUsername] = useState("")
   const [regPassword, setRegPassword] = useState("")
-  const [regAgreeTerms, setRegAgreeTerms] = useState(true)
+  const [showRegPassword, setShowRegPassword] = useState(false)
+  const [regAgreeTerms, setRegAgreeTerms] = useState(false)
 
-  // 4-Step Profile Form
+  // 4-Step Account Setup Form
   const [formData, setFormData] = useState<AloisAuthUser>({
     fullName: "Jerrold Harrington",
-    gender: "Male",
-    dob: "05/14/1954",
-    email: "jerrold.h@example.com",
-    phone: "+91 98301 23456",
-    city: "Kolkata, West Bengal",
-    diagnosis: "Early-stage Alzheimer's",
-    stage: "Stage 1 Mild Cognitive Impairment",
-    caregiverName: "Marcus Harrington",
-    caregiverEmail: "marcus.h@example.com",
-    caregiverPhone: "+91 98310 98765",
-    caregiverRelation: "Son",
+    gender: "Select your Gender",
+    dob: "",
+    email: "",
+    phone: "",
+    city: "",
+    diagnosis: "Select",
+    stage: "Select",
+    caregiverName: "",
+    caregiverEmail: "",
+    caregiverPhone: "",
   })
 
   // Caregiver OTP
-  const [otpDigits, setOtpDigits] = useState<string[]>(["7", "4", "2", "9"])
-  const [isOtpSent, setIsOtpSent] = useState(false)
-  const [resendTimer, setResendTimer] = useState(56)
+  const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", ""])
+  const [resendCountdown, setResendCountdown] = useState(56)
 
-  // Biometric scanning simulation
-  const [isScanningBiometric, setIsScanningBiometric] = useState(false)
-
-  // Resend timer countdown
   useEffect(() => {
     let timer: NodeJS.Timeout
-    if (isOtpSent && resendTimer > 0) {
-      timer = setInterval(() => setResendTimer((t) => t - 1), 1000)
+    if (screen === "caregiverVerify" && resendCountdown > 0) {
+      timer = setInterval(() => setResendCountdown((c) => c - 1), 1000)
     }
     return () => clearInterval(timer)
-  }, [isOtpSent, resendTimer])
+  }, [screen, resendCountdown])
 
-  const handleLogin = () => {
-    // Save to local storage
+  const handleFinishLogin = () => {
     localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(formData))
-    onAuthenticated(formData.fullName, formData.caregiverName)
+    onAuthenticated(
+      formData.fullName || "Jerrold Harrington",
+      formData.caregiverName || "Marcus Harrington",
+    )
   }
 
-  const handleSimulateBiometric = () => {
-    setIsScanningBiometric(true)
-    setTimeout(() => {
-      setIsScanningBiometric(false)
-      handleLogin()
-    }, 1200)
-  }
-
-  const handleCompleteSetup = () => {
-    localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(formData))
-    setScreen("success")
+  const handleKeypadPress = (val: string) => {
+    if (val === "backspace") {
+      for (let i = otpDigits.length - 1; i >= 0; i--) {
+        if (otpDigits[i] !== "") {
+          const next = [...otpDigits]
+          next[i] = ""
+          setOtpDigits(next)
+          break
+        }
+      }
+    } else {
+      const idx = otpDigits.findIndex((d) => d === "")
+      if (idx !== -1) {
+        const next = [...otpDigits]
+        next[idx] = val
+        setOtpDigits(next)
+      }
+    }
   }
 
   return (
     <div className="relative w-full h-full min-h-screen flex items-center justify-center bg-[#031e26] p-2 sm:p-4 select-none">
-      {/* Phone Frame Container */}
-      <div className="w-full max-w-[390px] h-[844px] bg-[#F4F4F4] rounded-[44px] shadow-2xl border-[6px] border-slate-800 flex flex-col overflow-hidden relative">
-        {/* iOS Notch / Island & Status bar */}
-        <div className="h-10 px-6 pt-3 flex items-center justify-between text-[#161616] text-[13px] font-semibold shrink-0 z-20">
+      {/* 375pt Phone Frame */}
+      <div className="w-full max-w-[375px] h-[812px] bg-white rounded-[44px] shadow-2xl border-[6px] border-slate-800 flex flex-col overflow-hidden relative text-[#161616]">
+        {/* iOS Status Bar (9:41) */}
+        <div className="h-11 px-6 pt-3 flex items-center justify-between text-[#161616] text-[14px] font-semibold shrink-0 z-20">
           <span>9:41</span>
-          <div className="w-24 h-4 bg-slate-900 rounded-full mx-auto" />
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px]">5G</span>
-            <div className="w-4 h-2.5 border border-[#161616] rounded-xs p-0.5 flex items-center">
+            <span className="text-[11px] font-bold">5G</span>
+            <div className="w-5 h-2.5 border border-[#161616] rounded-xs p-0.5 flex items-center">
               <div className="w-full h-full bg-[#161616] rounded-2xs" />
             </div>
           </div>
         </div>
 
-        {/* Top Alois Brand Icon */}
-        <div className="flex justify-center pt-2 pb-1 shrink-0">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#0F62FE] to-[#4589FF] text-white flex items-center justify-center shadow-md shadow-blue-500/25">
-            <Sparkles className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* ─── SCREEN 1: LOGIN (Figma node 96:732 / 206:2535 / 222:13056) ── */}
-        {screen === "login" && (
-          <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col justify-between">
+        {/* ─── SCREENS 1–4: LOGIN SCREENS (Credential / Biometric / Caregiver / Caregiver Verification) ── */}
+        {(screen === "credential" ||
+          screen === "biometric" ||
+          screen === "caregiver" ||
+          screen === "caregiverVerify") && (
+          <div className="flex-1 overflow-y-auto px-6 pt-3 pb-6 flex flex-col justify-between">
             <div>
-              <div className="text-center mt-1 mb-4">
-                <h2
+              <AloisLogo />
+
+              {/* Title & Subtitle */}
+              <div className="text-center mb-4">
+                <h1
                   style={{ fontFamily }}
-                  className="text-[22px] font-bold text-[#161616] tracking-tight"
+                  className="text-[20px] font-bold text-[#161616]"
                 >
                   Welcome Back!
-                </h2>
+                </h1>
                 <p className="text-[13px] text-[#525252] mt-0.5">
                   Choose your login method
                 </p>
               </div>
 
-              {/* 3 Auth Tabs (Credential | Biometric | Caregiver) */}
-              <div className="flex rounded-xl bg-slate-200/80 p-1 mb-5">
+              {/* Tab Navigation Row with Underline (Figma AuthTabs) */}
+              <div className="flex border-b border-[#E0E0E0] mb-6">
                 <button
                   type="button"
-                  onClick={() => setLoginTab("credential")}
-                  className={`flex-1 py-1.5 text-[12px] font-semibold rounded-lg transition-all ${
-                    loginTab === "credential"
-                      ? "bg-white text-[#161616] shadow-xs"
-                      : "text-[#525252] hover:text-[#161616]"
+                  onClick={() => setScreen("credential")}
+                  className={`flex-1 py-2 text-[14px] font-medium text-center transition-all relative ${
+                    screen === "credential"
+                      ? "text-[#161616] font-semibold"
+                      : "text-[#525252]"
                   }`}
                 >
                   Credential
+                  {screen === "credential" && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[2px] bg-[#161616]" />
+                  )}
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setLoginTab("biometric")}
-                  className={`flex-1 py-1.5 text-[12px] font-semibold rounded-lg transition-all ${
-                    loginTab === "biometric"
-                      ? "bg-white text-[#161616] shadow-xs"
-                      : "text-[#525252] hover:text-[#161616]"
+                  onClick={() => setScreen("biometric")}
+                  className={`flex-1 py-2 text-[14px] font-medium text-center transition-all relative ${
+                    screen === "biometric"
+                      ? "text-[#161616] font-semibold"
+                      : "text-[#525252]"
                   }`}
                 >
                   Biometric
+                  {screen === "biometric" && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[2px] bg-[#161616]" />
+                  )}
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setLoginTab("caregiver")}
-                  className={`flex-1 py-1.5 text-[12px] font-semibold rounded-lg transition-all ${
-                    loginTab === "caregiver"
-                      ? "bg-white text-[#161616] shadow-xs"
-                      : "text-[#525252] hover:text-[#161616]"
+                  onClick={() => setScreen("caregiver")}
+                  className={`flex-1 py-2 text-[14px] font-medium text-center transition-all relative ${
+                    screen === "caregiver" || screen === "caregiverVerify"
+                      ? "text-[#161616] font-semibold"
+                      : "text-[#525252]"
                   }`}
                 >
                   Caregiver
+                  {(screen === "caregiver" || screen === "caregiverVerify") && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[2px] bg-[#161616]" />
+                  )}
                 </button>
               </div>
 
-              {/* TAB A: Credential Mode */}
-              {loginTab === "credential" && (
-                <div className="space-y-3.5 animate-fade-in">
+              {/* ── 1. CREDENTIAL LOGIN (Figma node 96:732) ── */}
+              {screen === "credential" && (
+                <div className="space-y-4">
                   <div>
-                    <label className="text-[12px] font-medium text-[#525252] block mb-1">
+                    <label className="text-[12px] font-medium text-[#525252] block mb-1.5">
                       Username
                     </label>
                     <input
@@ -202,12 +227,12 @@ export default function AloisAuthContainer({
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="Enter your username"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] placeholder:text-[#6F6F6F] focus:outline-hidden focus:border-[#0F62FE]"
+                      className="w-full px-3.5 py-3 rounded-lg bg-[#F4F4F4] text-[14px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden focus:ring-1 focus:ring-[#0F62FE]"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[12px] font-medium text-[#525252] block mb-1">
+                    <label className="text-[12px] font-medium text-[#525252] block mb-1.5">
                       Password
                     </label>
                     <div className="relative">
@@ -216,12 +241,12 @@ export default function AloisAuthContainer({
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Enter your password"
-                        className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] placeholder:text-[#6F6F6F] focus:outline-hidden focus:border-[#0F62FE]"
+                        className="w-full pl-3.5 pr-10 py-3 rounded-lg bg-[#F4F4F4] text-[14px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden focus:ring-1 focus:ring-[#0F62FE]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#525252] hover:text-[#161616]"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#525252]"
                       >
                         {showPassword ? (
                           <EyeOff className="w-4 h-4" />
@@ -232,174 +257,202 @@ export default function AloisAuthContainer({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="rounded text-[#0F62FE] focus:ring-0"
-                      />
-                      <span className="text-[12px] text-[#525252]">
-                        Remember me
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      className="text-[12px] font-medium text-[#0F62FE] hover:underline"
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="rememberMe"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-[#0F62FE] focus:ring-0"
+                    />
+                    <label
+                      htmlFor="rememberMe"
+                      className="text-[12px] text-[#525252] cursor-pointer"
                     >
-                      Forgot password?
-                    </button>
+                      Remember me
+                    </label>
                   </div>
 
-                  <div className="pt-3">
+                  <div className="pt-2">
                     <button
                       type="button"
-                      onClick={handleLogin}
-                      className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-bold shadow-md shadow-blue-500/25 active:scale-98 transition-all"
+                      onClick={handleFinishLogin}
+                      className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
                     >
                       Login
                     </button>
                   </div>
-                </div>
-              )}
 
-              {/* TAB B: Biometric Mode (Figma node 206:2535) */}
-              {loginTab === "biometric" && (
-                <div className="space-y-4 py-2 flex flex-col items-center text-center animate-fade-in">
-                  <p className="text-[13px] text-[#525252]">
-                    Confirm fingerprint to continue
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={handleSimulateBiometric}
-                    className={`w-28 h-28 rounded-full bg-white border-2 flex items-center justify-center shadow-lg transition-all duration-300 relative ${
-                      isScanningBiometric
-                        ? "border-[#0F62FE] scale-105"
-                        : "border-[#E0E0E0] hover:border-[#0F62FE]"
-                    }`}
-                  >
-                    {isScanningBiometric && (
-                      <span className="absolute inset-0 rounded-full border-4 border-[#0F62FE] animate-ping opacity-30" />
-                    )}
-                    <Fingerprint
-                      className={`w-14 h-14 transition-colors ${
-                        isScanningBiometric
-                          ? "text-[#0F62FE]"
-                          : "text-[#525252]"
-                      }`}
-                    />
-                  </button>
-
-                  <div>
-                    <span
-                      style={{ fontFamily }}
-                      className="text-[14px] font-bold text-[#161616] block"
-                    >
-                      Touch Sensor Ready
-                    </span>
-                    <span className="text-[11px] text-[#6F6F6F]">
-                      {isScanningBiometric
-                        ? "Verifying biometrics..."
-                        : "Touch the sensor or tap to verify"}
-                    </span>
-                  </div>
-
-                  <div className="pt-2 w-full">
+                  <div className="text-center pt-1">
                     <button
                       type="button"
-                      onClick={() => setLoginTab("credential")}
-                      className="w-full py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[#525252] text-[13px] font-semibold hover:text-[#161616]"
+                      className="text-[12px] text-[#525252] hover:underline"
                     >
-                      Cancel
+                      Forgot my password
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* TAB C: Caregiver Access / Verification (Figma node 222:13056) */}
-              {loginTab === "caregiver" && (
-                <div className="space-y-4 animate-fade-in">
-                  {!isOtpSent ? (
-                    <div className="text-center py-2 space-y-3">
-                      <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#0F62FE] flex items-center justify-center mx-auto">
-                        <ShieldCheck className="w-7 h-7" />
-                      </div>
-                      <h4
-                        style={{ fontFamily }}
-                        className="text-[15px] font-bold text-[#161616]"
-                      >
-                        Authorized Caregiver Access
-                      </h4>
-                      <p className="text-[12px] text-[#525252] px-3 leading-relaxed">
-                        A one-time 4-digit code will be dispatched to your
-                        registered caregiver ({formData.caregiverName}).
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsOtpSent(true)}
-                        className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-bold shadow-md shadow-blue-500/25 transition-all"
-                      >
-                        Generate Unique Code
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <p className="text-[12px] text-[#525252]">
-                          Your unique code was sent to {formData.caregiverName}
-                        </p>
-                      </div>
+              {/* ── 2. BIOMETRIC LOGIN (Figma node 206:2535) ── */}
+              {screen === "biometric" && (
+                <div className="space-y-4 text-center pt-2">
+                  <p className="text-[13px] text-[#525252]">
+                    Confirm fingerprint to continue
+                  </p>
 
-                      {/* 4-digit OTP Boxes */}
-                      <div className="flex justify-center gap-3">
-                        {otpDigits.map((d, i) => (
-                          <input
-                            key={i}
-                            type="text"
-                            maxLength={1}
-                            value={d}
-                            onChange={(e) => {
-                              const newDigits = [...otpDigits]
-                              newDigits[i] = e.target.value.slice(-1)
-                              setOtpDigits(newDigits)
-                            }}
-                            className="w-12 h-14 rounded-xl bg-white border-2 border-[#0F62FE] text-[20px] font-bold text-center text-[#161616] shadow-xs focus:outline-hidden"
-                          />
-                        ))}
-                      </div>
+                  <div
+                    onClick={handleFinishLogin}
+                    className="w-32 h-32 rounded-2xl bg-white border border-[#E0E0E0] shadow-md flex items-center justify-center mx-auto my-4 cursor-pointer hover:border-[#0F62FE] transition-all"
+                  >
+                    <Fingerprint className="w-20 h-20 text-[#161616] stroke-[1.2]" />
+                  </div>
 
-                      <div className="text-center text-[12px] text-[#6F6F6F]">
-                        Resend code in:{" "}
-                        <span className="font-semibold text-[#0F62FE]">
-                          00:
-                          {resendTimer < 10 ? `0${resendTimer}` : resendTimer}
-                        </span>
-                      </div>
+                  <p className="text-[12px] text-[#525252]">Touch Sensor</p>
 
-                      <button
-                        type="button"
-                        onClick={handleLogin}
-                        className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-bold shadow-md shadow-blue-500/25 transition-all"
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setScreen("credential")}
+                      className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  <div className="pt-2 text-[12px] text-[#525252]">
+                    Touch id not working,{" "}
+                    <button
+                      type="button"
+                      onClick={() => setScreen("credential")}
+                      className="text-[#0F62FE] font-medium hover:underline"
+                    >
+                      Click here
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 3. CAREGIVER LOGIN (Figma node 207:2205) ── */}
+              {screen === "caregiver" && (
+                <div className="space-y-5 text-center pt-4">
+                  <p className="text-[14px] text-[#525252]">
+                    Generate your unique code
+                  </p>
+
+                  <div className="pt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpDigits(["7", "4", "2", "9"])
+                        setScreen("caregiverVerify")
+                      }}
+                      className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
+                    >
+                      Generate code
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 4. CAREGIVER VERIFICATION (Figma node 222:13056) ── */}
+              {screen === "caregiverVerify" && (
+                <div className="space-y-3 pt-1">
+                  <p className="text-[12px] text-[#525252] text-center">
+                    Your unique code send to your caregiver
+                  </p>
+
+                  {/* 4 OTP Boxes */}
+                  <div className="flex justify-center gap-3 py-1">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className={`w-12 h-14 rounded-xl border-2 flex items-center justify-center text-[22px] font-bold text-[#161616] ${
+                          otpDigits[i]
+                            ? "border-[#0F62FE] bg-blue-50/20"
+                            : "border-[#E0E0E0] bg-white"
+                        }`}
                       >
-                        Verify & Login
-                      </button>
-                    </div>
-                  )}
+                        {otpDigits[i]}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleFinishLogin}
+                    className="w-full py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
+                  >
+                    Verify
+                  </button>
+
+                  <div className="text-center text-[12px] text-[#525252]">
+                    Resend in,{" "}
+                    <span className="text-[#0F62FE] font-medium">
+                      00:
+                      {resendCountdown < 10
+                        ? `0${resendCountdown}`
+                        : resendCountdown}
+                    </span>
+                  </div>
+
+                  {/* iOS Numeric Keypad from Figma */}
+                  <div className="grid grid-cols-3 gap-1 pt-2">
+                    {[
+                      { num: "1", sub: "" },
+                      { num: "2", sub: "ABC" },
+                      { num: "3", sub: "DEF" },
+                      { num: "4", sub: "GHI" },
+                      { num: "5", sub: "JKL" },
+                      { num: "6", sub: "MNO" },
+                      { num: "7", sub: "PQRS" },
+                      { num: "8", sub: "TUV" },
+                      { num: "9", sub: "WXYZ" },
+                      { num: "", sub: "" },
+                      { num: "0", sub: "" },
+                      { num: "backspace", sub: "" },
+                    ].map((key, kIdx) => {
+                      if (!key.num) {
+                        return <div key={kIdx} className="h-11" />
+                      }
+                      return (
+                        <button
+                          key={kIdx}
+                          type="button"
+                          onClick={() => handleKeypadPress(key.num)}
+                          className="h-11 rounded-lg bg-[#F4F4F4] hover:bg-slate-200 active:bg-slate-300 flex flex-col items-center justify-center text-[#161616] transition-colors"
+                        >
+                          {key.num === "backspace" ? (
+                            <Delete className="w-5 h-5 text-[#525252]" />
+                          ) : (
+                            <>
+                              <span className="text-[17px] font-semibold leading-none">
+                                {key.num}
+                              </span>
+                              {key.sub && (
+                                <span className="text-[8px] font-semibold text-[#8D8D8D] leading-none mt-0.5">
+                                  {key.sub}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Footer: Link to Register */}
-            <div className="text-center py-4 border-t border-[#E0E0E0]">
+            {/* Bottom Register Link */}
+            <div className="text-center pt-3 border-t border-[#E0E0E0]">
               <span className="text-[12px] text-[#525252]">
-                Don't have an account?{" "}
+                I already have an account,{" "}
               </span>
               <button
                 type="button"
                 onClick={() => setScreen("register")}
-                className="text-[12px] font-bold text-[#0F62FE] hover:underline"
+                className="text-[12px] font-medium text-[#0F62FE] hover:underline"
               >
                 Register
               </button>
@@ -407,25 +460,27 @@ export default function AloisAuthContainer({
           </div>
         )}
 
-        {/* ─── SCREEN 2: REGISTRATION (Figma node 1049:48629) ─────────────── */}
+        {/* ─── SCREEN 5: REGISTRATION (Figma node 210:2277) ─────────────── */}
         {screen === "register" && (
-          <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="text-center mt-1">
-                <h2
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6 flex flex-col justify-between">
+            <div>
+              <AloisLogo />
+
+              <div className="text-center mb-5">
+                <h1
                   style={{ fontFamily }}
-                  className="text-[22px] font-bold text-[#161616] tracking-tight"
+                  className="text-[20px] font-bold text-[#161616]"
                 >
-                  Create Account
-                </h2>
+                  Register
+                </h1>
                 <p className="text-[13px] text-[#525252] mt-0.5">
-                  Begin your cognitive wellness journey
+                  Create your account
                 </p>
               </div>
 
-              <div className="space-y-3 pt-2">
+              <div className="space-y-4">
                 <div>
-                  <label className="text-[12px] font-medium text-[#525252] block mb-1">
+                  <label className="text-[12px] font-medium text-[#525252] block mb-1.5">
                     Username
                   </label>
                   <input
@@ -433,41 +488,61 @@ export default function AloisAuthContainer({
                     value={regUsername}
                     onChange={(e) => setRegUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] placeholder:text-[#6F6F6F] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3.5 py-3 rounded-lg bg-[#F4F4F4] text-[14px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden focus:ring-1 focus:ring-[#0F62FE]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[12px] font-medium text-[#525252] block mb-1">
+                  <label className="text-[12px] font-medium text-[#525252] block mb-1.5">
                     Password
                   </label>
-                  <input
-                    type="password"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Create a password"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] placeholder:text-[#6F6F6F] focus:outline-hidden focus:border-[#0F62FE]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showRegPassword ? "text" : "password"}
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full pl-3.5 pr-10 py-3 rounded-lg bg-[#F4F4F4] text-[14px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden focus:ring-1 focus:ring-[#0F62FE]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#525252]"
+                    >
+                      {showRegPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                <label className="flex items-start gap-2.5 cursor-pointer pt-1">
+                <div className="flex items-start gap-2 pt-1">
                   <input
                     type="checkbox"
+                    id="terms"
                     checked={regAgreeTerms}
                     onChange={(e) => setRegAgreeTerms(e.target.checked)}
-                    className="rounded text-[#0F62FE] mt-0.5"
+                    className="w-4 h-4 mt-0.5 rounded border-slate-300 text-[#0F62FE] focus:ring-0"
                   />
-                  <span className="text-[11px] text-[#525252] leading-snug">
-                    I agree to the Alzheimer's Association Terms of Care, Data
-                    Privacy and Clinical Screening Protocols.
-                  </span>
-                </label>
+                  <label
+                    htmlFor="terms"
+                    className="text-[11px] text-[#525252] leading-snug cursor-pointer"
+                  >
+                    Check here to indicate that you have agree to the terms of
+                    the{" "}
+                    <span className="text-[#0F62FE]">
+                      Alzheimer's Association
+                    </span>
+                  </label>
+                </div>
 
-                <div className="pt-3">
+                <div className="pt-2">
                   <button
                     type="button"
                     onClick={() => setScreen("setup1")}
-                    className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-bold shadow-md shadow-blue-500/25 active:scale-98 transition-all"
+                    className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
                   >
                     Register
                   </button>
@@ -475,14 +550,14 @@ export default function AloisAuthContainer({
               </div>
             </div>
 
-            <div className="text-center py-4 border-t border-[#E0E0E0]">
+            <div className="text-center pt-3 border-t border-[#E0E0E0]">
               <span className="text-[12px] text-[#525252]">
                 I already have an account,{" "}
               </span>
               <button
                 type="button"
-                onClick={() => setScreen("login")}
-                className="text-[12px] font-bold text-[#0F62FE] hover:underline"
+                onClick={() => setScreen("credential")}
+                className="text-[12px] font-medium text-[#0F62FE] hover:underline"
               >
                 Login
               </button>
@@ -490,39 +565,28 @@ export default function AloisAuthContainer({
           </div>
         )}
 
-        {/* ─── SCREEN 3: ACCOUNT SETUP STEP 1 (Personal Details) ───────────── */}
+        {/* ─── SCREEN 6: ACCOUNT SETUP STEP 1 (Figma node 289:12988) ──────── */}
         {screen === "setup1" && (
-          <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setScreen("register")}
-                  className="w-8 h-8 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616]"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-[11px] font-bold text-[#0F62FE] uppercase tracking-wider">
-                  Step 1 of 4
-                </span>
-              </div>
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6 flex flex-col justify-between">
+            <div>
+              <AloisLogo />
 
-              <div>
-                <h2
+              <div className="text-center mb-4">
+                <h1
                   style={{ fontFamily }}
-                  className="text-[20px] font-bold text-[#161616]"
+                  className="text-[18px] font-bold text-[#161616]"
                 >
                   Let's setup your account
-                </h2>
-                <p className="text-[12px] text-[#525252]">
-                  A few steps ahead to go.
+                </h1>
+                <p className="text-[12px] text-[#525252] mt-0.5">
+                  A few steps aheads to go.
                 </p>
-                <span className="inline-block px-2.5 py-0.5 rounded bg-blue-50 text-[#0F62FE] text-[11px] font-bold mt-2">
+                <p className="text-[12px] text-[#525252] mt-1">
                   Personal Details
-                </span>
+                </p>
               </div>
 
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3.5">
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
                     Full Name
@@ -534,7 +598,7 @@ export default function AloisAuthContainer({
                       setFormData({ ...formData, fullName: e.target.value })
                     }
                     placeholder="Enter your name"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                   />
                 </div>
 
@@ -547,8 +611,11 @@ export default function AloisAuthContainer({
                     onChange={(e) =>
                       setFormData({ ...formData, gender: e.target.value })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] focus:outline-hidden"
                   >
+                    <option value="Select your Gender">
+                      Select your Gender
+                    </option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
@@ -567,68 +634,60 @@ export default function AloisAuthContainer({
                         setFormData({ ...formData, dob: e.target.value })
                       }
                       placeholder="mm/dd/yyyy"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                      className="w-full pl-3.5 pr-10 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                     />
-                    <Calendar className="w-4 h-4 text-[#525252] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <CalendarIcon className="w-4 h-4 text-[#161616] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
               </div>
 
-              {/* Progress Track: 25% */}
-              <div className="w-full h-1.5 rounded-full bg-slate-200 mt-2 overflow-hidden">
-                <div className="h-full bg-[#0F62FE] w-1/4 rounded-full" />
+              {/* Next Button on Right (Figma layout) */}
+              <div className="flex justify-end pt-5">
+                <button
+                  type="button"
+                  onClick={() => setScreen("setup2")}
+                  className="px-6 py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold transition-colors"
+                >
+                  Next
+                </button>
               </div>
-
-              <p className="text-[11px] text-[#6F6F6F] text-center">
-                From the house of{" "}
-                <strong className="text-[#0F62FE]">
-                  Alzheimer's Association
-                </strong>
-              </p>
             </div>
 
-            <div className="py-4">
-              <button
-                type="button"
-                onClick={() => setScreen("setup2")}
-                className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-bold shadow-md shadow-blue-500/25 transition-all"
-              >
-                Next
-              </button>
+            {/* Bottom Progress Line (25%) & Attribution */}
+            <div>
+              <div className="w-full h-[2px] bg-slate-200 mb-3 overflow-hidden">
+                <div className="h-full bg-[#0F62FE] w-1/4" />
+              </div>
+              <p className="text-[11px] text-[#525252] text-center">
+                From the house of{" "}
+                <span className="text-[#0F62FE]">Alzheimer's Association</span>
+              </p>
             </div>
           </div>
         )}
 
-        {/* ─── SCREEN 4: ACCOUNT SETUP STEP 2 (Contact Details) ────────────── */}
+        {/* ─── SCREEN 7: ACCOUNT SETUP STEP 2 (Figma node 307:13054) ──────── */}
         {screen === "setup2" && (
-          <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setScreen("setup1")}
-                  className="w-8 h-8 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616]"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-[11px] font-bold text-[#0F62FE] uppercase tracking-wider">
-                  Step 2 of 4
-                </span>
-              </div>
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6 flex flex-col justify-between">
+            <div>
+              <AloisLogo />
 
-              <div>
-                <h2
+              <div className="text-center mb-4">
+                <h1
                   style={{ fontFamily }}
-                  className="text-[20px] font-bold text-[#161616]"
+                  className="text-[18px] font-bold text-[#161616]"
                 >
+                  Let's setup your account
+                </h1>
+                <p className="text-[12px] text-[#525252] mt-0.5">
+                  A few steps aheads to go.
+                </p>
+                <p className="text-[12px] text-[#525252] mt-1">
                   Contact Details
-                </h2>
-                <p className="text-[12px] text-[#525252]">
-                  How your care team can reach you.
                 </p>
               </div>
 
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3.5">
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
                     Email
@@ -640,13 +699,13 @@ export default function AloisAuthContainer({
                       setFormData({ ...formData, email: e.target.value })
                     }
                     placeholder="Enter your email"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                   />
                 </div>
 
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
-                    Phone Number
+                    Phone
                   </label>
                   <input
                     type="tel"
@@ -655,13 +714,13 @@ export default function AloisAuthContainer({
                       setFormData({ ...formData, phone: e.target.value })
                     }
                     placeholder="Enter your phone number"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                   />
                 </div>
 
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
-                    City / Location
+                    City/Location
                   </label>
                   <input
                     type="text"
@@ -669,60 +728,66 @@ export default function AloisAuthContainer({
                     onChange={(e) =>
                       setFormData({ ...formData, city: e.target.value })
                     }
-                    placeholder="e.g. Kolkata, West Bengal"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    placeholder="Enter your city name"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                   />
                 </div>
               </div>
 
-              {/* Progress Track: 50% */}
-              <div className="w-full h-1.5 rounded-full bg-slate-200 mt-2 overflow-hidden">
-                <div className="h-full bg-[#0F62FE] w-2/4 rounded-full" />
+              {/* Back Arrow & Next Button (Figma layout) */}
+              <div className="flex items-center justify-between pt-5">
+                <button
+                  type="button"
+                  onClick={() => setScreen("setup1")}
+                  className="text-[#161616] hover:text-[#0F62FE] p-1"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("setup3")}
+                  className="px-6 py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold transition-colors"
+                >
+                  Next
+                </button>
               </div>
             </div>
 
-            <div className="py-4">
-              <button
-                type="button"
-                onClick={() => setScreen("setup3")}
-                className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-bold shadow-md shadow-blue-500/25 transition-all"
-              >
-                Next
-              </button>
+            {/* Bottom Progress Line (50%) & Attribution */}
+            <div>
+              <div className="w-full h-[2px] bg-slate-200 mb-3 overflow-hidden">
+                <div className="h-full bg-[#0F62FE] w-2/4" />
+              </div>
+              <p className="text-[11px] text-[#525252] text-center">
+                From the house of{" "}
+                <span className="text-[#0F62FE]">Alzheimer's Association</span>
+              </p>
             </div>
           </div>
         )}
 
-        {/* ─── SCREEN 5: ACCOUNT SETUP STEP 3 (Medical History) ────────────── */}
+        {/* ─── SCREEN 8: ACCOUNT SETUP STEP 3 (Figma node 307:14675) ──────── */}
         {screen === "setup3" && (
-          <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setScreen("setup2")}
-                  className="w-8 h-8 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616]"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-[11px] font-bold text-[#0F62FE] uppercase tracking-wider">
-                  Step 3 of 4
-                </span>
-              </div>
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6 flex flex-col justify-between">
+            <div>
+              <AloisLogo />
 
-              <div>
-                <h2
+              <div className="text-center mb-4">
+                <h1
                   style={{ fontFamily }}
-                  className="text-[20px] font-bold text-[#161616]"
+                  className="text-[18px] font-bold text-[#161616]"
                 >
+                  Let's setup your account
+                </h1>
+                <p className="text-[12px] text-[#525252] mt-0.5">
+                  A few steps aheads to go.
+                </p>
+                <p className="text-[12px] text-[#525252] mt-1">
                   Medical History
-                </h2>
-                <p className="text-[12px] text-[#525252]">
-                  Helps calibrate AI screening biomarkers.
                 </p>
               </div>
 
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3">
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
                     Diagnosis
@@ -732,17 +797,18 @@ export default function AloisAuthContainer({
                     onChange={(e) =>
                       setFormData({ ...formData, diagnosis: e.target.value })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] focus:outline-hidden"
                   >
-                    <option value="Early-stage Alzheimer's">
-                      Early-stage Alzheimer's
+                    <option value="Select">Select</option>
+                    <option value="Alzheimer's Disease">
+                      Alzheimer's Disease
                     </option>
                     <option value="Mild Cognitive Impairment">
                       Mild Cognitive Impairment (MCI)
                     </option>
                     <option value="Vascular Dementia">Vascular Dementia</option>
-                    <option value="None / Healthy Screening">
-                      None / Baseline Voice Screening
+                    <option value="Healthy Senior / Baseline">
+                      Healthy Senior / Baseline
                     </option>
                   </select>
                 </div>
@@ -756,82 +822,93 @@ export default function AloisAuthContainer({
                     onChange={(e) =>
                       setFormData({ ...formData, stage: e.target.value })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] focus:outline-hidden"
                   >
-                    <option value="Stage 1 Mild Cognitive Impairment">
-                      Stage 1 Mild Cognitive Impairment
-                    </option>
-                    <option value="Stage 2 Moderate Memory Decline">
-                      Stage 2 Moderate Memory Decline
-                    </option>
-                    <option value="Stage 3 Advanced Care Needed">
-                      Stage 3 Advanced Care Needed
-                    </option>
+                    <option value="Select">Select</option>
+                    <option value="Early Stage">Early Stage</option>
+                    <option value="Moderate Stage">Moderate Stage</option>
+                    <option value="Advanced Stage">Advanced Stage</option>
                   </select>
                 </div>
 
-                <div className="p-3.5 rounded-xl border border-dashed border-[#0F62FE] bg-blue-50/40 text-center">
-                  <Upload className="w-5 h-5 text-[#0F62FE] mx-auto mb-1" />
-                  <span className="text-[12px] font-semibold text-[#0F62FE] block">
-                    Upload Medical Reports (Optional)
-                  </span>
-                  <span className="text-[10px] text-[#525252]">
-                    Max file size 5MB. Supports .pdf and .jpg
-                  </span>
+                {/* Medical Reports Uploader from Figma */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-[12px] font-medium text-[#525252] block">
+                    Medical Reports{" "}
+                    <span className="text-[#8D8D8D] font-normal">
+                      (Optional)
+                    </span>
+                  </label>
+                  <p className="text-[11px] text-[#8D8D8D] leading-snug">
+                    Max file size is 500kb. Supported file types are .jpg and
+                    .pdf.
+                  </p>
+                  <button
+                    type="button"
+                    className="px-5 py-2 rounded-lg border border-[#0F62FE] text-[#0F62FE] text-[12px] font-semibold hover:bg-blue-50/50 mt-1 transition-colors"
+                  >
+                    Upload
+                  </button>
                 </div>
               </div>
 
-              {/* Progress Track: 75% */}
-              <div className="w-full h-1.5 rounded-full bg-slate-200 mt-2 overflow-hidden">
-                <div className="h-full bg-[#0F62FE] w-3/4 rounded-full" />
+              {/* Back Arrow & Next Button (Figma layout) */}
+              <div className="flex items-center justify-between pt-4">
+                <button
+                  type="button"
+                  onClick={() => setScreen("setup2")}
+                  className="text-[#161616] hover:text-[#0F62FE] p-1"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("setup4")}
+                  className="px-6 py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold transition-colors"
+                >
+                  Next
+                </button>
               </div>
             </div>
 
-            <div className="py-4">
-              <button
-                type="button"
-                onClick={() => setScreen("setup4")}
-                className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-bold shadow-md shadow-blue-500/25 transition-all"
-              >
-                Next
-              </button>
+            {/* Bottom Progress Line (75%) & Attribution */}
+            <div>
+              <div className="w-full h-[2px] bg-slate-200 mb-3 overflow-hidden">
+                <div className="h-full bg-[#0F62FE] w-3/4" />
+              </div>
+              <p className="text-[11px] text-[#525252] text-center">
+                From the house of{" "}
+                <span className="text-[#0F62FE]">Alzheimer's Association</span>
+              </p>
             </div>
           </div>
         )}
 
-        {/* ─── SCREEN 6: ACCOUNT SETUP STEP 4 (Caregiver Info) ────────────── */}
+        {/* ─── SCREEN 9: ACCOUNT SETUP STEP 4 (Figma node 308:14734) ──────── */}
         {screen === "setup4" && (
-          <div className="flex-1 overflow-y-auto px-6 py-2 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setScreen("setup3")}
-                  className="w-8 h-8 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616]"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-[11px] font-bold text-[#0F62FE] uppercase tracking-wider">
-                  Step 4 of 4
-                </span>
-              </div>
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6 flex flex-col justify-between">
+            <div>
+              <AloisLogo />
 
-              <div>
-                <h2
+              <div className="text-center mb-4">
+                <h1
                   style={{ fontFamily }}
-                  className="text-[20px] font-bold text-[#161616]"
+                  className="text-[18px] font-bold text-[#161616]"
                 >
-                  Primary Caregiver
-                </h2>
-                <p className="text-[12px] text-[#525252]">
-                  Emergency contact and supervised care manager.
+                  Let's setup your account
+                </h1>
+                <p className="text-[12px] text-[#525252] mt-0.5">
+                  A few steps aheads to go.
+                </p>
+                <p className="text-[12px] text-[#525252] mt-1">
+                  Primary Caregiver Information
                 </p>
               </div>
 
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3.5">
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
-                    Caregiver Name
+                    Primary caregiver name
                   </label>
                   <input
                     type="text"
@@ -843,13 +920,13 @@ export default function AloisAuthContainer({
                       })
                     }
                     placeholder="Enter caregiver name"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                   />
                 </div>
 
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
-                    Caregiver Email
+                    Email
                   </label>
                   <input
                     type="email"
@@ -861,13 +938,13 @@ export default function AloisAuthContainer({
                       })
                     }
                     placeholder="Enter email here"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                   />
                 </div>
 
                 <div>
                   <label className="text-[12px] font-medium text-[#525252] block mb-1">
-                    Caregiver Phone
+                    Phone
                   </label>
                   <input
                     type="tel"
@@ -878,87 +955,113 @@ export default function AloisAuthContainer({
                         caregiverPhone: e.target.value,
                       })
                     }
-                    placeholder="Enter phone number"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0E0E0] text-[13px] text-[#161616] focus:outline-hidden focus:border-[#0F62FE]"
+                    placeholder="Enter phone number here"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#F4F4F4] text-[13px] text-[#161616] placeholder:text-[#8D8D8D] focus:outline-hidden"
                   />
                 </div>
               </div>
 
-              {/* Progress Track: 100% */}
-              <div className="w-full h-1.5 rounded-full bg-slate-200 mt-2 overflow-hidden">
-                <div className="h-full bg-[#198038] w-full rounded-full" />
+              {/* Back Arrow & Next Button (Figma layout) */}
+              <div className="flex items-center justify-between pt-5">
+                <button
+                  type="button"
+                  onClick={() => setScreen("setup3")}
+                  className="text-[#161616] hover:text-[#0F62FE] p-1"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("success")}
+                  className="px-6 py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold transition-colors"
+                >
+                  Next
+                </button>
               </div>
             </div>
 
-            <div className="py-4">
-              <button
-                type="button"
-                onClick={handleCompleteSetup}
-                className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-bold shadow-md shadow-blue-500/25 transition-all"
-              >
-                Complete Setup
-              </button>
+            {/* Bottom Progress Line (100%) & Attribution */}
+            <div>
+              <div className="w-full h-[2px] bg-slate-200 mb-3 overflow-hidden">
+                <div className="h-full bg-[#0F62FE] w-full" />
+              </div>
+              <p className="text-[11px] text-[#525252] text-center">
+                From the house of{" "}
+                <span className="text-[#0F62FE]">Alzheimer's Association</span>
+              </p>
             </div>
           </div>
         )}
 
-        {/* ─── SCREEN 7: SUCCESSFUL MSG (Figma node 222:13264) ───────────── */}
+        {/* ─── SCREEN 10: SUCCESSFUL MSG (Figma node 222:13264) ─────────── */}
         {screen === "success" && (
-          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col items-center justify-between text-center animate-fade-in">
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6 flex flex-col items-center justify-between text-center">
             <div className="w-full">
-              <h2
+              <AloisLogo />
+
+              <h1
                 style={{ fontFamily }}
-                className="text-[22px] font-bold text-[#161616] tracking-tight mt-2"
+                className="text-[20px] font-bold text-[#525252] mb-3"
               >
                 Good to go!
-              </h2>
+              </h1>
 
-              {/* Happy Earth Illustration */}
-              <div className="my-8 relative w-48 h-48 mx-auto flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-ping" />
-                <div className="w-40 h-40 rounded-full bg-gradient-to-tr from-emerald-500 via-teal-500 to-sky-400 p-1 flex items-center justify-center shadow-xl shadow-emerald-500/20">
-                  <div className="w-full h-full rounded-full bg-white flex flex-col items-center justify-center p-3">
-                    <Globe className="w-16 h-16 text-emerald-500" />
-                    <div className="flex items-center gap-1 mt-1 text-rose-500 animate-bounce">
-                      <Heart className="w-4 h-4 fill-rose-500" />
-                    </div>
+              {/* Happy Earth Illustration with Flowers, Butterfly, Heart Bubble */}
+              <div className="my-5 relative w-48 h-48 mx-auto flex items-center justify-center">
+                {/* Floating moon and clouds */}
+                <div className="absolute top-2 left-6 w-5 h-5 rounded-full bg-slate-200/80" />
+                {/* Earth Sphere */}
+                <div className="w-36 h-36 rounded-full bg-gradient-to-tr from-sky-400 via-blue-400 to-indigo-500 shadow-xl flex items-center justify-center relative">
+                  {/* Closed happy eye lines */}
+                  <div className="text-white text-lg font-bold">^ ◡ ^</div>
+                  {/* Floral & leaf wreath */}
+                  <span className="absolute -top-2 -left-2 text-xl">🌸</span>
+                  <span className="absolute -top-1 -right-1 text-xl">🌿</span>
+                  <span className="absolute -bottom-2 -left-1 text-xl">🌺</span>
+                  <span className="absolute -bottom-1 -right-2 text-xl">
+                    🌼
+                  </span>
+                  {/* Floating heart bubble */}
+                  <div className="absolute -top-3 right-3 w-7 h-7 rounded-full bg-sky-200 text-rose-500 flex items-center justify-center shadow-xs">
+                    ♥
                   </div>
                 </div>
               </div>
 
-              <h3
+              <h2
                 style={{ fontFamily }}
-                className="text-[18px] font-bold text-[#161616]"
+                className="text-[16px] font-bold text-[#161616]"
               >
                 All done!
-              </h3>
-              <p className="text-[13px] text-[#525252] mt-1 px-4 leading-relaxed">
-                Let's start our wonderful journey with alOis memory aid and
-                SwarSanket voice screening.
+              </h2>
+              <p className="text-[13px] text-[#525252] mt-1 leading-snug">
+                Let's start our wonderful journey with alOis.
               </p>
             </div>
 
             <div className="w-full space-y-4">
-              {/* Green Progress Checkmark */}
-              <div className="flex items-center justify-center gap-2 text-[#198038] text-[12px] font-bold">
-                <CheckCircle2 className="w-4 h-4 fill-[#198038] text-white" />
-                <span>Account Activated</span>
-              </div>
-
               <button
                 type="button"
-                onClick={handleLogin}
-                className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-bold shadow-md shadow-blue-500/25 active:scale-98 transition-all"
+                onClick={handleFinishLogin}
+                className="w-full py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
               >
-                Continue to Dashboard
+                Continue
               </button>
+
+              {/* Green Checkmark & Progress Bar from Figma */}
+              <div className="flex items-center gap-2 pt-1">
+                <div className="w-4 h-4 rounded-full bg-[#198038] text-white flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                </div>
+                <div className="flex-1 h-[3px] bg-[#198038] rounded-full" />
+              </div>
             </div>
           </div>
         )}
 
-        {/* iOS Home Indicator Bar */}
+        {/* iOS Home Indicator */}
         <div className="h-6 flex items-center justify-center shrink-0">
-          <div className="w-32 h-1 bg-slate-400/60 rounded-full" />
+          <div className="w-32 h-1 bg-black rounded-full" />
         </div>
       </div>
     </div>

@@ -9573,58 +9573,6 @@ export default function App() {
     )
   }
 
-  // Caregiver is signed in but nobody has been enrolled yet: the caregiver adds
-
-  // the first person here, with the patient present but not asked to do anything.
-
-  if (members !== null && members.length === 0) {
-    return (
-      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
-        <MemberPicker
-          title="Who will be using this app?"
-          subtitle="Add the person who will take the voice check."
-          onSelect={() => undefined}
-          onAddMember={() => setShowAddMember(true)}
-          fontFamily={F.display}
-        />
-        {showAddMember && (
-          <AddMemberSheet
-            languages={LANGUAGES}
-            onSaved={handleMemberSaved}
-            onCancel={() => setShowAddMember(false)}
-            fontFamily={F.display}
-          />
-        )}
-      </div>
-    )
-  }
-
-  // More than one person shares the device and we do not yet know which is here.
-
-  if (members !== null && members.length > 0 && !activeMember) {
-    return (
-      <div className="relative w-full h-full min-h-screen flex flex-col bg-[#f3f9fb]">
-        <MemberPicker
-          onSelect={(member) => {
-            setActiveMember(member)
-
-            setActiveMemberId(member.id)
-          }}
-          onAddMember={() => setShowAddMember(true)}
-          fontFamily={F.display}
-        />
-        {showAddMember && (
-          <AddMemberSheet
-            languages={LANGUAGES}
-            onSaved={handleMemberSaved}
-            onCancel={() => setShowAddMember(false)}
-            fontFamily={F.display}
-          />
-        )}
-      </div>
-    )
-  }
-
   return (
     <SwarSanketApp
       authenticatedName={activeMember?.displayName || authenticatedName}
