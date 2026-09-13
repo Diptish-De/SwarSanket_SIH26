@@ -97,6 +97,8 @@ import {
 } from "./services/db"
 
 import {
+  getLastAudioRecordingResult,
+  MIN_RECORDING_SECONDS,
   VoiceRecorder,
   AudioRecordingResult,
   getLastRecordedAudioBlob,
@@ -351,6 +353,9 @@ const TX: Record<string, Record<string, string>> = {
     startSpeaking: "Start Speaking",
 
     tapToSpeak: "Tap to speak",
+
+    tapMicrophone:
+      "Tap the microphone when you are ready. Aim for about 45 to 60 seconds.",
 
     speakNaturally: "Speak naturally…",
 
@@ -4269,6 +4274,32 @@ function SwarSanketApp({
       return
     }
 
+    // Same floor the backend enforces. Refusing here costs nothing; refusing
+    // after upload costs the person a multi-minute wait for the same answer.
+    const recordedSeconds =
+      getLastAudioRecordingResult()?.durationSeconds ?? recordingSecs
+
+    if (recordedSeconds > 0 && recordedSeconds < MIN_RECORDING_SECONDS) {
+      setScreeningApiResult({
+        success: false,
+        sample_sufficient: false,
+        sample_requirements: {
+          // Word count is only known after transcription; null keeps the
+          // screen from printing a fabricated zero.
+          words_recorded: null,
+          words_required: 40,
+          seconds_recorded: Math.round(recordedSeconds),
+          seconds_required: MIN_RECORDING_SECONDS,
+        },
+      } as unknown as ScreeningApiResponse)
+
+      setIsAnalyzing(false)
+
+      navigate("needMoreSpeech")
+
+      return
+    }
+
     if (isOffline) {
       console.log(
         "[SwarSanket] Offline mode active, queuing recording for later sync.",
@@ -4300,6 +4331,8 @@ function SwarSanketApp({
         audioBlob,
 
         "voice_check.webm",
+
+        240000,
       )
 
       console.log("[SwarSanket] Analysis complete")
@@ -5407,11 +5440,22 @@ function SwarSanketApp({
                       </span>
                     </div>
                     <p
-                      className="text-4xl font-bold text-[#0c1e27] tracking-wider"
+                      className={`text-4xl font-bold tracking-wider transition-colors ${
+                        recordingSecs >= MIN_RECORDING_SECONDS
+                          ? "text-emerald-700"
+                          : "text-[#0c1e27]"
+                      }`}
                       style={{ fontFamily: F.display }}
                     >
                       {String(Math.floor(recordingSecs / 60)).padStart(2, "0")}:
                       {String(recordingSecs % 60).padStart(2, "0")}
+                    </p>
+                    {/* Numeric floor: language-neutral, so no unverified
+                        translations are needed for it to be understood. */}
+                    <p className="text-xs text-[#5e7380] tabular-nums">
+                      {recordingSecs >= MIN_RECORDING_SECONDS
+                        ? "\u2713 00:30"
+                        : `\u2192 00:${String(MIN_RECORDING_SECONDS).padStart(2, "0")}`}
                     </p>
                     <p className="text-xs text-[#5e7380]">
                       {t(lang, "speakNaturally")}
@@ -9135,14 +9179,15 @@ function SwarSanketApp({
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-slate-500">Words recorded</span>
                     <span className="font-bold text-slate-900">
-                      {req.words_recorded} of {req.words_required} needed
+                      {req.words_recorded ?? "\u2013"} of {req.words_required}{" "}
+                      needed
                     </span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-[#02738a]"
                       style={{
-                        width: `${Math.min(100, (req.words_recorded / req.words_required) * 100)}%`,
+                        width: `${Math.min(100, ((req.words_recorded ?? 0) / req.words_required) * 100)}%`,
                       }}
                     />
                   </div>

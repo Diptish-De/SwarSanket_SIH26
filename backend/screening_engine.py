@@ -130,8 +130,8 @@ IU_TO_KEYWORD_RATIO = 0.6725
 # Word count is the primary gate: it is what governs the stability of the ratio
 # features. The duration floor is secondary and exists so the pause statistics have
 # enough signal to estimate from.
-MIN_WORDS_FOR_SCORING = 50
-MIN_SPEECH_SECONDS_FOR_SCORING = 20.0
+MIN_WORDS_FOR_SCORING = 40
+MIN_SPEECH_SECONDS_FOR_SCORING = 30.0
 
 # Features are clamped to this many standard deviations around the training mean.
 # Beyond that range the model is extrapolating outside its support, where the

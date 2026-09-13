@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   ChevronLeft,
   Bell,
@@ -16,49 +17,80 @@ import {
 
 interface AloisAppointmentsProps {
   onBack: () => void
+
   onSelectDoctor: (doctorId: string) => void
+
   onOpenSettings: () => void
+
   onStartVoiceCheck?: () => void
+
   onOpenDoctorModal?: () => void
+
   fontFamily?: string
 }
 
 interface Doctor {
   id: string
+
   name: string
+
   specialty: string
+
   rating: number
+
   reviewsCount: string
+
   avatarUrl: string
+
   fallbackInitials: string
 }
 
 const DOCTORS: Doctor[] = [
   {
     id: "andrew-lucas",
+
     name: "Dr. Andrew Lucas",
+
     specialty: "Neurologist",
+
     rating: 5,
+
     reviewsCount: "(122) Reviews",
+
     avatarUrl: "/doctors/doctor-andrew-lucas.jpg",
+
     fallbackInitials: "AL",
   },
+
   {
     id: "kalvin-mathew",
+
     name: "Dr. Kalvin Mathew",
+
     specialty: "Neurologist",
+
     rating: 5,
+
     reviewsCount: "(122) Reviews",
+
     avatarUrl: "/doctors/doctor-kalvin-portrait.jpg",
+
     fallbackInitials: "KM",
   },
+
   {
     id: "deccan-kay",
+
     name: "Dr. Deccan Kay",
+
     specialty: "Neurologist",
+
     rating: 5,
+
     reviewsCount: "(122) Reviews",
+
     avatarUrl: "/doctors/doctor-deccan-kay.jpg",
+
     fallbackInitials: "DK",
   },
 ]
@@ -67,15 +99,22 @@ const DOCTORS: Doctor[] = [
  * Appointments Screen — exact replica of Figma node 451:16134 (Screen 3 in canvas).
  * Clean, simple UI matching the provided screenshot and zip.
  */
+
 export default function AloisAppointments({
   onBack,
+
   onSelectDoctor,
+
   onOpenSettings,
+
   onStartVoiceCheck,
+
   onOpenDoctorModal,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisAppointmentsProps) {
   const [tab, setTab] = useState<"Doctors" | "Tests">("Doctors")
+
   const [searchQuery, setSearchQuery] = useState("")
 
   const filteredDoctors = DOCTORS.filter(
@@ -141,6 +180,7 @@ export default function AloisAppointments({
         <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-200/80">
           {(["Doctors", "Tests"] as const).map((option) => {
             const active = tab === option
+
             return (
               <button
                 key={option}
@@ -173,6 +213,7 @@ export default function AloisAppointments({
                   style={{
                     backgroundImage:
                       "radial-gradient(#161616 1.5px, transparent 1.5px)",
+
                     backgroundSize: "10px 10px",
                   }}
                 />
@@ -185,6 +226,7 @@ export default function AloisAppointments({
                     className="w-16 h-16 rounded-xl object-cover border border-slate-100 shadow-xs shrink-0"
                     onError={(e) => {
                       // Fallback if image fails
+
                       e.currentTarget.style.display = "none"
                     }}
                   />
@@ -222,6 +264,7 @@ export default function AloisAppointments({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
+
                       if (onOpenDoctorModal) onOpenDoctorModal()
                     }}
                     className="absolute top-3 right-2 text-[#525252] hover:text-[#161616] p-1"

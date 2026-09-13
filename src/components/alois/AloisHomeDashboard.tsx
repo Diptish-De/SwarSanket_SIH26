@@ -1,6 +1,6 @@
 import React from "react"
+
 import {
-  MapPin,
   Bell,
   Settings,
   Sparkles,
@@ -10,18 +10,26 @@ import {
   Activity,
   Check,
 } from "lucide-react"
+
 import { ScreeningSession } from "../../types"
+
 import { AloisTab } from "./types"
 
 interface AloisHomeDashboardProps {
   patientName: string
+
   latestSession?: ScreeningSession | null
+
   onStartVoiceCheck: () => void
+
   onSelectTab: (tab: AloisTab) => void
+
   onOpenDoctorModal?: () => void
-  onOpenSafetyModal: () => void
+
   onOpenCognitiveModal?: () => void
+
   onViewReport?: () => void
+
   fontFamily?: string
 }
 
@@ -31,16 +39,22 @@ interface AloisHomeDashboardProps {
  * Secondary: Daily Care.
  * All extraneous sections (upcoming appointment, medications, appointments, events, news) removed.
  */
+
 export default function AloisHomeDashboard({
   patientName,
+
   latestSession,
+
   onStartVoiceCheck,
+
   onSelectTab,
-  onOpenSafetyModal,
+
   onViewReport,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisHomeDashboardProps) {
   const isNormal = latestSession?.mlResult?.screeningRisk === "low"
+
   const confidencePct = latestSession?.mlResult
     ? Math.round(latestSession.mlResult.confidenceScore * 100)
     : null
@@ -65,17 +79,6 @@ export default function AloisHomeDashboard({
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Where Am I Action: Blue circular button */}
-          <button
-            type="button"
-            onClick={onOpenSafetyModal}
-            title="Where Am I?"
-            aria-label="Where Am I"
-            className="w-9 h-9 rounded-full bg-[#0F62FE] text-white flex items-center justify-center shadow-sm hover:bg-[#0353e9] active:scale-95 transition-all"
-          >
-            <MapPin className="w-4 h-4 text-white" />
-          </button>
-
           {/* Notifications */}
           <button
             type="button"
@@ -168,6 +171,7 @@ export default function AloisHomeDashboard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
+
                   onStartVoiceCheck()
                 }}
                 className="px-4 py-2 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
@@ -255,7 +259,9 @@ export default function AloisHomeDashboard({
           <div className="space-y-2">
             {[
               { title: "Wash dishes after breakfast", done: true },
+
               { title: "Afternoon walking routine (15 mins)", done: false },
+
               { title: "Evening hydration reminder", done: false },
             ].map((task, idx) => (
               <div

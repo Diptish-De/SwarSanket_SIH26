@@ -1,4 +1,5 @@
 import React from "react"
+
 import {
   ChevronLeft,
   Bell,
@@ -10,53 +11,88 @@ import {
 
 interface AloisDoctorInfoProps {
   doctorId?: string
+
   onBack: () => void
+
   onBookAppointment: () => void
+
   onOpenSettings: () => void
+
   onOpenChat?: () => void
+
   fontFamily?: string
 }
 
 interface DoctorDetail {
   id: string
+
   name: string
+
   specialty: string
+
   rating: number
+
   reviewsCount: string
+
   photoUrl: string
+
   bio: string
+
   locationMapUrl: string
 }
 
 const DOCTORS_DATA: Record<string, DoctorDetail> = {
   "kalvin-mathew": {
     id: "kalvin-mathew",
+
     name: "Dr. Kalvin Mathew",
+
     specialty: "Neurologist",
+
     rating: 5,
+
     reviewsCount: "(3,222) Reviews",
+
     photoUrl: "/doctors/doctor-kalvin-portrait.jpg",
+
     bio: "Dr. Kalvin Mathew is an expert consultant neurologist and active clinician scientist in London, with a focus on linguistic profiles of disorders of the nervous system. He has more than 15 years",
+
     locationMapUrl: "/doctors/map-preview.jpg",
   },
+
   "andrew-lucas": {
     id: "andrew-lucas",
+
     name: "Dr. Andrew Lucas",
+
     specialty: "Neurologist",
+
     rating: 5,
+
     reviewsCount: "(1,850) Reviews",
+
     photoUrl: "/doctors/doctor-andrew-lucas.jpg",
+
     bio: "Dr. Andrew Lucas is a leading neuro-cognitive specialist focusing on early-stage memory retention therapies and longitudinal neurological monitoring with over 18 years of clinical practice.",
+
     locationMapUrl: "/doctors/map-preview.jpg",
   },
+
   "deccan-kay": {
     id: "deccan-kay",
+
     name: "Dr. Deccan Kay",
+
     specialty: "Neurologist",
+
     rating: 5,
+
     reviewsCount: "(1,220) Reviews",
+
     photoUrl: "/doctors/doctor-deccan-kay.jpg",
+
     bio: "Dr. Deccan Kay specializes in neurodegenerative clinical diagnosis, computerized cognitive assessments, and patient-centered memory rehabilitation programs.",
+
     locationMapUrl: "/doctors/map-preview.jpg",
   },
 }
@@ -65,12 +101,18 @@ const DOCTORS_DATA: Record<string, DoctorDetail> = {
  * Doctor Info Screen — exact replica of Figma node 476:16578 (Screen 4 in canvas).
  * Clean, simple UI matching the provided screenshot and zip.
  */
+
 export default function AloisDoctorInfo({
   doctorId = "kalvin-mathew",
+
   onBack,
+
   onBookAppointment,
+
   onOpenSettings,
+
   onOpenChat,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisDoctorInfoProps) {
   const doctor = DOCTORS_DATA[doctorId] || DOCTORS_DATA["kalvin-mathew"]
