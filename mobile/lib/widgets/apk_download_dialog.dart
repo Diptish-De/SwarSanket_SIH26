@@ -5,8 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
-const String kApkDownloadUrl = 'https://github.com/Diptish-De/SIH-26/releases/latest/download/SwarSanket.apk';
-const String kGitHubReleasesUrl = 'https://github.com/Diptish-De/SIH-26/releases';
+const String kApkDownloadUrl = 'https://github.com/Diptish-De/SwarSanket_SIH26/releases/latest/download/SwarSanket.apk';
+const String kGitHubReleasesUrl = 'https://github.com/Diptish-De/SwarSanket_SIH26/releases';
 
 class ApkDownloadDialog extends StatefulWidget {
   const ApkDownloadDialog({super.key});

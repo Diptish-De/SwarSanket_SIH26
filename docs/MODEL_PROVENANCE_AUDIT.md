@@ -239,5 +239,5 @@ The UI already ships 11 languages; the model behind it is monolingual Chinese-de
 | 3 | `CTP_F0 SD(st)`, `CTP_EST` and the four syntactic-phrase features remain median-imputed — never extracted live | Medium |
 | 4 | Expanded picture-description prompts for 10 Indic locales were authored without native review | Medium |
 | 5 | `CTP_Voiced Rate(1/s)` semantics inferred, not recovered; currently words per second of active speech | Low |
-| 6 | Doctor-view model comparison card still names "Xception + XGBoost", a pipeline no longer in use | Low — cosmetic |
+| 6 | ~~Doctor-view model comparison card still names "Xception + XGBoost", a pipeline no longer in use~~ **RESOLVED.** The doctor-view card now reports the measured ROC-AUC from `swarsanket_qh_evaluation.json`, and the GitHub Release notes no longer advertise Xception or XGBoost. Neither has ever existed in this project. | Closed |
 | 7 | `clearAllScreenings()` intentionally leaves `doctor_notes` intact; the confirmation copy is scoped accordingly | Low — by design, noted for review |
