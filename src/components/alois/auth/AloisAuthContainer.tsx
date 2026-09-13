@@ -4,28 +4,42 @@ import { Delete, Eye, EyeOff } from "lucide-react"
 
 export interface AloisAuthUser {
   username: string
+
   fullName: string
+
   gender: string
+
   age: string
+
   dob: string
+
   email: string
+
   phone: string
+
   city: string
+
   diagnosis: string
+
   stage: string
+
   caregiverName: string
+
   caregiverEmail: string
+
   caregiverPhone: string
 }
 
 interface AloisAuthContainerProps {
   onAuthenticated: (fullName: string, caregiverName?: string) => void
+
   fontFamily?: string
 }
 
 type AuthScreen = "you" | "caregiver" | "caregiverVerify" | "register"
 
 export const ALOIS_USER_STORAGE_KEY = "alois-user-profile"
+
 export const ALOIS_AUTH_SESSION_KEY = "alois-auth-session"
 
 function AloisLogo() {
@@ -45,29 +59,50 @@ const inputClass =
 
 export default function AloisAuthContainer({
   onAuthenticated,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisAuthContainerProps) {
   const [screen, setScreen] = useState<AuthScreen>("you")
+
   const [username, setUsername] = useState("jerrold")
+
   const [password, setPassword] = useState("password123")
+
   const [showPassword, setShowPassword] = useState(false)
+
   const [showRegPassword, setShowRegPassword] = useState(false)
+
   const [regAgreeTerms, setRegAgreeTerms] = useState(false)
+
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""])
+
   const [resendCountdown, setResendCountdown] = useState(56)
+
   const [formData, setFormData] = useState<AloisAuthUser>({
     username: "",
+
     fullName: "Jerrold Harrington",
+
     gender: "",
+
     age: "",
+
     dob: "",
+
     email: "",
+
     phone: "",
+
     city: "",
+
     diagnosis: "Select",
+
     stage: "Select",
+
     caregiverName: "",
+
     caregiverEmail: "",
+
     caregiverPhone: "",
   })
 
@@ -84,6 +119,7 @@ export default function AloisAuthContainer({
   const handleFinishLogin = (user = formData) => {
     try {
       localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(user))
+
       localStorage.setItem(ALOIS_AUTH_SESSION_KEY, "active")
     } catch {
       // Ignore storage errors and continue into the app.
@@ -91,6 +127,7 @@ export default function AloisAuthContainer({
 
     onAuthenticated(
       user.fullName || user.username || "Jerrold Harrington",
+
       user.caregiverName || "Marcus Harrington",
     )
   }
@@ -100,18 +137,25 @@ export default function AloisAuthContainer({
       for (let index = otpDigits.length - 1; index >= 0; index -= 1) {
         if (otpDigits[index]) {
           const next = [...otpDigits]
+
           next[index] = ""
+
           setOtpDigits(next)
+
           break
         }
       }
+
       return
     }
 
     const index = otpDigits.findIndex((digit) => digit === "")
+
     if (index >= 0) {
       const next = [...otpDigits]
+
       next[index] = value
+
       setOtpDigits(next)
     }
   }
@@ -149,6 +193,7 @@ export default function AloisAuthContainer({
               <div className="flex border-b border-[#E0E0E0] mb-6">
                 {([
                   ["you", "You"],
+
                   ["caregiver", "Caregiver"],
                 ] as const).map(([tab, label]) => (
                   <button
@@ -231,7 +276,9 @@ export default function AloisAuthContainer({
                     type="button"
                     onClick={() => {
                       setOtpDigits(["7", "4", "2", "9"])
+
                       setResendCountdown(56)
+
                       setScreen("caregiverVerify")
                     }}
                     className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
@@ -276,16 +323,27 @@ export default function AloisAuthContainer({
                   <div className="grid grid-cols-3 gap-1 pt-2">
                     {[
                       "1",
+
                       "2",
+
                       "3",
+
                       "4",
+
                       "5",
+
                       "6",
+
                       "7",
+
                       "8",
+
                       "9",
+
                       "",
+
                       "0",
+
                       "backspace",
                     ].map((key, index) =>
                       key ? (
@@ -436,6 +494,7 @@ export default function AloisAuthContainer({
                   onClick={() => {
                     handleFinishLogin({
                       ...formData,
+
                       fullName: formData.username,
                     })
                   }}
