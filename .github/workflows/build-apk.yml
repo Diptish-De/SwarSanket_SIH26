@@ -1,8 +1,17 @@
 name: Build SwarSanket Android APK & Release
 
+# The APK is NOT built on every push to main. A merge does not need an Android
+# build to be useful, and paying 3-5 minutes of runner time plus a Vercel
+# deployment slot for every merge is what exhausted both quotas.
+#
+# Build one when you actually want one:
+#   - push a tag:      git tag v1.0 && git push origin v1.0
+#   - or on demand:    Actions -> Build & Release Android APK -> Run workflow
+#
+# A manual run from main still publishes under the `latest` release, so the
+# in-app download link keeps working without tagging.
 on:
   push:
-    branches: [ main ]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -100,11 +109,11 @@ jobs:
 
             ### 📱 Android APK Direct Download
             Direct APK download for Android phones:
-            - **[Download SwarSanket.apk](https://github.com/Diptish-De/SIH-26/releases/latest/download/SwarSanket.apk)**
+            - **[Download SwarSanket.apk](https://github.com/Diptish-De/SwarSanket_SIH26/releases/latest/download/SwarSanket.apk)**
 
             ### 🚀 Highlights
             - Early voice biomarker screening for elderly users across 9 Indian languages.
-            - Dual-engine classical (Xception + XGBoost) and Quantum-hybrid (PennyLane) model analysis.
+            - Quantum-hybrid screening: 8-qubit PennyLane VQC over 22 speech biomarkers, with Monte Carlo Dropout uncertainty.
             - Full offline capability with local IndexedDB queuing and auto-sync.
             - Doctor clinical dashboard, longitudinal acoustic trend charts, and downloadable medical report.
           files: release-output/SwarSanket.apk

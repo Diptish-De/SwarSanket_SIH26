@@ -16,12 +16,12 @@ import {
 } from "lucide-react"
 
 export const APK_DOWNLOAD_URL =
-  "https://github.com/Diptish-De/SIH-26/releases/latest/download/SwarSanket.apk"
+  "https://github.com/Diptish-De/SwarSanket_SIH26/releases/latest/download/SwarSanket.apk"
 
 export const GITHUB_RELEASES_URL =
-  "https://github.com/Diptish-De/SIH-26/releases"
+  "https://github.com/Diptish-De/SwarSanket_SIH26/releases"
 
-export const GITHUB_REPO_URL = "https://github.com/Diptish-De/SIH-26"
+export const GITHUB_REPO_URL = "https://github.com/Diptish-De/SwarSanket_SIH26"
 
 interface ApkDownloadModalProps {
   isOpen: boolean
@@ -270,7 +270,7 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({
         {/* Footer */}
         <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
           <span>
-            GitHub: <strong>Diptish-De/SIH-26</strong>
+            GitHub: <strong>Diptish-De/SwarSanket_SIH26</strong>
           </span>
           <button
             onClick={onClose}
