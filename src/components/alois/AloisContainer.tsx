@@ -26,6 +26,8 @@ import AloisCognitiveBoosterModal from "./AloisCognitiveBoosterModal"
 
 import AloisBottomNav from "./AloisBottomNav"
 
+import CognitiveGamesHub from "../cognitiveGames/CognitiveGamesHub"
+
 interface AloisContainerProps {
   patientName: string
 
@@ -50,6 +52,8 @@ interface AloisContainerProps {
   onOpenHistory?: () => void
 
   onOpenDoctorDash?: () => void
+
+  onOpenCognitiveGames?: () => void
 
   fontFamily?: string
 }
@@ -84,12 +88,11 @@ export default function AloisContainer({
 
   onOpenDoctorDash,
 
+  onOpenCognitiveGames,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisContainerProps) {
   const [activeTab, setActiveTab] = useState<AloisTab>("home")
-
-  const [selectedDoctorId, setSelectedDoctorId] =
-    useState<string>("kalvin-mathew")
 
   const [showSafetyModal, setShowSafetyModal] = useState(false)
 
@@ -97,10 +100,13 @@ export default function AloisContainer({
 
   const [showCognitiveModal, setShowCognitiveModal] = useState(false)
 
+  const [selectedDoctorId, setSelectedDoctorId] =
+    useState<string>("kalvin-mathew")
+
   return (
-    <div className="flex flex-col h-full bg-[#F4F4F4] relative overflow-hidden">
-      {/* ─── Active Tab Content View ─────────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-[#F4F4F4] relative overflow-hidden select-none">
+      {/* ─── Main Content Viewports (Tabs) ────────────────────────────── */}
+      <main className="flex-1 overflow-y-auto pb-24">
         {activeTab === "home" && (
           <AloisHomeDashboard
             patientName={patientName}
@@ -145,6 +151,13 @@ export default function AloisContainer({
             onBack={() => setActiveTab("home")}
             onViewReport={onViewReport}
             onOpenSettings={() => setActiveTab("profile")}
+            fontFamily={fontFamily}
+          />
+        )}
+
+        {activeTab === "games" && (
+          <CognitiveGamesHub
+            onBack={() => setActiveTab("home")}
             fontFamily={fontFamily}
           />
         )}
@@ -208,6 +221,11 @@ export default function AloisContainer({
         isOpen={showCognitiveModal}
         onClose={() => setShowCognitiveModal(false)}
         onStartVoiceCheck={onStartVoiceCheck}
+        onOpenCognitiveGames={() => {
+          setShowCognitiveModal(false)
+          setActiveTab("games")
+          onOpenCognitiveGames?.()
+        }}
         fontFamily={fontFamily}
       />
     </div>

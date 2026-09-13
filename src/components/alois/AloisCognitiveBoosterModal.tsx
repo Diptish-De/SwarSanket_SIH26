@@ -21,6 +21,8 @@ interface AloisCognitiveBoosterModalProps {
 
   onStartVoiceCheck: () => void
 
+  onOpenCognitiveGames?: () => void
+
   fontFamily?: string
 }
 
@@ -35,6 +37,8 @@ export default function AloisCognitiveBoosterModal({
   onClose,
 
   onStartVoiceCheck,
+
+  onOpenCognitiveGames,
 
   fontFamily = "'Outfit', sans-serif",
 }: AloisCognitiveBoosterModalProps) {
@@ -235,20 +239,64 @@ export default function AloisCognitiveBoosterModal({
             </button>
           </div>
 
+          {/* ─── Cognitive Booster Games Banner ──────────────────────── */}
+          <div className="rounded-2xl bg-gradient-to-br from-[#0F766E] to-[#0D9488] text-white p-4 shadow-md flex items-center justify-between">
+            <div className="flex-1 min-w-0 pr-2">
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-teal-100 text-[10px] font-bold">
+                Playable Games
+              </span>
+              <h4
+                style={{ fontFamily }}
+                className="text-sm font-bold text-white mt-1"
+              >
+                Cognitive Games Suite
+              </h4>
+              <p className="text-[11px] text-teal-100/90 mt-0.5 line-clamp-1">
+                Logic Puzzle, Memory Treasure, Attention & Speed
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                onOpenCognitiveGames?.()
+              }}
+              className="px-3.5 py-2 rounded-xl bg-white text-teal-800 text-xs font-bold shadow-sm hover:bg-teal-50 active:scale-95 transition-all shrink-0"
+            >
+              Play Games
+            </button>
+          </div>
+
           {/* ─── 6 Cognitive Activity Cards (Figma Grid 124x176) ───────── */}
           <div>
             <h4
               style={{ fontFamily }}
-              className="text-[13px] font-bold text-[#161616] mb-2.5 px-1"
+              className="text-[13px] font-bold text-[#161616] mb-2.5 px-1 flex items-center justify-between"
             >
-              Daily Brain Exercises
+              <span>Daily Brain Exercises</span>
+              {onOpenCognitiveGames && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose()
+                    onOpenCognitiveGames()
+                  }}
+                  className="text-[11px] text-[#0F62FE] font-medium hover:underline"
+                >
+                  Open Games Hub →
+                </button>
+              )}
             </h4>
 
             <div className="grid grid-cols-2 gap-2.5">
               {activities.map((act) => (
                 <div
                   key={act.id}
-                  className={`p-3 rounded-2xl border ${act.color} bg-white flex flex-col justify-between h-[128px] shadow-2xs hover:shadow-xs transition-shadow`}
+                  onClick={() => {
+                    onClose()
+                    onOpenCognitiveGames?.()
+                  }}
+                  className={`p-3 rounded-2xl border ${act.color} bg-white flex flex-col justify-between h-[128px] shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-98`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">

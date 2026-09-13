@@ -71,6 +71,7 @@ class MainTabScaffold extends StatelessWidget {
   final bool hasError;
   final VoidCallback onStartCheck;
   final VoidCallback onDoctorPatient;
+  final VoidCallback? onCognitiveGames;
   final Function(String lang) onLanguageChanged;
   final VoidCallback onLogout;
 
@@ -84,6 +85,7 @@ class MainTabScaffold extends StatelessWidget {
     required this.hasError,
     required this.onStartCheck,
     required this.onDoctorPatient,
+    this.onCognitiveGames,
     required this.onLanguageChanged,
     required this.onLogout,
   });
@@ -120,6 +122,7 @@ class MainTabScaffold extends StatelessWidget {
           onCaregiver: onDoctorPatient,
           onSettings: () => onTabChange(3),
           onTrend: onDoctorPatient,
+          onCognitiveGames: onCognitiveGames,
         );
         break;
     }
@@ -186,6 +189,7 @@ class HomeTab extends StatelessWidget {
   final VoidCallback onCaregiver;
   final VoidCallback onSettings;
   final VoidCallback onTrend;
+  final VoidCallback? onCognitiveGames;
 
   const HomeTab({
     super.key,
@@ -199,6 +203,7 @@ class HomeTab extends StatelessWidget {
     required this.onCaregiver,
     required this.onSettings,
     required this.onTrend,
+    this.onCognitiveGames,
   });
 
   @override
@@ -471,15 +476,132 @@ class HomeTab extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // 2 Quick Action Tiles
+          // Cognitive Booster Card (Separate from clinical voice screening)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F766E).withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.psychology_outlined, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Cognitive Booster',
+                            style: GoogleFonts.outfit(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Play fun activities designed for cognitive engagement.',
+                            style: GoogleFonts.notoSans(
+                              fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildGameMiniBadge('🧩 Logic'),
+                    _buildGameMiniBadge('🃏 Memory'),
+                    _buildGameMiniBadge('🎯 Attention'),
+                    _buildGameMiniBadge('⚡ Speed'),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: onCognitiveGames,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                    label: Text(
+                      'Play Cognitive Games',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF0F766E),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Quick Action Tiles
           Row(
             children: [
+              _buildQuickAction('Games', Icons.sports_esports_outlined, onCognitiveGames ?? () {}),
+              const SizedBox(width: 10),
               _buildQuickAction('Caregiver', Icons.people_outline, onCaregiver),
               const SizedBox(width: 10),
               _buildQuickAction('Trends', Icons.show_chart, onTrend),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGameMiniBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.notoSans(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       ),
     );
   }

@@ -1,4 +1,4 @@
-export type AloisTab = "home" | "appointments" | "doctorInfo" | "progress" | "profile" | "medications" | "dailyCare"
+export type AloisTab = "home" | "appointments" | "doctorInfo" | "progress" | "profile" | "medications" | "dailyCare" | "games"
 
 export interface MedicationItem {
   id: string
