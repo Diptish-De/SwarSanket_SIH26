@@ -20,7 +20,7 @@ import io
 import os
 import re
 from pathlib import Path
-from typing import Union, BinaryIO, Dict, Any, List, Optional
+from typing import Union, BinaryIO, Dict, Any, List, Optional, Callable
 import numpy as np
 import pandas as pd
 import spacy
@@ -347,13 +347,27 @@ def _calibrate_to_training_support(
 def run_screening_pipeline(
     audio_source: Union[str, Path, BinaryIO, bytes],
     require_minimum_sample: bool = True,
+    on_stage: Optional[Callable[[str], None]] = None,
 ) -> Dict[str, Any]:
     """
     Executes the end-to-end validated SwarSanket screening pipeline using
     the 22-Feature Quantum-Classical Hybrid model (PyTorch + PennyLane 8-Qubit VQC).
+
+    ``on_stage`` is called with "transcribing", "extracting" and "scoring" as each
+    phase begins, so a job runner can publish real progress instead of a guess.
+    A failing callback never aborts the screening.
     """
+    def _stage(name: str) -> None:
+        if on_stage is None:
+            return
+        try:
+            on_stage(name)
+        except Exception:
+            pass
+
     try:
         # 1. Decode and inspect audio metrics
+        _stage("transcribing")
         audio_metrics = decode_and_inspect_audio(audio_source)
         duration_sec = audio_metrics.get("duration_seconds", 0.0)
 
@@ -469,6 +483,7 @@ def run_screening_pipeline(
         word_rate = _safe_div(word_count, speech_timeline_duration, 0.0)
 
         # 3. Extract spaCy linguistic POS ratios & keywords
+        _stage("extracting")
         nlp_features = extract_linguistic_pos_features(full_transcript, word_count)
 
         # 4. Extract Acoustic & Pause Metrics
@@ -572,6 +587,7 @@ def run_screening_pipeline(
         feature_array = np.array([feature_vector], dtype=np.float64)
 
         # 6. Execute Quantum-Hybrid Inference with Monte Carlo Dropout (30 passes)
+        _stage("scoring")
         inference_res = run_monte_carlo_inference(feature_array, n_passes=30)
         prob = inference_res["mean_probability"]
         prob_percent = round(prob * 100.0, 2)

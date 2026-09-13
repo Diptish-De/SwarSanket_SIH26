@@ -5,11 +5,13 @@ import logging
 import tempfile
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from supabase_service import supabase_service
+from screening_jobs import job_manager
 
 # Configure backend logger
 logging.basicConfig(level=logging.INFO)
@@ -164,6 +166,79 @@ async def upload_audio(audio: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Internal server error while saving audio recording.")
     finally:
         audio.file.close()
+
+
+def _save_upload(audio: UploadFile) -> "tuple[Path, int]":
+    """Writes the multipart body to the uploads directory; refuses empty files."""
+    saved_path = _generate_saved_path(audio.filename, audio.content_type or "")
+    with open(saved_path, "wb") as buffer:
+        shutil.copyfileobj(audio.file, buffer)
+    size_bytes = os.path.getsize(saved_path)
+    if size_bytes == 0:
+        saved_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Uploaded audio file is empty (0 bytes).")
+    return saved_path, size_bytes
+
+
+def _realtime_config() -> Optional[dict]:
+    """
+    What a client needs to follow its recordings row over Supabase Realtime.
+    The anon key is designed to be public (it is what the browser SDK uses);
+    row access is governed by RLS, not by secrecy of this key. None when the
+    backend has no anon key, in which case clients poll the status endpoint.
+    """
+    if not supabase_service.is_configured() or not supabase_service.anon_key:
+        return None
+    return {
+        "supabase_url": supabase_service.url,
+        "anon_key": supabase_service.anon_key,
+        "schema": "public",
+        "table": "recordings",
+        "id_column": "recording_id",
+    }
+
+
+@app.post("/api/screenings", status_code=202)
+async def submit_screening(audio: UploadFile = File(...)):
+    """
+    Asynchronous screening: stores the recording, queues it, and returns at once.
+    Follow progress over Supabase Realtime on the returned row, or poll
+    GET /api/screenings/{recording_id}. Heavy work never runs inside a request,
+    so the hosting proxy's request timeout cannot cut a screening short.
+    """
+    if not audio or not audio.filename:
+        raise HTTPException(status_code=400, detail="No valid audio file provided.")
+    try:
+        saved_path, size_bytes = _save_upload(audio)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save audio file: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while saving audio recording.")
+    finally:
+        audio.file.close()
+
+    job = job_manager.submit(
+        saved_path,
+        original_filename=audio.filename,
+        content_type=audio.content_type or "audio/webm",
+        size_bytes=size_bytes,
+    )
+    return {
+        "success": True,
+        **job,
+        "poll_url": f"/api/screenings/{job['recording_id']}",
+        "realtime": _realtime_config(),
+    }
+
+
+@app.get("/api/screenings/{recording_id}")
+def get_screening_status(recording_id: str):
+    """Current stage of a queued screening; carries the full result once completed."""
+    job = job_manager.status(recording_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Unknown recording id.")
+    return {"success": True, **job}
 
 
 @app.post("/api/analyze-audio")

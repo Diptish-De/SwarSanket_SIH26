@@ -104,6 +104,8 @@ def run_verification():
         assert "/api/supabase/screenings" in routes
         assert "/api/upload-audio" in routes
         assert "/api/analyze-audio" in routes
+        assert "/api/screenings" in routes
+        assert "/api/screenings/{recording_id}" in routes
         print("  ✅ All Supabase endpoints successfully wired into FastAPI.")
     except Exception as e:
         print(f"  ❌ ERROR: FastAPI route check failed: {e}")

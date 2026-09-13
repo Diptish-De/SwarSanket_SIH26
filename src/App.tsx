@@ -102,9 +102,14 @@ import {
   AudioRecordingResult,
   getLastRecordedAudioBlob,
   uploadAudioToBackend,
-  analyzeAudioWithBackend,
   ScreeningApiResponse,
 } from "./services/audioRecorder"
+
+import {
+  runScreeningJob,
+  type AnalysisStep,
+  type JobTransport,
+} from "./services/screeningJob"
 
 import {
   getApiBaseUrl,
@@ -3966,8 +3971,11 @@ function SwarSanketApp({
     null,
   )
 
-  const [analysisStep, setAnalysisStep] =
-    useState<"idle" | "uploading" | "analyzing" | "complete">("idle")
+  const [analysisStep, setAnalysisStep] = useState<AnalysisStep>("idle")
+
+  const [jobQueuePosition, setJobQueuePosition] = useState<number | null>(null)
+
+  const [jobTransport, setJobTransport] = useState<JobTransport | null>(null)
 
   // Backend API URL & Health state (Android & Web dynamic configuration)
 
@@ -4322,15 +4330,23 @@ function SwarSanketApp({
     console.log("[SwarSanket] Sending audio for analysis to backend...")
 
     try {
-      setAnalysisStep("analyzing")
+      setJobQueuePosition(null)
 
-      let apiResult = await analyzeAudioWithBackend(
-        audioBlob,
+      setJobTransport(null)
 
-        "voice_check.webm",
+      // Upload once, then follow the job over Supabase Realtime (with HTTP
+      // polling as the fallback). No request stays open long enough for the
+      // hosting proxy to cut it off, so a 60-second clip can take the time
+      // it takes.
+      let apiResult = await runScreeningJob(audioBlob, "voice_check.webm", {
+        onProgress: (p) => {
+          setAnalysisStep(p.stage)
 
-        240000,
-      )
+          setJobQueuePosition(p.queuePosition)
+
+          setJobTransport(p.transport)
+        },
+      })
 
       console.log("[SwarSanket] Analysis complete")
 
@@ -5745,6 +5761,8 @@ function SwarSanketApp({
             <StatusBar />
             <VoiceProcessingVisualizer
               analysisStep={analysisStep}
+              queuePosition={jobQueuePosition}
+              transport={jobTransport}
               analysisError={analysisError}
               lang={lang}
               t={t}

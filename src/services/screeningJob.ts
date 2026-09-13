@@ -1,0 +1,556 @@
+// ─── Asynchronous screening job client ───────────────────────────────────────
+//
+// A screening is a job, not a request. The phone uploads the clip once
+// (POST /api/screenings, a few seconds), gets a recording_id back, and then
+// follows the job's row in the Supabase `recordings` table. Two transports run
+// side by side and the first to deliver a terminal state wins:
+//
+//   1. Supabase Realtime: a websocket subscription to UPDATEs on that one row,
+//      pushed the moment the worker writes a new stage. This is the live path.
+//   2. HTTP polling of GET /api/screenings/{id} every few seconds, so a blocked
+//      websocket, a missing anon key or a flaky Realtime connection degrade to
+//      "slightly less live" instead of "stuck".
+//
+// Neither path ever holds a long HTTP request open, which is what let the
+// hosting proxy's 100 second cap kill screenings in the previous design.
+
+import {
+  createClient,
+  type RealtimeChannel,
+  type SupabaseClient,
+} from "@supabase/supabase-js"
+
+import { getApiBaseUrl } from "./apiConfig"
+
+import { getExtensionForBlob, type ScreeningApiResponse } from "./audioRecorder"
+
+/** Stages exactly as the backend writes them (backend/screening_jobs.py). */
+
+export type ScreeningJobStage = "queued" | "uploading" | "transcribing" | "extracting" | "scoring" | "completed" | "failed"
+
+/** What the processing screen renders. "complete" is the app's historical spelling. */
+
+export type AnalysisStep = "idle" | "uploading" | "queued" | "transcribing" | "extracting" | "scoring" | "complete"
+
+export type JobTransport = "http" | "realtime" | "poll"
+
+export interface ScreeningJobProgress {
+  stage: AnalysisStep
+
+  /** 0 = running now, 1 = one ahead of you, …; null once running or finished. */
+
+  queuePosition: number | null
+
+  /** Which channel delivered this update. */
+
+  transport: JobTransport
+
+  recordingId: string
+}
+
+export interface RunScreeningJobOptions {
+  onProgress?: (progress: ScreeningJobProgress) => void
+
+  /** Upload only; the request returns as soon as the clip is stored. */
+
+  submitTimeoutMs?: number
+
+  /** Whole job, including time spent queued behind other screenings. */
+
+  overallTimeoutMs?: number
+
+  pollIntervalMs?: number
+}
+
+interface RealtimeConfig {
+  supabase_url: string
+
+  anon_key: string
+
+  schema: string
+
+  table: string
+
+  id_column: string
+}
+
+interface SubmitResponse {
+  success: boolean
+
+  recording_id: string
+
+  status: ScreeningJobStage
+
+  queue_position: number | null
+
+  poll_url: string
+
+  realtime: RealtimeConfig | null
+}
+
+interface JobStatusResponse {
+  recording_id: string
+
+  status: ScreeningJobStage
+
+  queue_position: number | null
+
+  result: ScreeningApiResponse | null
+
+  error: string | null
+}
+
+interface RecordingRow {
+  recording_id?: string
+
+  processing_status?: string
+
+  prediction_result?: ScreeningApiResponse | null
+
+  error_message?: string | null
+}
+
+const STAGE_ORDER: ScreeningJobStage[] = [
+  "queued",
+  "uploading",
+  "transcribing",
+  "extracting",
+  "scoring",
+  "completed",
+  "failed",
+]
+
+export const SERVER_SLOW_MESSAGE =
+  "The screening server is taking longer than expected. It may be waking up or busy - please wait a minute and try again. Your recording is kept."
+
+export const SERVER_UNREACHABLE_MESSAGE =
+  "The screening server did not respond. It may be restarting or overloaded - please wait a minute and try again. On a phone, also check your connection or the server address in Settings."
+
+function toAnalysisStep(stage: string): AnalysisStep | null {
+  switch (stage) {
+    case "queued":
+    case "uploading":
+    case "transcribing":
+    case "extracting":
+    case "scoring":
+      return stage
+
+    case "completed":
+      return "complete"
+
+    default:
+      return null
+  }
+}
+
+/**
+ * Realtime configuration: an explicit build-time setting wins; otherwise the
+ * backend tells us where its own project lives, so a fresh deployment needs no
+ * frontend configuration at all. The anon key is public by design.
+ */
+
+function resolveRealtimeConfig(
+  fromServer: RealtimeConfig | null,
+): RealtimeConfig | null {
+  const envUrl = import.meta.env?.VITE_SUPABASE_URL as string | undefined
+
+  const envKey = import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined
+
+  if (envUrl && envKey) {
+    return {
+      supabase_url: envUrl.replace(/\/+$/, ""),
+
+      anon_key: envKey,
+
+      schema: fromServer?.schema ?? "public",
+
+      table: fromServer?.table ?? "recordings",
+
+      id_column: fromServer?.id_column ?? "recording_id",
+    }
+  }
+
+  return fromServer
+}
+
+const clientCache = new Map<string, SupabaseClient>()
+
+function getSupabaseClient(cfg: RealtimeConfig): SupabaseClient {
+  const key = `${cfg.supabase_url}|${cfg.anon_key.slice(-8)}`
+
+  let client = clientCache.get(key)
+
+  if (!client) {
+    client = createClient(cfg.supabase_url, cfg.anon_key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+
+      realtime: { params: { eventsPerSecond: 5 } },
+    })
+
+    clientCache.set(key, client)
+  }
+
+  return client
+}
+
+async function submitRecording(
+  blob: Blob,
+
+  filename: string,
+
+  timeoutMs: number,
+): Promise<SubmitResponse> {
+  const endpoint = `${getApiBaseUrl()}/api/screenings`
+
+  const formData = new FormData()
+
+  formData.append("audio", blob, filename)
+
+  const controller = new AbortController()
+
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+
+      body: formData,
+
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "")
+
+      let detail = `Server returned HTTP ${response.status}`
+
+      try {
+        const parsed = JSON.parse(errorText)
+
+        if (parsed.detail) detail = String(parsed.detail)
+      } catch {
+        // keep the fallback detail
+      }
+
+      throw new Error(detail)
+    }
+
+    return (await response.json()) as SubmitResponse
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(SERVER_SLOW_MESSAGE)
+    }
+
+    const message =
+      err instanceof Error ? err.message : "Unable to reach screening backend."
+
+    if (
+      message.includes("Failed to fetch") ||
+      message.includes("NetworkError")
+    ) {
+      throw new Error(SERVER_UNREACHABLE_MESSAGE)
+    }
+
+    throw err instanceof Error ? err : new Error(message)
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
+ * Uploads a recording, then follows its job to completion. Resolves with the
+ * same contract the synchronous endpoint returned, so callers need no changes
+ * beyond swapping the function.
+ */
+
+export async function runScreeningJob(
+  blob: Blob,
+
+  filename?: string,
+
+  options: RunScreeningJobOptions = {},
+): Promise<ScreeningApiResponse> {
+  const {
+    onProgress,
+
+    submitTimeoutMs = 90000,
+
+    overallTimeoutMs = 600000,
+
+    pollIntervalMs = 4000,
+  } = options
+
+  const targetFilename = filename || `voice_check${getExtensionForBlob(blob)}`
+
+  const baseUrl = getApiBaseUrl()
+
+  onProgress?.({
+    stage: "uploading",
+
+    queuePosition: null,
+
+    transport: "http",
+
+    recordingId: "",
+  })
+
+  console.log("[SwarSanket] Submitting recording as a screening job", {
+    endpoint: `${baseUrl}/api/screenings`,
+
+    filename: targetFilename,
+
+    sizeBytes: blob.size,
+  })
+
+  const submitted = await submitRecording(blob, targetFilename, submitTimeoutMs)
+
+  const recordingId = submitted.recording_id
+
+  const realtimeCfg = resolveRealtimeConfig(submitted.realtime)
+
+  console.log("[SwarSanket] Screening job accepted", {
+    recordingId,
+
+    status: submitted.status,
+
+    queuePosition: submitted.queue_position,
+
+    realtime: realtimeCfg ? "available" : "polling only",
+  })
+
+  return new Promise<ScreeningApiResponse>((resolve, reject) => {
+    let settled = false
+
+    let highestStage = -1
+
+    let channel: RealtimeChannel | null = null
+
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+
+    const deadline = setTimeout(
+      () => finish(new Error(SERVER_SLOW_MESSAGE)),
+      overallTimeoutMs,
+    )
+
+    const cleanup = () => {
+      clearTimeout(deadline)
+
+      if (pollTimer) clearTimeout(pollTimer)
+
+      if (channel && realtimeCfg) {
+        const client = getSupabaseClient(realtimeCfg)
+
+        client.removeChannel(channel).catch(() => undefined)
+
+        channel = null
+      }
+    }
+
+    const finish = (outcome: Error | ScreeningApiResponse) => {
+      if (settled) return
+
+      settled = true
+
+      cleanup()
+
+      if (outcome instanceof Error) reject(outcome)
+      else resolve(outcome)
+    }
+
+    // Stages may arrive from two transports slightly out of step; never let a
+    // late poll response move the display backwards.
+
+    const report = (
+      stage: string,
+
+      queuePosition: number | null,
+
+      transport: JobTransport,
+    ) => {
+      const idx = STAGE_ORDER.indexOf(stage as ScreeningJobStage)
+
+      if (idx < 0 || idx < highestStage) return
+
+      highestStage = idx
+
+      const step = toAnalysisStep(stage)
+
+      if (step) {
+        onProgress?.({ stage: step, queuePosition, transport, recordingId })
+      }
+    }
+
+    const handleTerminal = async (
+      status: string,
+
+      result: ScreeningApiResponse | null | undefined,
+
+      error: string | null | undefined,
+
+      transport: JobTransport,
+    ): Promise<boolean> => {
+      if (status === "failed") {
+        finish(
+          new Error(
+            error ||
+              "An error occurred while processing the voice screening. Please try again.",
+          ),
+        )
+
+        return true
+      }
+
+      if (status !== "completed") return false
+
+      let full = result ?? null
+
+      if (!full) {
+        // Realtime trims oversized rows; fetch the result explicitly.
+        full = await fetchResult(transport)
+      }
+
+      if (full) {
+        console.log("[SwarSanket] Screening job completed via", transport, {
+          predictedClass: full.screening?.predicted_class,
+
+          probability: full.screening?.probability,
+        })
+
+        finish(full)
+
+        return true
+      }
+
+      return false
+    }
+
+    const fetchResult = async (
+      preferred: JobTransport,
+    ): Promise<ScreeningApiResponse | null> => {
+      if (preferred === "realtime" && realtimeCfg) {
+        try {
+          const { data } = await getSupabaseClient(realtimeCfg)
+            .from(realtimeCfg.table)
+            .select("prediction_result")
+            .eq(realtimeCfg.id_column, recordingId)
+            .maybeSingle<RecordingRow>()
+
+          if (data?.prediction_result) return data.prediction_result
+        } catch {
+          // fall through to HTTP
+        }
+      }
+
+      try {
+        const res = await fetch(`${baseUrl}/api/screenings/${recordingId}`)
+
+        if (res.ok) {
+          const body = (await res.json()) as JobStatusResponse
+
+          if (body.result) return body.result
+        }
+      } catch {
+        // caller keeps waiting; the poll loop will retry
+      }
+
+      return null
+    }
+
+    // ── Transport 1: Supabase Realtime ────────────────────────────────────
+
+    if (realtimeCfg) {
+      try {
+        const client = getSupabaseClient(realtimeCfg)
+
+        channel = client
+          .channel(`screening-${recordingId}`)
+          .on(
+            "postgres_changes",
+
+            {
+              event: "UPDATE",
+
+              schema: realtimeCfg.schema,
+
+              table: realtimeCfg.table,
+
+              filter: `${realtimeCfg.id_column}=eq.${recordingId}`,
+            },
+
+            (payload) => {
+              const row = (payload.new ?? {}) as RecordingRow
+
+              const status = row.processing_status ?? ""
+
+              report(status, null, "realtime")
+
+              void handleTerminal(
+                status,
+
+                row.prediction_result,
+
+                row.error_message,
+
+                "realtime",
+              )
+            },
+          )
+          .subscribe((status, err) => {
+            if (status === "SUBSCRIBED") {
+              console.log(
+                "[SwarSanket] Realtime subscribed to recording",
+                recordingId,
+              )
+            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              console.warn(
+                "[SwarSanket] Realtime unavailable, polling instead:",
+                err?.message ?? status,
+              )
+            }
+          })
+      } catch (err) {
+        console.warn(
+          "[SwarSanket] Realtime setup failed, polling instead:",
+          err,
+        )
+
+        channel = null
+      }
+    }
+
+    // ── Transport 2: HTTP polling (always on, as the safety net) ──────────
+
+    const poll = async () => {
+      if (settled) return
+
+      try {
+        const res = await fetch(`${baseUrl}/api/screenings/${recordingId}`)
+
+        if (res.ok) {
+          const body = (await res.json()) as JobStatusResponse
+
+          report(body.status, body.queue_position, "poll")
+
+          if (
+            await handleTerminal(body.status, body.result, body.error, "poll")
+          ) {
+            return
+          }
+        } else if (res.status === 404) {
+          // The worker restarted and forgot the job before Supabase had the row.
+          finish(new Error(SERVER_SLOW_MESSAGE))
+
+          return
+        }
+      } catch {
+        // transient; try again on the next tick
+      }
+
+      if (!settled) pollTimer = setTimeout(poll, pollIntervalMs)
+    }
+
+    report(submitted.status, submitted.queue_position, "http")
+
+    pollTimer = setTimeout(poll, Math.min(pollIntervalMs, 2500))
+  })
+}

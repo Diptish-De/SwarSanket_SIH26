@@ -267,6 +267,44 @@ class SupabaseService:
             logger.warning(f"[Supabase] Failed to persist recording record: {e}")
             return {"saved": False, "error": err_str}
 
+    def update_recording_status(self, recording_id: str, fields: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Updates the job columns of a 'recordings' row. This is the write that the
+        phone's Realtime subscription is listening for, so it is issued once per
+        pipeline stage. Fails soft: the screening itself never depends on it.
+        """
+        if not self.is_configured() or not USE_SUPABASE_DB or not recording_id:
+            return {"saved": False, "reason": "Supabase database disabled or unconfigured."}
+        try:
+            res = (
+                self.client.table("recordings")
+                .update(fields)
+                .eq("recording_id", recording_id)
+                .execute()
+            )
+            return {"saved": True, "data": res.data}
+        except Exception as e:
+            logger.warning(f"[Supabase] Failed to update recording '{recording_id}': {e}")
+            return {"saved": False, "error": str(e)}
+
+    def get_recording(self, recording_id: str) -> Optional[Dict[str, Any]]:
+        """Fetches one 'recordings' row by its public recording_id, or None."""
+        if not self.is_configured() or not USE_SUPABASE_DB or not recording_id:
+            return None
+        try:
+            res = (
+                self.client.table("recordings")
+                .select("*")
+                .eq("recording_id", recording_id)
+                .limit(1)
+                .execute()
+            )
+            rows = res.data or []
+            return rows[0] if rows else None
+        except Exception as e:
+            logger.info(f"[Supabase] Unable to fetch recording '{recording_id}': {e}")
+            return None
+
     def get_screening_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Fetches past screening sessions ordered by created_at descending."""
         if not self.is_configured() or not USE_SUPABASE_DB:
