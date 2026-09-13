@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   ChevronLeft,
   Bell,
@@ -13,35 +14,49 @@ import {
 
 interface AloisDailyCareProps {
   onBack?: () => void
+
   onStartVoiceCheck?: () => void
+
   onOpenSettings?: () => void
+
   fontFamily?: string
 }
 
 interface ChoreTask {
   id: string
+
   title: string
+
   completed: boolean
 }
 
 /**
  * Alois Daily Care Screen — matching Figma node 508:18094 & app/(main)/daily-plans.tsx / household-chores.tsx.
  */
+
 export default function AloisDailyCare({
   onBack,
+
   onStartVoiceCheck,
+
   onOpenSettings,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisDailyCareProps) {
   const [activeSegment, setActiveSegment] =
     useState<"pending" | "todo" | "done">("todo")
+
   const [searchQuery, setSearchQuery] = useState("")
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
   const [householdChores, setHouseholdChores] = useState<ChoreTask[]>([
     { id: "c1", title: "Wash dishes after breakfast", completed: true },
+
     { id: "c2", title: "Set the table for lunch", completed: false },
+
     { id: "c3", title: "Light living room dusting", completed: false },
+
     { id: "c4", title: "Water balcony plants", completed: false },
   ])
 
@@ -54,46 +69,75 @@ export default function AloisDailyCare({
   const tasks = [
     {
       id: "chores",
+
       title: "Household chores",
+
       desc: "Wash dishes, set the table, prepare food, sweep the floor, dust, etc...",
+
       percent: Math.round(
         (householdChores.filter((c) => c.completed).length /
           householdChores.length) *
           100,
       ),
+
       color: "from-blue-600 to-indigo-600",
+
       avatar: "🧹",
     },
+
     {
       id: "meals",
+
       title: "Mealtimes",
+
       desc: "Provide a balanced diet with hydration and rich variety of foods.",
+
       percent: 48,
+
       color: "from-amber-500 to-orange-500",
+
       avatar: "🥗",
     },
+
     {
       id: "personal",
+
       title: "Personal care",
+
       desc: "Bathing, dressing, morning grooming, and dental care routine.",
+
       percent: 85,
+
       color: "from-emerald-600 to-teal-600",
+
       avatar: "🛁",
     },
+
     {
       id: "creative",
+
       title: "Creative activities",
+
       desc: "Cognitive puzzles, adult coloring, music therapy, and reading.",
+
       percent: 30,
+
       color: "from-purple-600 to-violet-600",
+
       avatar: "🎨",
     },
+
     {
       id: "physical",
+
       title: "Physical activity",
+
       desc: "Gentle 15-minute garden walk and light stretching exercises.",
+
       percent: 10,
+
       color: "from-rose-500 to-pink-600",
+
       avatar: "🚶",
     },
   ]

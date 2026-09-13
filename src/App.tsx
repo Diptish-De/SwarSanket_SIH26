@@ -123,7 +123,10 @@ import {
   APK_DOWNLOAD_URL,
   GITHUB_RELEASES_URL,
 } from "./components/ApkDownloadModal"
+
 import DemoAuth, { readDemoUser } from "./components/DemoAuth"
+
+import AloisAuthContainer from "./components/alois/auth/AloisAuthContainer"
 
 import MemberPicker from "./components/MemberPicker"
 
@@ -3803,7 +3806,9 @@ function SwarSanketApp({
   onLogout: () => void
 }) {
   // Caregiver gate. Only destructive or outbound actions pass through here;
+
   // taking a screening is never gated.
+
   const [pendingGatedAction, setPendingGatedAction] = useState<{
     label: string
 
@@ -3818,8 +3823,11 @@ function SwarSanketApp({
   const restoredSession = useRef(loadSession()).current
 
   // Lost in a merge resolution, which left 47 references to `lang` and `setLang`
+
   // undefined and broke the build. Restored with the session fallback it had
+
   // before, so a refresh keeps the language the person was using.
+
   const [lang, setLang] = useState<LanguageCode>(restoredSession?.lang ?? "en")
 
   const [userName, setUserName] = useState<string>(
@@ -9546,14 +9554,21 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <DemoAuth
+      <AloisAuthContainer
         onAuthenticated={(fullName) => {
+          try {
+            localStorage.setItem("swarsanket-demo-session", "active")
+          } catch {
+            // Ignore localStorage errors
+          }
+
           setAuthenticatedName(
-            fullName || readDemoUser()?.fullName || "Participant",
+            fullName || readDemoUser()?.fullName || "Jerrold Harrington",
           )
 
           setIsAuthenticated(true)
         }}
+        fontFamily={F.display}
       />
     )
   }

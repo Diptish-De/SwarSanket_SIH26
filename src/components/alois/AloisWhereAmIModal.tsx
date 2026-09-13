@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   X,
   MapPin,
@@ -13,20 +14,29 @@ import {
 
 interface AloisWhereAmIModalProps {
   isOpen: boolean
+
   onClose: () => void
+
   caregiverPhone?: string
+
   patientAddress?: string
+
   fontFamily?: string
 }
 
 /**
  * Alois Where Am I Screen / Modal — matching Figma node 591:24816 & app/(main)/where-am-i.tsx.
  */
+
 export default function AloisWhereAmIModal({
   isOpen,
+
   onClose,
+
   caregiverPhone = "+91 98301 23456",
+
   patientAddress = "Coreys Mill Lane, Stevenage, Hertfordshire SG1 4AB",
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisWhereAmIModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -45,8 +55,10 @@ export default function AloisWhereAmIModal({
     const encoded = encodeURIComponent(
       "Lister Hospital, Coreys Mill Lane, Stevenage",
     )
+
     window.open(
       `https://www.google.com/maps/search/?api=1&query=${encoded}`,
+
       "_blank",
     )
   }
@@ -110,8 +122,11 @@ export default function AloisWhereAmIModal({
             style={{
               backgroundImage:
                 "radial-gradient(#0F62FE 1.5px, transparent 1.5px), radial-gradient(#42BE65 1.5px, transparent 1.5px)",
+
               backgroundSize: "28px 28px",
+
               backgroundPosition: "0 0, 14px 14px",
+
               backgroundColor: "#2c3e50",
             }}
           />

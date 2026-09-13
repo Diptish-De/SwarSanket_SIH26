@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   ChevronLeft,
   Bell,
@@ -12,29 +13,40 @@ import {
 
 interface AloisMessagesProps {
   onBack: () => void
+
   onOpenSettings: () => void
+
   fontFamily?: string
 }
 
 interface ChatMessage {
   id: string
+
   sender: "doctor" | "patient"
+
   text: string
+
   time: string
 }
 
 /**
  * Alois Messages Screen — matching Figma node 520:18898 & app/(main)/inbox.tsx / chat.tsx.
  */
+
 export default function AloisMessages({
   onBack,
+
   onOpenSettings,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisMessagesProps) {
   const [activeSegment, setActiveSegment] =
     useState<"communities" | "chats" | "calls">("chats")
+
   const [searchQuery, setSearchQuery] = useState("")
+
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
+
   const [replyText, setReplyText] = useState("")
 
   const [chatThreads, setChatThreads] = useState<{
@@ -43,22 +55,33 @@ export default function AloisMessages({
     "1": [
       {
         id: "m1",
+
         sender: "doctor",
+
         text: "Hello Jerrold, your latest voice screening showed great phonation stability.",
+
         time: "10:15 AM",
       },
+
       {
         id: "m2",
+
         sender: "doctor",
+
         text: "Okay, let's start by taking your blood pressure and checking in at 10:30 tomorrow.",
+
         time: "10:18 AM",
       },
     ],
+
     "2": [
       {
         id: "m3",
+
         sender: "doctor",
+
         text: "Hi Jerrold, I have updated the morning pill reminder schedule.",
+
         time: "09:30 AM",
       },
     ],
@@ -67,62 +90,100 @@ export default function AloisMessages({
   const chats = [
     {
       id: "1",
+
       name: "Dr. Andrew Lucas",
+
       role: "Neurologist",
+
       preview: "Okay, let's start by taking your blood pre...",
+
       time: "10:18 AM",
+
       unread: 3,
+
       avatar: "AL",
+
       color: "from-blue-600 to-indigo-600",
     },
+
     {
       id: "2",
+
       name: "Marcus (Caregiver)",
+
       role: "Family Primary Contact",
+
       preview: "Everything is set for the evening walk and hydration.",
+
       time: "09:45 AM",
+
       unread: 0,
+
       avatar: "MC",
+
       color: "from-emerald-600 to-teal-600",
     },
+
     {
       id: "3",
+
       name: "Natasha (Care Specialist)",
+
       role: "Community Health Worker",
+
       preview: "Your weekly acoustic screening report is ready for download.",
+
       time: "Yesterday",
+
       unread: 1,
+
       avatar: "NS",
+
       color: "from-purple-600 to-pink-600",
     },
+
     {
       id: "4",
+
       name: "Alzheimer's Support Circle",
+
       role: "Memory Café Community",
+
       preview: "Join today's caregiver memory café session at 4 PM.",
+
       time: "2 days ago",
+
       unread: 0,
+
       avatar: "AC",
+
       color: "from-amber-600 to-orange-600",
     },
   ]
 
   const handleSendMessage = () => {
     if (!replyText.trim() || !selectedChat) return
+
     const newMsg: ChatMessage = {
       id: `p-${Date.now()}`,
+
       sender: "patient",
+
       text: replyText.trim(),
+
       time: new Date().toLocaleTimeString([], {
         hour: "2-digit",
+
         minute: "2-digit",
       }),
     }
 
     setChatThreads((prev) => ({
       ...prev,
+
       [selectedChat]: [...(prev[selectedChat] || []), newMsg],
     }))
+
     setReplyText("")
   }
 

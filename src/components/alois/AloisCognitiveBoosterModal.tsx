@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   X,
   Sparkles,
@@ -15,8 +16,11 @@ import {
 
 interface AloisCognitiveBoosterModalProps {
   isOpen: boolean
+
   onClose: () => void
+
   onStartVoiceCheck: () => void
+
   fontFamily?: string
 }
 
@@ -24,10 +28,14 @@ interface AloisCognitiveBoosterModalProps {
  * Alois Cognitive Booster Modal / Screen — matching Figma node 530:18957 & app/game/memory-enhancement.tsx.
  * Features the hero SwarSanket voice screening launch card + 6 cognitive stimulation activities.
  */
+
 export default function AloisCognitiveBoosterModal({
   isOpen,
+
   onClose,
+
   onStartVoiceCheck,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisCognitiveBoosterModalProps) {
   const [activeSegment, setActiveSegment] =
@@ -38,50 +46,85 @@ export default function AloisCognitiveBoosterModal({
   const activities = [
     {
       id: "1",
+
       title: "Planning",
+
       subtitle: "Problem Solving",
+
       icon: <Compass className="w-6 h-6 text-blue-600" />,
+
       color: "bg-blue-50 border-blue-100",
+
       description: "Route planning & step sequencing exercises",
     },
+
     {
       id: "2",
+
       title: "Attention",
+
       subtitle: "Selective",
+
       icon: <Brain className="w-6 h-6 text-emerald-600" />,
+
       color: "bg-emerald-50 border-emerald-100",
+
       description: "Target search under visual distractions",
     },
+
     {
       id: "3",
+
       title: "Treasure",
+
       subtitle: "Memory",
+
       icon: <Award className="w-6 h-6 text-amber-600" />,
+
       color: "bg-amber-50 border-amber-100",
+
       description: "Object pair matching & spatial recall",
     },
+
     {
       id: "4",
+
       title: "Visualisation",
+
       subtitle: "Speed",
+
       icon: <Zap className="w-6 h-6 text-purple-600" />,
+
       color: "bg-purple-50 border-purple-100",
+
       description: "Rapid pattern recognition & symbol match",
     },
+
     {
       id: "5",
+
       title: "Divided",
+
       subtitle: "Attention",
+
       icon: <Layers className="w-6 h-6 text-rose-600" />,
+
       color: "bg-rose-50 border-rose-100",
+
       description: "Dual-task auditory and visual sorting",
     },
+
     {
       id: "6",
+
       title: "Task Switching",
+
       subtitle: "Flexibility",
+
       icon: <Sparkles className="w-6 h-6 text-indigo-600" />,
+
       color: "bg-indigo-50 border-indigo-100",
+
       description: "Cognitive rule inversion & Stroop challenges",
     },
   ]
@@ -182,6 +225,7 @@ export default function AloisCognitiveBoosterModal({
               type="button"
               onClick={() => {
                 onClose()
+
                 onStartVoiceCheck()
               }}
               className="w-full py-2.5 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[12px] font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-500/30 active:scale-98 transition-all"

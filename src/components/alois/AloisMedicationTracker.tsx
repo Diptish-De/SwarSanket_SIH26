@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   ChevronLeft,
   Bell,
@@ -11,66 +12,99 @@ import {
 
 interface AloisMedicationTrackerProps {
   onBack?: () => void
+
   onOpenSettings?: () => void
+
   fontFamily?: string
 }
 
 interface MedItem {
   id: string
+
   name: string
+
   dose: string
+
   tags: {
     label: string
+
     bg: string
+
     fg: string
   }[]
+
   taken: boolean
+
   color: string
 }
 
 /**
  * Alois Medications Screen — matching Figma node 496:20424 & app/(main)/medications.tsx.
  */
+
 export default function AloisMedicationTracker({
   onBack,
+
   onOpenSettings,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisMedicationTrackerProps) {
   const [tab, setTab] = useState<"week" | "today" | "month">("today")
+
   const [selectedDay, setSelectedDay] = useState(15)
 
   const [medsList, setMedsList] = useState<MedItem[]>([
     {
       id: "1",
+
       name: "Rivastigmine",
+
       dose: "4.6 mg / 24 hr",
+
       tags: [
         { label: "09:00 AM", bg: "#F4F4F4", fg: "#161616" },
+
         { label: "After Meal", bg: "#F4F4F4", fg: "#161616" },
       ],
+
       taken: true,
+
       color: "#FA4D56",
     },
+
     {
       id: "2",
+
       name: "Donepezil",
+
       dose: "10 mg",
+
       tags: [
         { label: "08:00 PM", bg: "#F4F4F4", fg: "#161616" },
+
         { label: "Before Sleep", bg: "#F4F4F4", fg: "#161616" },
       ],
+
       taken: true,
+
       color: "#0F62FE",
     },
+
     {
       id: "3",
+
       name: "Galantamine",
+
       dose: "8 mg",
+
       tags: [
         { label: "01:00 PM", bg: "#F4F4F4", fg: "#161616" },
+
         { label: "After Lunch", bg: "#F4F4F4", fg: "#161616" },
       ],
+
       taken: false,
+
       color: "#42BE65",
     },
   ])
@@ -83,16 +117,24 @@ export default function AloisMedicationTracker({
 
   const days = [
     { day: "Sun", date: 13 },
+
     { day: "Mon", date: 14 },
+
     { day: "Tue", date: 15 },
+
     { day: "Wed", date: 16 },
+
     { day: "Thu", date: 17 },
+
     { day: "Fri", date: 18 },
+
     { day: "Sat", date: 19 },
   ]
 
   const takenCount = medsList.filter((m) => m.taken).length
+
   const totalCount = medsList.length
+
   const percent = Math.round((takenCount / totalCount) * 100)
 
   return (
@@ -153,6 +195,7 @@ export default function AloisMedicationTracker({
           <div className="grid grid-cols-7 gap-1.5 text-center">
             {days.map((item) => {
               const isSelected = item.date === selectedDay
+
               return (
                 <button
                   key={item.date}

@@ -1,4 +1,5 @@
 import React from "react"
+
 import {
   MapPin,
   Bell,
@@ -14,18 +15,28 @@ import {
   ArrowRight,
   ExternalLink,
 } from "lucide-react"
+
 import { ScreeningSession } from "../../types"
+
 import { AloisTab } from "./types"
 
 interface AloisHomeDashboardProps {
   patientName: string
+
   latestSession?: ScreeningSession | null
+
   onStartVoiceCheck: () => void
+
   onSelectTab: (tab: AloisTab) => void
+
   onOpenDoctorModal: () => void
+
   onOpenSafetyModal: () => void
+
   onOpenCognitiveModal: () => void
+
   onViewReport: () => void
+
   fontFamily?: string
 }
 
@@ -33,19 +44,30 @@ interface AloisHomeDashboardProps {
  * Alois Home Screen — exact replica of Figma node 222:13739 & app/(main)/home.tsx.
  * Incorporates SwarSanket Quantum-ML voice screening as the hero "Cognitive Booster".
  */
+
 export default function AloisHomeDashboard({
   patientName,
+
   latestSession,
+
   onStartVoiceCheck,
+
   onSelectTab,
+
   onOpenDoctorModal,
+
   onOpenSafetyModal,
+
   onOpenCognitiveModal,
+
   onViewReport,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisHomeDashboardProps) {
   const lastRisk = latestSession?.mlResult?.screeningRisk || "none"
+
   const isElevated = lastRisk === "elevated"
+
   const isLow = lastRisk === "low"
 
   return (
@@ -118,6 +140,7 @@ export default function AloisHomeDashboard({
               style={{
                 backgroundImage:
                   "radial-gradient(#161616 1.5px, transparent 1.5px)",
+
                 backgroundSize: "10px 10px",
               }}
             />
@@ -355,6 +378,7 @@ export default function AloisHomeDashboard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
+
                 onOpenCognitiveModal()
               }}
               title="Browse Memory Games"
