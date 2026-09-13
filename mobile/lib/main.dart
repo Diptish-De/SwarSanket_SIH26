@@ -3,15 +3,19 @@ import 'theme/app_theme.dart';
 import 'models/screening_models.dart';
 import 'services/tts_service.dart';
 import 'services/audio_service.dart';
-import 'services/storage_service.dart';
+import 'services/api_service.dart';
+import 'services/auth_service.dart';
 import 'screens/splash_screen.dart';
+import 'screens/setup_screen.dart';
 import 'screens/app_screens.dart';
 import 'screens/voice_check_screens.dart';
 import 'screens/doctor_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AuthService.purgeLegacyData();
   await TtsService().init();
+  await ApiService.initialize();
   runApp(const SwarSanketApp());
 }
 
@@ -39,12 +43,35 @@ class MainNavigationController extends StatefulWidget {
 class _MainNavigationControllerState extends State<MainNavigationController> {
   int _activeTabIndex = 0;
   String _currentScreen = 'splash';
+  final List<String> _screenHistory = [];
   String _selectedLanguage = 'en';
-  final String _userName = 'Rama Devi';
+  String _userName = 'Rama Devi';
+  int _patientAge = 72;
   String _selectedPatient = 'Rama Devi';
   final bool _hasPreviousCheck = true;
 
   final AudioRecorderService _audioRecorder = AudioRecorderService();
+  String? _recordedAudioPath;
+  ScreeningApiResponse? _latestApiResponse;
+  ScreeningSession? _latestSession;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final profile = await AuthService.getUserProfile();
+    if (mounted) {
+      setState(() {
+        _userName = profile['name'] as String? ?? 'Rama Devi';
+        _patientAge = profile['age'] as int? ?? 72;
+        _selectedLanguage = profile['language'] as String? ?? 'en';
+        _selectedPatient = _userName;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -52,15 +79,55 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
     super.dispose();
   }
 
-  void _navigateTo(String screen) {
+  void _navigateTo(String screen, {bool clearHistory = false}) {
+    if (clearHistory) {
+      _screenHistory.clear();
+    } else if (_currentScreen != screen &&
+        _currentScreen != 'splash' &&
+        _currentScreen != 'setup') {
+      _screenHistory.add(_currentScreen);
+    }
     setState(() => _currentScreen = screen);
+  }
+
+  bool _navigateBack() {
+    if (_screenHistory.isNotEmpty) {
+      final previous = _screenHistory.removeLast();
+      setState(() => _currentScreen = previous);
+      return true;
+    } else if (_currentScreen != 'tabs' &&
+        _currentScreen != 'setup' &&
+        _currentScreen != 'splash') {
+      setState(() => _currentScreen = 'tabs');
+      return true;
+    } else if (_currentScreen == 'tabs' && _activeTabIndex != 0) {
+      setState(() => _activeTabIndex = 0);
+      return true;
+    }
+    return false;
   }
 
   Widget _buildScreenContent() {
     switch (_currentScreen) {
       case 'splash':
         return SplashScreen(
-          onFinish: () => _navigateTo('tabs'),
+          onFinish: () async {
+            final isSetupComplete = await AuthService.isFirstTimeSetupComplete();
+            if (isSetupComplete) {
+              await _loadUserProfile();
+              _navigateTo('tabs', clearHistory: true);
+            } else {
+              _navigateTo('setup', clearHistory: true);
+            }
+          },
+        );
+
+      case 'setup':
+        return SetupScreen(
+          onComplete: () async {
+            await _loadUserProfile();
+            _navigateTo('tabs', clearHistory: true);
+          },
         );
 
       // ─── Voice Check Intro ─────────────────────────────────────────
@@ -69,7 +136,7 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
           language: _selectedLanguage,
           onBegin: () => _navigateTo('task1'),
           onAssisted: () => _navigateTo('task1'),
-          onBack: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
         );
 
       // ─── Task 1 of 3: Picture Description ─────────────────────────
@@ -77,25 +144,28 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
         return PictureDescriptionScreen(
           language: _selectedLanguage,
           onStartSpeaking: () => _navigateTo('ready1'),
-          onBack: () => _navigateTo('intro'),
-          onClose: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'ready1':
         return ReadyToSpeakScreen(
           stepIndex: 1,
           onStartRecording: () => _navigateTo('rec1'),
-          onBack: () => _navigateTo('task1'),
-          onClose: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'rec1':
         return ActiveRecordingScreen(
           recorder: _audioRecorder,
           stepIndex: 1,
-          onFinish: () => _navigateTo('quality1'),
-          onBack: () => _navigateTo('ready1'),
-          onClose: () => _navigateTo('tabs'),
+          onFinish: (path) {
+            setState(() => _recordedAudioPath = path ?? _audioRecorder.currentFilePath);
+            _navigateTo('quality1');
+          },
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'quality1':
@@ -114,8 +184,8 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
         return MemoryRecallIntroScreen(
           language: _selectedLanguage,
           onContinue: () => _navigateTo('task2_prompt'),
-          onBack: () => _navigateTo('review1'),
-          onClose: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'task2_prompt':
@@ -123,25 +193,28 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
           language: _selectedLanguage,
           onStartSpeaking: () => _navigateTo('ready2'),
           onListenAgain: () => _navigateTo('task2_intro'),
-          onBack: () => _navigateTo('task2_intro'),
-          onClose: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'ready2':
         return ReadyToSpeakScreen(
           stepIndex: 2,
           onStartRecording: () => _navigateTo('rec2'),
-          onBack: () => _navigateTo('task2_prompt'),
-          onClose: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'rec2':
         return ActiveRecordingScreen(
           recorder: _audioRecorder,
           stepIndex: 2,
-          onFinish: () => _navigateTo('quality2'),
-          onBack: () => _navigateTo('ready2'),
-          onClose: () => _navigateTo('tabs'),
+          onFinish: (path) {
+            setState(() => _recordedAudioPath = path ?? _audioRecorder.currentFilePath);
+            _navigateTo('quality2');
+          },
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'quality2':
@@ -160,25 +233,28 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
         return ConversationalTaskScreen(
           language: _selectedLanguage,
           onStartSpeaking: () => _navigateTo('ready3'),
-          onBack: () => _navigateTo('review2'),
-          onClose: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'ready3':
         return ReadyToSpeakScreen(
           stepIndex: 3,
           onStartRecording: () => _navigateTo('rec3'),
-          onBack: () => _navigateTo('task3'),
-          onClose: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'rec3':
         return ActiveRecordingScreen(
           recorder: _audioRecorder,
           stepIndex: 3,
-          onFinish: () => _navigateTo('quality3'),
-          onBack: () => _navigateTo('ready3'),
-          onClose: () => _navigateTo('tabs'),
+          onFinish: (path) {
+            setState(() => _recordedAudioPath = path ?? _audioRecorder.currentFilePath);
+            _navigateTo('quality3');
+          },
+          onBack: () => _navigateBack(),
+          onClose: () => _navigateTo('tabs', clearHistory: true),
         );
 
       case 'quality3':
@@ -200,38 +276,19 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
 
       case 'processing':
         return AnalyzingVoiceScreen(
-          onComplete: () async {
-
-            final session = ScreeningSession(
-              id: 'sc_${DateTime.now().millisecondsSinceEpoch}',
-              patientName: _userName,
-              patientAge: 72,
-              language: _selectedLanguage,
-              assistedMode: false,
-              createdAt: DateTime.now(),
-              durationSeconds: 220,
-              biomarkers: AcousticBiomarkers(
-                speechRateWpm: 68.0,
-                pausePatternRatio: 45.0,
-                pitchVariationHz: 72.0,
-                jitterPercent: 3.2,
-                shimmerDb: 4.1,
-                hnrDb: 21.0,
-              ),
-              mlResult: MLInferenceResult(
-                risk: ScreeningRisk.elevated,
-                confidenceScore: 0.88,
-                classicalRiskScore: 0.84,
-                quantumRiskScore: 0.89,
-                shapFactors: [
-                  ShapFactor(feature: 'Extended pause duration (>1.2s)', weight: 38.0),
-                  ShapFactor(feature: 'Vocal pitch jitter (3.2%)', weight: 30.0),
-                ],
-              ),
-            );
-            await StorageService.saveScreening(session);
+          audioPath: _recordedAudioPath ?? _audioRecorder.currentFilePath,
+          patientName: _userName,
+          patientAge: _patientAge,
+          language: _selectedLanguage,
+          assistedMode: false,
+          onSuccess: (apiResponse, session) {
+            setState(() {
+              _latestApiResponse = apiResponse;
+              _latestSession = session;
+            });
             _navigateTo('result');
           },
+          onCancel: () => _navigateTo('tabs', clearHistory: true),
         );
 
       // ─── Quality Error State: Try Again ───────────────────────────
@@ -244,10 +301,12 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
       // ─── Result Screen ────────────────────────────────────────────
       case 'result':
         return ScreeningResultScreen(
-          risk: ScreeningRisk.elevated,
+          apiResponse: _latestApiResponse,
+          session: _latestSession,
+          risk: _latestSession?.mlResult.risk ?? ScreeningRisk.elevated,
           onDone: () {
             setState(() => _activeTabIndex = 0);
-            _navigateTo('tabs');
+            _navigateTo('tabs', clearHistory: true);
           },
           onDetails: () => _navigateTo('doctorPatient'),
         );
@@ -255,7 +314,7 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
       // ─── Doctor Clinical Dashboard & Longitudinal Trends ──────────
       case 'doctorDash':
         return DoctorDashboardScreen(
-          onBack: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
           onSelectPatient: (name) {
             setState(() => _selectedPatient = name);
             _navigateTo('doctorPatient');
@@ -265,7 +324,7 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
       case 'doctorPatient':
         return DoctorPatientDetailScreen(
           patientName: _selectedPatient,
-          onBack: () => _navigateTo('tabs'),
+          onBack: () => _navigateBack(),
         );
 
       // ─── Main Persistent Tabs ─────────────────────────────────────
@@ -281,14 +340,27 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
           onStartCheck: () => _navigateTo('intro'),
           onDoctorPatient: () => _navigateTo('doctorPatient'),
           onLanguageChanged: (lang) => setState(() => _selectedLanguage = lang),
+          onLogout: () async {
+            await AuthService.resetAll();
+            _screenHistory.clear();
+            _navigateTo('setup', clearHistory: true);
+          },
         );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FigmaPhoneFrame(
-      child: _buildScreenContent(),
+    return PopScope(
+      canPop: _currentScreen == 'setup' ||
+          (_currentScreen == 'tabs' && _activeTabIndex == 0),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _navigateBack();
+      },
+      child: FigmaPhoneFrame(
+        child: _buildScreenContent(),
+      ),
     );
   }
 }

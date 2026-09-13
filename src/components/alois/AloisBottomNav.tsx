@@ -42,7 +42,7 @@ export default function AloisBottomNav({
     {
       id: "schedule",
 
-      label: "Reminder",
+      label: "Schedule",
 
       icon: <Calendar className="w-5 h-5" />,
     },
@@ -78,11 +78,13 @@ export default function AloisBottomNav({
       className="sticky bottom-0 left-0 right-0 z-30 h-[74px] bg-[#F4F4F4] border-t border-[#E0E0E0] rounded-t-[24px] px-2 flex items-center justify-between shadow-[0_-4px_24px_rgba(0,0,0,0.06)] select-none"
     >
       {tabs.map((tab) => {
-        // Map sub-tabs like 'medications' or 'dailyCare' to schedule/home if active
-
+        // Map sub-tabs like 'medications', 'appointments', 'doctorInfo' or 'dailyCare'
         const isActive =
           activeTab === tab.id ||
-          (tab.id === "schedule" && activeTab === "medications") ||
+          (tab.id === "schedule" &&
+            (activeTab === "medications" ||
+              activeTab === "appointments" ||
+              activeTab === "doctorInfo")) ||
           (tab.id === "home" && activeTab === "dailyCare")
 
         return (

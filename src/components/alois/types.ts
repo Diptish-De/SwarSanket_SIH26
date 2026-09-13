@@ -1,6 +1,6 @@
 // ─── Alois Memory Aid & Wellness Data Contracts ─────────────────────────────
 
-export type AloisTab = "home" | "schedule" | "progress" | "messages" | "profile" | "medications" | "dailyCare"
+export type AloisTab = "home" | "schedule" | "appointments" | "doctorInfo" | "progress" | "messages" | "profile" | "medications" | "dailyCare"
 
 export interface MedicationItem {
   id: string
