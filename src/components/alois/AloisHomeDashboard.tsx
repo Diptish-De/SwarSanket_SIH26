@@ -1,6 +1,5 @@
 import React from "react"
 import {
-  MapPin,
   Bell,
   Settings,
   Sparkles,
@@ -19,7 +18,6 @@ interface AloisHomeDashboardProps {
   onStartVoiceCheck: () => void
   onSelectTab: (tab: AloisTab) => void
   onOpenDoctorModal?: () => void
-  onOpenSafetyModal: () => void
   onOpenCognitiveModal?: () => void
   onViewReport?: () => void
   fontFamily?: string
@@ -36,7 +34,6 @@ export default function AloisHomeDashboard({
   latestSession,
   onStartVoiceCheck,
   onSelectTab,
-  onOpenSafetyModal,
   onViewReport,
   fontFamily = "'Outfit', sans-serif",
 }: AloisHomeDashboardProps) {
@@ -65,17 +62,6 @@ export default function AloisHomeDashboard({
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Where Am I Action: Blue circular button */}
-          <button
-            type="button"
-            onClick={onOpenSafetyModal}
-            title="Where Am I?"
-            aria-label="Where Am I"
-            className="w-9 h-9 rounded-full bg-[#0F62FE] text-white flex items-center justify-center shadow-sm hover:bg-[#0353e9] active:scale-95 transition-all"
-          >
-            <MapPin className="w-4 h-4 text-white" />
-          </button>
-
           {/* Notifications */}
           <button
             type="button"
