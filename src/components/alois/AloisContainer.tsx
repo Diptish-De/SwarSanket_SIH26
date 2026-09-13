@@ -115,6 +115,7 @@ export default function AloisContainer({
             onBack={() => setActiveTab("home")}
             onSelectDoctor={(id) => {
               setSelectedDoctorId(id)
+
               setActiveTab("doctorInfo")
             }}
             onOpenSettings={() => setActiveTab("profile")}

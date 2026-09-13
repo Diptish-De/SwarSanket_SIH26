@@ -62,6 +62,7 @@ export default function AloisBottomNav({
     >
       {tabs.map((tab) => {
         // Map sub-tabs like 'medications', 'appointments', 'doctorInfo' or 'dailyCare' to 'home'
+
         const isActive =
           activeTab === tab.id ||
           (tab.id === "home" &&

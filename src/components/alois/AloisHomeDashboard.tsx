@@ -1,4 +1,5 @@
 import React from "react"
+
 import {
   Bell,
   Settings,
@@ -9,17 +10,26 @@ import {
   Activity,
   Check,
 } from "lucide-react"
+
 import { ScreeningSession } from "../../types"
+
 import { AloisTab } from "./types"
 
 interface AloisHomeDashboardProps {
   patientName: string
+
   latestSession?: ScreeningSession | null
+
   onStartVoiceCheck: () => void
+
   onSelectTab: (tab: AloisTab) => void
+
   onOpenDoctorModal?: () => void
+
   onOpenCognitiveModal?: () => void
+
   onViewReport?: () => void
+
   fontFamily?: string
 }
 
@@ -29,15 +39,22 @@ interface AloisHomeDashboardProps {
  * Secondary: Daily Care.
  * All extraneous sections (upcoming appointment, medications, appointments, events, news) removed.
  */
+
 export default function AloisHomeDashboard({
   patientName,
+
   latestSession,
+
   onStartVoiceCheck,
+
   onSelectTab,
+
   onViewReport,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisHomeDashboardProps) {
   const isNormal = latestSession?.mlResult?.screeningRisk === "low"
+
   const confidencePct = latestSession?.mlResult
     ? Math.round(latestSession.mlResult.confidenceScore * 100)
     : null
@@ -154,6 +171,7 @@ export default function AloisHomeDashboard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
+
                   onStartVoiceCheck()
                 }}
                 className="px-4 py-2 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
@@ -241,7 +259,9 @@ export default function AloisHomeDashboard({
           <div className="space-y-2">
             {[
               { title: "Wash dishes after breakfast", done: true },
+
               { title: "Afternoon walking routine (15 mins)", done: false },
+
               { title: "Evening hydration reminder", done: false },
             ].map((task, idx) => (
               <div

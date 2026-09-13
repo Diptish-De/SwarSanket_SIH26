@@ -114,3 +114,7 @@ CREATE POLICY "Service Role Upload SwarSanket Recordings"
 ON storage.objects FOR INSERT
 TO service_role
 WITH CHECK ( bucket_id = 'swarsanket-recordings' );
+
+-- 9. Realtime Publication for mobile / web push subscriptions
+ALTER PUBLICATION supabase_realtime ADD TABLE public.recordings;
+
