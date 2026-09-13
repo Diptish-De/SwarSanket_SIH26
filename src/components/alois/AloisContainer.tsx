@@ -8,6 +8,10 @@ import AloisHomeDashboard from "./AloisHomeDashboard"
 
 import AloisSchedule from "./AloisSchedule"
 
+import AloisAppointments from "./AloisAppointments"
+
+import AloisDoctorInfo from "./AloisDoctorInfo"
+
 import AloisProgress from "./AloisProgress"
 
 import AloisMessages from "./AloisMessages"
@@ -88,6 +92,9 @@ export default function AloisContainer({
 }: AloisContainerProps) {
   const [activeTab, setActiveTab] = useState<AloisTab>("home")
 
+  const [selectedDoctorId, setSelectedDoctorId] =
+    useState<string>("kalvin-mathew")
+
   const [showSafetyModal, setShowSafetyModal] = useState(false)
 
   const [showDoctorModal, setShowDoctorModal] = useState(false)
@@ -117,7 +124,37 @@ export default function AloisContainer({
             onBack={() => setActiveTab("home")}
             onStartVoiceCheck={onStartVoiceCheck}
             onOpenDoctorModal={() => setShowDoctorModal(true)}
+            onSelectDoctor={(id) => {
+              setSelectedDoctorId(id)
+              setActiveTab("doctorInfo")
+            }}
+            onOpenAppointments={() => setActiveTab("appointments")}
             onOpenSettings={() => setActiveTab("profile")}
+            fontFamily={fontFamily}
+          />
+        )}
+
+        {activeTab === "appointments" && (
+          <AloisAppointments
+            onBack={() => setActiveTab("home")}
+            onSelectDoctor={(id) => {
+              setSelectedDoctorId(id)
+              setActiveTab("doctorInfo")
+            }}
+            onOpenSettings={() => setActiveTab("profile")}
+            onStartVoiceCheck={onStartVoiceCheck}
+            onOpenDoctorModal={() => setShowDoctorModal(true)}
+            fontFamily={fontFamily}
+          />
+        )}
+
+        {activeTab === "doctorInfo" && (
+          <AloisDoctorInfo
+            doctorId={selectedDoctorId}
+            onBack={() => setActiveTab("appointments")}
+            onBookAppointment={() => setShowDoctorModal(true)}
+            onOpenSettings={() => setActiveTab("profile")}
+            onOpenChat={() => setActiveTab("messages")}
             fontFamily={fontFamily}
           />
         )}

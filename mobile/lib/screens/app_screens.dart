@@ -72,6 +72,7 @@ class MainTabScaffold extends StatelessWidget {
   final VoidCallback onStartCheck;
   final VoidCallback onDoctorPatient;
   final Function(String lang) onLanguageChanged;
+  final VoidCallback onLogout;
 
   const MainTabScaffold({
     super.key,
@@ -84,6 +85,7 @@ class MainTabScaffold extends StatelessWidget {
     required this.onStartCheck,
     required this.onDoctorPatient,
     required this.onLanguageChanged,
+    required this.onLogout,
   });
 
   @override
@@ -102,6 +104,7 @@ class MainTabScaffold extends StatelessWidget {
           currentLang: language,
           onLanguageChanged: onLanguageChanged,
           onHelp: () => onTabChange(2),
+          onLogout: onLogout,
         );
         break;
       case 0:
@@ -357,23 +360,23 @@ class HomeTab extends StatelessWidget {
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
+                  height: 54,
+                  child: ElevatedButton.icon(
                     onPressed: onStartCheck,
+                    icon: const Icon(Icons.mic, size: 22),
+                    label: Text(
+                      'Start Voice Screening',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: AppColors.primaryDark,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Text(
-                      'START',
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
@@ -660,6 +663,7 @@ class ProfileTab extends StatefulWidget {
   final String currentLang;
   final Function(String lang) onLanguageChanged;
   final VoidCallback onHelp;
+  final VoidCallback onLogout;
 
   const ProfileTab({
     super.key,
@@ -667,6 +671,7 @@ class ProfileTab extends StatefulWidget {
     required this.currentLang,
     required this.onLanguageChanged,
     required this.onHelp,
+    required this.onLogout,
   });
 
   @override
@@ -815,6 +820,39 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
+  void _confirmResetSetup() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Reset Profile Setup?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.text),
+        ),
+        content: const Text(
+          'You will be returned to the profile setup screen to update your details. Your screening records will be safely preserved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.onLogout();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reset Setup'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmDeleteRecordings() {
     showDialog(
       context: context,
@@ -951,31 +989,34 @@ class _ProfileTabState extends State<ProfileTab> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Audio Instructions',
-                              style: GoogleFonts.outfit(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.text,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Audio Instructions',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.text,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Hear instructions spoken aloud',
-                              style: GoogleFonts.notoSans(
-                                fontSize: 12,
-                                color: AppColors.muted,
+                              const SizedBox(height: 2),
+                              Text(
+                                'Hear instructions spoken aloud',
+                                style: GoogleFonts.notoSans(
+                                  fontSize: 12,
+                                  color: AppColors.muted,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Switch(
                           value: _audioInstructions,
                           onChanged: (val) => setState(() => _audioInstructions = val),
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                         ),
                       ],
                     ),
@@ -988,31 +1029,34 @@ class _ProfileTabState extends State<ProfileTab> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Data Saver',
-                              style: GoogleFonts.outfit(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.text,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Data Saver',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.text,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Sync recordings when connection is better',
-                              style: GoogleFonts.notoSans(
-                                fontSize: 12,
-                                color: AppColors.muted,
+                              const SizedBox(height: 2),
+                              Text(
+                                'Sync recordings when connection is better',
+                                style: GoogleFonts.notoSans(
+                                  fontSize: 12,
+                                  color: AppColors.muted,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Switch(
                           value: _dataSaver,
                           onChanged: (val) => setState(() => _dataSaver = val),
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                         ),
                       ],
                     ),
@@ -1092,6 +1136,38 @@ class _ProfileTabState extends State<ProfileTab> {
                       color: AppColors.danger,
                     ),
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Reset Profile Setup Button
+            InkWell(
+              key: const ValueKey('logout_button'),
+              onTap: _confirmResetSetup,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.manage_accounts_outlined, color: AppColors.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Reset Profile Setup',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

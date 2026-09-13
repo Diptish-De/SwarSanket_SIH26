@@ -41,3 +41,5 @@ env/
 # pnpm-lock.yaml silently goes stale, and the next build fails frozen-lockfile.
 package-lock.json
 yarn.lock
+.vercel/
+

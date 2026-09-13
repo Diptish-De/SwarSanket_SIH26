@@ -6,6 +6,9 @@ import '../theme/app_theme.dart';
 import '../models/screening_models.dart';
 import '../services/tts_service.dart';
 import '../services/audio_service.dart';
+import 'dart:io';
+import '../services/api_service.dart';
+import '../services/storage_service.dart';
 
 // ─── Step Indicator Dots (Figma: [ — ] [ • ] [ • ]) ───────────────────────────
 
@@ -878,67 +881,122 @@ class ReadyToSpeakScreen extends StatelessWidget {
           children: [
             StepProgressHeader(currentStep: stepIndex, onBack: onBack, onClose: onClose),
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Teal Mic Button
-                  GestureDetector(
-                    onTap: onStartRecording,
-                    child: Container(
-                      width: 130,
-                      height: 130,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 10),
+
+                    // Teal Mic Button
+                    GestureDetector(
+                      onTap: onStartRecording,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              blurRadius: 28,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.mic,
+                          color: Colors.white,
+                          size: 54,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    Text(
+                      'Ready to Speak',
+                      style: GoogleFonts.outfit(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Please speak naturally for the requested task.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.notoSans(
+                        fontSize: 14,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Elderly-friendly instructions card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.primary,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.3),
-                            blurRadius: 28,
-                            spreadRadius: 4,
-                          ),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTipRow(Icons.volume_off_rounded, 'Find a quiet place without background noise.'),
+                          const SizedBox(height: 12),
+                          _buildTipRow(Icons.timer_outlined, 'Speak for at least 20–30 seconds (around 50 words or more).'),
+                          const SizedBox(height: 12),
+                          _buildTipRow(Icons.record_voice_over_rounded, 'Speak clearly at your normal pace describing the picture.'),
+                          const SizedBox(height: 12),
+                          _buildTipRow(Icons.touch_app_rounded, 'Tap Start Recording when you are ready.'),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.mic,
-                        color: Colors.white,
-                        size: 56,
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Big Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: onStartRecording,
+                        icon: const Icon(Icons.fiber_manual_record, color: Colors.white, size: 20),
+                        label: Text(
+                          'Start Recording',
+                          style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  Text(
-                    'Tap to speak',
-                    style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Subtle Waveform Dots Representation
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(24, (index) {
-                      final h = (index % 3 == 0) ? 10.0 : ((index % 2 == 0) ? 6.0 : 4.0);
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        width: 3,
-                        height: h,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryDark.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTipRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: AppColors.primary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.notoSans(fontSize: 13, color: AppColors.text, height: 1.4),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -948,7 +1006,7 @@ class ReadyToSpeakScreen extends StatelessWidget {
 class ActiveRecordingScreen extends StatefulWidget {
   final AudioRecorderService recorder;
   final int stepIndex; // 1, 2, 3
-  final VoidCallback onFinish;
+  final void Function(String? recordedPath) onFinish;
   final VoidCallback onBack;
   final VoidCallback onClose;
 
@@ -969,6 +1027,7 @@ class _ActiveRecordingScreenState extends State<ActiveRecordingScreen> with Sing
   int _seconds = 0;
   Timer? _timer;
   late AnimationController _waveAnim;
+  bool _permissionDenied = false;
 
   @override
   void initState() {
@@ -981,7 +1040,20 @@ class _ActiveRecordingScreenState extends State<ActiveRecordingScreen> with Sing
   }
 
   void _startRecording() async {
-    await widget.recorder.start();
+    _timer?.cancel();
+    setState(() {
+      _seconds = 0;
+      _permissionDenied = false;
+    });
+
+    final started = await widget.recorder.start();
+    if (!started) {
+      if (mounted) {
+        setState(() => _permissionDenied = true);
+      }
+      return;
+    }
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted && !widget.recorder.isPaused) {
         setState(() => _seconds++);
@@ -996,20 +1068,133 @@ class _ActiveRecordingScreenState extends State<ActiveRecordingScreen> with Sing
     super.dispose();
   }
 
+  void _confirmAndExit({required VoidCallback onConfirm}) async {
+    final wasRecording = widget.recorder.isRecording && !widget.recorder.isPaused;
+    if (wasRecording) {
+      widget.recorder.pause();
+      _waveAnim.stop();
+      if (mounted) setState(() {});
+    }
+
+    if (!mounted) return;
+
+    final shouldStop = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Stop recording?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.text),
+        ),
+        content: Text(
+          'If you leave now, this audio recording will not be saved.',
+          style: GoogleFonts.notoSans(fontSize: 14, color: AppColors.textSub, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Continue Recording',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.primary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              'Stop Recording',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldStop == true) {
+      await widget.recorder.stop();
+      onConfirm();
+    } else {
+      if (wasRecording) {
+        widget.recorder.resume();
+        _waveAnim.repeat();
+        if (mounted) setState(() {});
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final fmtTime = '${(_seconds ~/ 60).toString().padLeft(2, '0')}:${(_seconds % 60).toString().padLeft(2, '0')}';
 
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: Column(
-          children: [
-            StepProgressHeader(
-              currentStep: widget.stepIndex,
-              onBack: widget.onBack,
-              onClose: widget.onClose,
-            ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _confirmAndExit(onConfirm: widget.onBack);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              StepProgressHeader(
+                currentStep: widget.stepIndex,
+                onBack: () => _confirmAndExit(onConfirm: widget.onBack),
+                onClose: () => _confirmAndExit(onConfirm: widget.onClose),
+              ),
+            if (_permissionDenied)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(28.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 90,
+                        height: 90,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFEE2E2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.mic_off_rounded, color: Color(0xFFDC2626), size: 48),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Microphone Access Needed',
+                        style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.text),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'SwarSanket needs permission to access your device microphone to record your voice screening. Please grant microphone permission to continue.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.notoSans(fontSize: 14, color: AppColors.muted, height: 1.4),
+                      ),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: _startRecording,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: Text('Try Again / Grant Permission', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1124,8 +1309,45 @@ class _ActiveRecordingScreenState extends State<ActiveRecordingScreen> with Sing
                     height: 52,
                     child: ElevatedButton(
                       onPressed: () async {
-                        await widget.recorder.stop();
-                        widget.onFinish();
+                        if (_seconds < 5) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Please speak for at least 5 seconds before finishing.',
+                                style: GoogleFonts.notoSans(fontSize: 14),
+                              ),
+                              backgroundColor: const Color(0xFFDC2626),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                          return;
+                        }
+                        if (_seconds < 20) {
+                          final proceed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text('More Speech Recommended', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                              content: Text(
+                                'The screening engine needs at least 20 seconds (around 50 words) to calculate a full screening score. You recorded \$_seconds seconds.\n\nWould you like to keep speaking or finish anyway?',
+                                style: GoogleFonts.notoSans(fontSize: 14, height: 1.4),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Keep Speaking'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                                  child: const Text('Finish Anyway'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (proceed != true) return;
+                        }
+                        final path = await widget.recorder.stop();
+                        widget.onFinish(path);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -1169,7 +1391,8 @@ class _ActiveRecordingScreenState extends State<ActiveRecordingScreen> with Sing
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -1547,34 +1770,157 @@ class _CompletionScreenState extends State<CompletionScreen> {
   }
 }
 
-// ─── Step: ML Processing Screen ("Analyzing your voice…") ──────────────────────
+// ─── Step: ML Processing Screen (Real Backend HTTP Pipeline) ──────────────────────
 
 class AnalyzingVoiceScreen extends StatefulWidget {
-  final VoidCallback onComplete;
+  final String? audioPath;
+  final String patientName;
+  final int patientAge;
+  final String language;
+  final bool assistedMode;
+  final void Function(ScreeningApiResponse apiResponse, ScreeningSession session) onSuccess;
+  final VoidCallback onCancel;
 
-  const AnalyzingVoiceScreen({super.key, required this.onComplete});
+  const AnalyzingVoiceScreen({
+    super.key,
+    required this.audioPath,
+    required this.patientName,
+    required this.patientAge,
+    required this.language,
+    required this.assistedMode,
+    required this.onSuccess,
+    required this.onCancel,
+  });
 
   @override
   State<AnalyzingVoiceScreen> createState() => _AnalyzingVoiceScreenState();
 }
 
 class _AnalyzingVoiceScreenState extends State<AnalyzingVoiceScreen> {
-  double _progress = 0.0;
+  bool _isAnalyzing = true;
+  String? _errorMessage;
+  final TextEditingController _ipController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    Timer.periodic(const Duration(milliseconds: 60), (timer) {
+    _startAnalysis();
+  }
+
+  @override
+  void dispose() {
+    _ipController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startAnalysis() async {
+    setState(() {
+      _isAnalyzing = true;
+      _errorMessage = null;
+    });
+
+    final audioPath = widget.audioPath;
+    if (audioPath == null || audioPath.trim().isEmpty) {
       if (mounted) {
         setState(() {
-          _progress += 0.03;
-          if (_progress >= 1.0) {
-            timer.cancel();
-            Future.delayed(const Duration(milliseconds: 300), widget.onComplete);
-          }
+          _isAnalyzing = false;
+          _errorMessage = 'No recorded audio file was captured. Please record your voice and try again.';
         });
       }
-    });
+      return;
+    }
+
+    final audioFile = File(audioPath);
+    if (!audioFile.existsSync()) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _errorMessage = 'Recorded audio file could not be found on device storage. Please try recording again.';
+        });
+      }
+      return;
+    }
+
+    try {
+      debugPrint('[SwarSanket AnalyzingVoiceScreen] Calling real backend with ${audioFile.path}...');
+      final apiResponse = await ApiService.analyzeAudio(audioFile);
+
+      final session = ScreeningSession.fromApiResponse(
+        patientName: widget.patientName,
+        patientAge: widget.patientAge,
+        language: widget.language,
+        assistedMode: widget.assistedMode,
+        response: apiResponse,
+      );
+
+      await StorageService.saveScreening(session);
+
+      if (mounted) {
+        widget.onSuccess(apiResponse, session);
+      }
+    } catch (e) {
+      debugPrint('[SwarSanket AnalyzingVoiceScreen] Error during screening: $e');
+      if (mounted) {
+        String cleanMessage = e.toString()
+            .replaceFirst(RegExp(r"^[A-Za-z]+Exception: "), "")
+            .replaceFirst("HttpException: ", "");
+        setState(() {
+          _isAnalyzing = false;
+          _errorMessage = cleanMessage;
+        });
+      }
+    }
+  }
+
+  void _showConfigureIpDialog() {
+    _ipController.text = ApiService.baseUrl;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Configure Screening Server IP', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'For physical phone testing, enter your development Mac local Wi-Fi IP (e.g. http://192.168.1.100:8001):',
+              style: GoogleFonts.notoSans(fontSize: 13, color: AppColors.textSub),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ipController,
+              decoration: InputDecoration(
+                hintText: 'http://<MAC-LAN-IP>:8001',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+              keyboardType: TextInputType.url,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newUrl = _ipController.text.trim();
+              if (newUrl.isNotEmpty) {
+                await ApiService.setBaseUrl(newUrl);
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+              _startAnalysis();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Save & Retry'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1584,100 +1930,223 @@ class _AnalyzingVoiceScreenState extends State<AnalyzingVoiceScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(28.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-
-              // Light Cyan Wave Icon Box (~~~)
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(26),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.waves_rounded,
-                    size: 44,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              Text(
-                'Analyzing your voice…',
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.text,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'This may take a moment.',
-                style: GoogleFonts.notoSans(
-                  fontSize: 13,
-                  color: AppColors.muted,
-                ),
-              ),
-              const SizedBox(height: 36),
-
-              // Linear Progress Indicator
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: _progress.clamp(0.0, 1.0),
-                  minHeight: 10,
-                  backgroundColor: AppColors.border,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Processing speech features…',
-                style: GoogleFonts.notoSans(
-                  fontSize: 12,
-                  color: AppColors.muted,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Privacy Pill
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.lock_outline, size: 16, color: AppColors.primaryDark),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Your information is processed securely.',
-                      style: GoogleFonts.notoSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Spacer(),
-            ],
-          ),
+          child: _isAnalyzing ? _buildAnalyzingView() : _buildErrorView(),
         ),
       ),
     );
   }
-}
 
+  Widget _buildAnalyzingView() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Spacer(),
+
+        // Light Cyan Wave Icon Box
+        Container(
+          width: 90,
+          height: 90,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.waves_rounded,
+              size: 44,
+              color: AppColors.primaryDark,
+            ),
+          ),
+        ),
+        const SizedBox(height: 28),
+
+        Text(
+          'Analyzing your voice…',
+          style: GoogleFonts.outfit(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Running Faster-Whisper ASR & Quantum-Hybrid ML inference.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.notoSans(
+            fontSize: 13,
+            color: AppColors.muted,
+          ),
+        ),
+        const SizedBox(height: 36),
+
+        // Indeterminate Progress Indicator for Real Network Call
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: const LinearProgressIndicator(
+            minHeight: 10,
+            backgroundColor: AppColors.border,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Extracting acoustic & linguistic biomarkers…',
+          style: GoogleFonts.notoSans(
+            fontSize: 12,
+            color: AppColors.muted,
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Privacy Pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_outline, size: 16, color: AppColors.primaryDark),
+              const SizedBox(width: 8),
+              Text(
+                'Your information is processed securely.',
+                style: GoogleFonts.notoSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const Spacer(),
+
+        TextButton(
+          onPressed: widget.onCancel,
+          child: Text(
+            'Cancel Check',
+            style: GoogleFonts.notoSans(
+              fontSize: 14,
+              color: AppColors.muted,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Spacer(),
+
+        Container(
+          width: 80,
+          height: 80,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFEE2E2),
+            shape: BoxShape.circle,
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.error_outline_rounded,
+              size: 44,
+              color: Color(0xFFDC2626),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        Text(
+          'Unable to Analyze Recording',
+          style: GoogleFonts.outfit(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppColors.text,
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Text(
+            _errorMessage ?? 'An error occurred during communication with the screening backend. Please check your connection and try again.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.notoSans(
+              fontSize: 13,
+              color: AppColors.textSub,
+              height: 1.4,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        Text(
+          'Active Server URL: ${ApiService.baseUrl}',
+          style: GoogleFonts.notoSans(
+            fontSize: 11,
+            color: AppColors.muted,
+          ),
+        ),
+
+        const Spacer(),
+
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: _startAnalysis,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: Text(
+              'Try Again',
+              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton(
+            onPressed: _showConfigureIpDialog,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Text(
+              'Change Server IP',
+              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        TextButton(
+          onPressed: widget.onCancel,
+          child: Text(
+            'Record Again',
+            style: GoogleFonts.notoSans(fontSize: 14, color: AppColors.muted),
+          ),
+        ),
+      ],
+    );
+  }
+}
 // ─── Result: Quality Error / Uncertain Screen ("Try Again") ────────────────────
 
 class TryAgainErrorScreen extends StatelessWidget {
@@ -1850,137 +2319,376 @@ class TryAgainErrorScreen extends StatelessWidget {
   }
 }
 
-// ─── Result: Final Outcome Screen (Low Risk / Elevated Risk) ───────────────────
+// ─── Result: Final Outcome Screen (Real Backend Model Output) ───────────────────
 
-class ScreeningResultScreen extends StatelessWidget {
+class ScreeningResultScreen extends StatefulWidget {
+  final ScreeningApiResponse? apiResponse;
+  final ScreeningSession? session;
   final ScreeningRisk risk;
   final VoidCallback onDone;
   final VoidCallback onDetails;
 
   const ScreeningResultScreen({
     super.key,
-    required this.risk,
+    this.apiResponse,
+    this.session,
+    this.risk = ScreeningRisk.elevated,
     required this.onDone,
     required this.onDetails,
   });
 
   @override
+  State<ScreeningResultScreen> createState() => _ScreeningResultScreenState();
+}
+
+class _ScreeningResultScreenState extends State<ScreeningResultScreen> {
+  bool _showTechnicalDetails = false;
+
+  @override
   Widget build(BuildContext context) {
-    final isElevated = risk == ScreeningRisk.elevated;
+    final apiResponse = widget.apiResponse;
+    final isMoreSpeech = apiResponse?.screening.status == 'More speech needed';
+    final isElevated = !isMoreSpeech && (apiResponse != null
+        ? (apiResponse.screening.predictedClass == 1 ||
+            apiResponse.screening.status.toLowerCase().contains('elevated') ||
+            apiResponse.screening.riskTier.toLowerCase().contains('elevated'))
+        : (widget.risk == ScreeningRisk.elevated));
+
+    final statusText = apiResponse?.screening.status ??
+        (isElevated ? 'Elevated screening signal' : 'Lower screening signal');
+
+    final interpretationText = isMoreSpeech
+        ? (apiResponse?.screening.interpretation ?? 'More speech is needed to estimate a screening signal. Please describe the prompt in as much detail as you can.')
+        : (isElevated
+            ? 'Your voice sample showed acoustic and speech pacing patterns that may benefit from clinical follow-up. We recommend consulting your healthcare provider.'
+            : 'Your voice metrics are within typical ranges for your age profile. Periodic voice checks can help monitor your cognitive wellness over time.');
+
+    final confidencePercent = apiResponse?.screening.technicalConfidencePercent ??
+        ((widget.session?.mlResult.confidenceScore ?? 0.88) * 100.0);
+
+    final probabilityPercent = apiResponse?.screening.probabilityPercent ??
+        ((widget.session?.mlResult.quantumRiskScore ?? 0.84) * 100.0);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             children: [
-              const Spacer(),
+              const SizedBox(height: 10),
 
+              // Status Icon Circle
               Container(
-                width: 90,
-                height: 90,
+                width: 84,
+                height: 84,
                 decoration: BoxDecoration(
                   color: isElevated ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Icon(
-                    isElevated ? Icons.info_outline_rounded : Icons.check_rounded,
-                    size: 48,
+                    isMoreSpeech ? Icons.record_voice_over_rounded : (isElevated ? Icons.info_outline_rounded : Icons.check_circle_outline_rounded),
+                    size: 46,
                     color: isElevated ? const Color(0xFFD97706) : const Color(0xFF16A34A),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
+              // Status Pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: isElevated ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  isElevated ? 'Further Evaluation Recommended' : 'No Immediate Concern Detected',
+                  statusText,
                   style: GoogleFonts.outfit(
                     color: isElevated ? const Color(0xFF92400E) : const Color(0xFF16A34A),
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 14,
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
               Text(
-                'Voice Check Complete',
-                style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.text),
+                isMoreSpeech ? 'More Speech Needed' : 'Your Screening Result',
+                style: GoogleFonts.outfit(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.text,
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 6),
+              Text(
+                'Screening result only — not a diagnosis.',
+                style: GoogleFonts.notoSans(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: AppColors.muted,
+                ),
+              ),
+              const SizedBox(height: 16),
 
+              // Patient-Friendly Interpretation Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.border),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: Colors.black.withValues(alpha: 0.03),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Text(
-                  isElevated
-                      ? 'The screening found some speech and acoustic patterns that may benefit from professional assessment.'
-                      : 'This screening did not identify voice biomarker patterns that require immediate follow-up.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.notoSans(fontSize: 13, color: AppColors.textSub, height: 1.5),
+                child: Column(
+                  children: [
+                    Text(
+                      interpretationText,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.notoSans(
+                        fontSize: 14,
+                        color: AppColors.text,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
-              Text(
-                'This screening does not replace a medical diagnosis.',
-                style: GoogleFonts.notoSans(fontSize: 11, color: AppColors.muted),
+              const SizedBox(height: 16),
+
+              // Expandable Technical Metrics for Healthcare Providers
+              InkWell(
+                onTap: () => setState(() => _showTechnicalDetails = !_showTechnicalDetails),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.analytics_outlined, color: AppColors.primary, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _showTechnicalDetails ? 'Hide Technical Metrics' : 'Show Technical Metrics (Clinicians)',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        _showTechnicalDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
-              const Spacer(),
+              if (_showTechnicalDetails) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Column(
+                            children: [
+                              Text(
+                                isMoreSpeech ? 'N/A' : '${confidencePercent.toStringAsFixed(1)}%',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: isElevated ? const Color(0xFFD97706) : const Color(0xFF16A34A),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Technical Confidence',
+                                style: GoogleFonts.notoSans(fontSize: 11, color: AppColors.muted),
+                              ),
+                            ],
+                          ),
+                          Container(width: 1, height: 32, color: AppColors.border),
+                          Column(
+                            children: [
+                              Text(
+                                isMoreSpeech ? 'N/A' : '${probabilityPercent.toStringAsFixed(1)}%',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Screening Probability',
+                                style: GoogleFonts.notoSans(fontSize: 11, color: AppColors.muted),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
 
+                      if (apiResponse != null && apiResponse.transcript.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 14),
+                        Text(
+                          'FASTER-WHISPER TRANSCRIPT',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '"${apiResponse.transcript}"',
+                            style: GoogleFonts.notoSans(
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.text,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      if (apiResponse?.explanation != null) ...[
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 14),
+                        Text(
+                          'ACOUSTIC CONTRIBUTIONS (SHAP)',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...apiResponse!.explanation!.topPositiveContributions.take(2).map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.feature,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.notoSans(fontSize: 12, color: AppColors.text),
+                                ),
+                              ),
+                              Text(
+                                '+${item.shapValue.toStringAsFixed(3)}',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFD97706),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 16),
+
+              // Mandatory Medical Disclaimer Pill
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  'Screening result only — not a diagnosis. Does not replace clinical assessment by a healthcare professional.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.notoSans(
+                    fontSize: 11,
+                    color: AppColors.muted,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Primary Action: Return to Home
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 54,
                 child: ElevatedButton(
-                  onPressed: onDone,
+                  onPressed: widget.onDone,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: Text(
-                    'Done',
+                    isMoreSpeech ? 'Record More Speech' : 'Return to Home',
                     style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
+
+              // Secondary Action: Doctor Details
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton(
-                  onPressed: onDetails,
+                  onPressed: widget.onDetails,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary, width: 1.5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: Text(
-                    'View Screening Details',
+                    'View Detailed Clinical Report',
                     style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
             ],
           ),
         ),

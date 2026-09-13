@@ -135,11 +135,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 left: 0,
                 right: 0,
                 child: Text(
-                  'splash · English',
+                  'v1.0.2 • Tap to continue',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.notoSans(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ),
