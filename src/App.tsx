@@ -124,11 +124,12 @@ import {
   GITHUB_RELEASES_URL,
 } from "./components/ApkDownloadModal"
 
-import DemoAuth, { readDemoUser } from "./components/DemoAuth"
+import {
+  ALOIS_USER_STORAGE_KEY,
+  AloisAuthUser,
+} from "./components/alois/auth/AloisAuthContainer"
 
 import AloisAuthContainer from "./components/alois/auth/AloisAuthContainer"
-
-import MemberPicker from "./components/MemberPicker"
 
 import AddMemberSheet from "./components/AddMemberSheet"
 
@@ -3898,28 +3899,6 @@ function SwarSanketApp({
     useState<"listen" | "how" | "offline" | "contact" | null>(null)
 
   const [isListeningAudio, setIsListeningAudio] = useState<boolean>(false)
-
-  const handleStartFromBeginning = (
-    targetScreen: "splash" | "profile" = "splash",
-  ) => {
-    clearSession()
-
-    stopSpeech()
-
-    setCurrentAudioBlob(null)
-
-    setCurrentAudioUrl("")
-
-    setRecordingContext("pictureDesc")
-
-    setLastResult(null)
-
-    setScreeningApiResult(null)
-
-    setScreen(targetScreen)
-
-    setShowRestartMenu(false)
-  }
 
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string>("")
 
@@ -9289,12 +9268,12 @@ function SwarSanketApp({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Start from Beginning / Registration Button */}
+          {/* Return to the current login and registration flow. */}
           <div className="relative">
             <div className="flex items-center rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:border-[#38bdf8]/60 shadow-md transition-all">
               <button
-                onClick={() => handleStartFromBeginning("splash")}
-                title="Start from Beginning (Splash / Registration flow)"
+                onClick={onLogout}
+                title="Return to the login and registration flow"
                 className="px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 text-slate-200 hover:text-white active:scale-95 transition-all"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-[#38bdf8]" />
@@ -9317,30 +9296,16 @@ function SwarSanketApp({
                 />
                 <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-64 rounded-2xl bg-[#03222a] border border-[#0d4f5e] shadow-2xl p-1.5 z-50 animate-fade-in text-xs space-y-1">
                   <button
-                    onClick={() => handleStartFromBeginning("splash")}
+                    onClick={onLogout}
                     className="w-full px-3 py-2 rounded-xl text-left hover:bg-[#073c4b] text-slate-200 hover:text-white transition-colors flex items-center gap-2.5"
                   >
                     <Sparkles className="w-4 h-4 text-[#38bdf8] shrink-0" />
                     <div>
                       <div className="font-bold text-white">
-                        Full Beginning (Splash)
+                        Login / Registration
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        Language, Welcome &amp; Consent
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleStartFromBeginning("profile")}
-                    className="w-full px-3 py-2 rounded-xl text-left hover:bg-[#073c4b] text-slate-200 hover:text-white transition-colors flex items-center gap-2.5"
-                  >
-                    <User className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <div>
-                      <div className="font-bold text-white">
-                        Registration Page (Profile)
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        Direct Patient Profile &amp; Age Setup
+                        Return to the current Alois sign-in flow
                       </div>
                     </div>
                   </button>
@@ -9484,9 +9449,18 @@ export default function App() {
     }
   })
 
-  const [authenticatedName, setAuthenticatedName] = useState<string>(
-    () => readDemoUser()?.fullName || "Jerrold Harrington",
-  )
+  const [authenticatedName, setAuthenticatedName] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+
+      return stored
+        ? (JSON.parse(stored) as Partial<AloisAuthUser>).fullName ||
+            "Jerrold Harrington"
+        : "Jerrold Harrington"
+    } catch {
+      return "Jerrold Harrington"
+    }
+  })
 
   // Household identity
 
@@ -9551,8 +9525,6 @@ export default function App() {
   const handleLogout = () => {
     try {
       localStorage.removeItem("alois-auth-session")
-
-      localStorage.removeItem("swarsanket-demo-session")
     } catch {
       // Ignore
     }
@@ -9576,9 +9548,7 @@ export default function App() {
             // Ignore localStorage errors
           }
 
-          setAuthenticatedName(
-            fullName || readDemoUser()?.fullName || "Jerrold Harrington",
-          )
+          setAuthenticatedName(fullName || "Jerrold Harrington")
 
           setIsAuthenticated(true)
         }}
