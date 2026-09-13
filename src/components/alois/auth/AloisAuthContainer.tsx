@@ -31,10 +31,11 @@ export const ALOIS_AUTH_SESSION_KEY = "alois-auth-session"
 function AloisLogo() {
   return (
     <div className="w-10 h-10 flex items-center justify-center mx-auto mb-3">
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-        <circle cx="18" cy="18" r="14" stroke="#0F62FE" strokeWidth="4.5" />
-        <circle cx="18" cy="18" r="5" fill="#0F62FE" />
-      </svg>
+      <img
+        src="/logo.jpeg"
+        alt="SwarSanket Logo"
+        className="w-9 h-9 rounded-xl object-contain"
+      />
     </div>
   )
 }

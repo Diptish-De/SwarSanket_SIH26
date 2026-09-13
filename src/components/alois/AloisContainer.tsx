@@ -22,8 +22,6 @@ import AloisMedicationTracker from "./AloisMedicationTracker"
 
 import AloisDailyCare from "./AloisDailyCare"
 
-import AloisWhereAmIModal from "./AloisWhereAmIModal"
-
 import AloisDoctorBookingModal from "./AloisDoctorBookingModal"
 
 import AloisCognitiveBoosterModal from "./AloisCognitiveBoosterModal"
@@ -95,8 +93,6 @@ export default function AloisContainer({
   const [selectedDoctorId, setSelectedDoctorId] =
     useState<string>("kalvin-mathew")
 
-  const [showSafetyModal, setShowSafetyModal] = useState(false)
-
   const [showDoctorModal, setShowDoctorModal] = useState(false)
 
   const [showCognitiveModal, setShowCognitiveModal] = useState(false)
@@ -112,7 +108,6 @@ export default function AloisContainer({
             onStartVoiceCheck={onStartVoiceCheck}
             onSelectTab={setActiveTab}
             onOpenDoctorModal={() => setShowDoctorModal(true)}
-            onOpenSafetyModal={() => setShowSafetyModal(true)}
             onOpenCognitiveModal={() => setShowCognitiveModal(true)}
             onViewReport={onViewReport}
             fontFamily={fontFamily}
@@ -219,12 +214,6 @@ export default function AloisContainer({
       />
 
       {/* ─── Modals ───────────────────────────────────────────────────── */}
-      <AloisWhereAmIModal
-        isOpen={showSafetyModal}
-        onClose={() => setShowSafetyModal(false)}
-        fontFamily={fontFamily}
-      />
-
       <AloisDoctorBookingModal
         isOpen={showDoctorModal}
         onClose={() => setShowDoctorModal(false)}
