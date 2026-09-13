@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   ChevronLeft,
   Bell,
@@ -18,9 +19,13 @@ import {
 
 interface AloisScheduleProps {
   onBack: () => void
+
   onStartVoiceCheck: () => void
+
   onOpenDoctorModal: () => void
+
   onOpenSettings: () => void
+
   fontFamily?: string
 }
 
@@ -28,55 +33,88 @@ interface AloisScheduleProps {
  * Alois Schedule & Clinical Tests Screen — matching Figma node 449:14810 & 451:16134.
  * Incorporates the SwarSanket Quantum-ML Voice Screening and Cognitive Tests.
  */
+
 export default function AloisSchedule({
   onBack,
+
   onStartVoiceCheck,
+
   onOpenDoctorModal,
+
   onOpenSettings,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisScheduleProps) {
   const [activeSegment, setActiveSegment] = useState<"doctors" | "tests">(
     "tests",
   )
+
   const [selectedDay, setSelectedDay] = useState(15)
+
   const [searchQuery, setSearchQuery] = useState("")
 
   const days = [
     { day: "Sun", date: 13 },
+
     { day: "Mon", date: 14 },
+
     { day: "Tue", date: 15 },
+
     { day: "Wed", date: 16 },
+
     { day: "Thu", date: 17 },
+
     { day: "Fri", date: 18 },
+
     { day: "Sat", date: 19 },
   ]
 
   const doctors = [
     {
       id: "1",
+
       name: "Dr. Andrew Lucas",
+
       department: "Neurology & Cognitive Health",
+
       rating: 5.0,
+
       time: "10:30 AM",
+
       avatar: "AL",
+
       color: "from-blue-600 to-indigo-600",
     },
+
     {
       id: "2",
+
       name: "Dr. Kalvin Mathew",
+
       department: "Geriatric Psychiatry",
+
       rating: 4.9,
+
       time: "02:00 PM",
+
       avatar: "KM",
+
       color: "from-emerald-600 to-teal-600",
     },
+
     {
       id: "3",
+
       name: "Dr. Deccan Kay",
+
       department: "Cognitive Rehabilitation",
+
       rating: 4.8,
+
       time: "04:15 PM",
+
       avatar: "DK",
+
       color: "from-purple-600 to-violet-600",
     },
   ]
@@ -137,6 +175,7 @@ export default function AloisSchedule({
           <div className="grid grid-cols-7 gap-1.5 text-center">
             {days.map((item) => {
               const isSelected = item.date === selectedDay
+
               return (
                 <button
                   key={item.date}

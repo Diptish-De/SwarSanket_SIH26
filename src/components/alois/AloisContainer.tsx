@@ -1,31 +1,56 @@
 import React, { useState } from "react"
+
 import { ScreeningSession } from "../../types"
+
 import { AloisTab } from "./types"
+
 import AloisHomeDashboard from "./AloisHomeDashboard"
+
 import AloisSchedule from "./AloisSchedule"
+
 import AloisProgress from "./AloisProgress"
+
 import AloisMessages from "./AloisMessages"
+
 import AloisProfile from "./AloisProfile"
+
 import AloisMedicationTracker from "./AloisMedicationTracker"
+
 import AloisDailyCare from "./AloisDailyCare"
+
 import AloisWhereAmIModal from "./AloisWhereAmIModal"
+
 import AloisDoctorBookingModal from "./AloisDoctorBookingModal"
+
 import AloisCognitiveBoosterModal from "./AloisCognitiveBoosterModal"
+
 import AloisBottomNav from "./AloisBottomNav"
 
 interface AloisContainerProps {
   patientName: string
+
   caregiverName?: string
+
   isAssisted?: boolean
+
   selectedLanguageName: string
+
   latestSession?: ScreeningSession | null
+
   onStartVoiceCheck: () => void
+
   onViewReport: () => void
+
   onSwitchProfile: () => void
+
   onLogout: () => void
+
   onOpenLanguageModal?: () => void
+
   onOpenHistory?: () => void
+
   onOpenDoctorDash?: () => void
+
   fontFamily?: string
 }
 
@@ -33,24 +58,40 @@ interface AloisContainerProps {
  * Alois Container Orchestrator — full patient shell coordinating the 5 Alois tabs,
  * sub-screens, modals, and the SwarSanket Quantum-ML screening pipeline.
  */
+
 export default function AloisContainer({
   patientName,
+
   caregiverName = "Marcus",
+
   isAssisted = false,
+
   selectedLanguageName,
+
   latestSession,
+
   onStartVoiceCheck,
+
   onViewReport,
+
   onSwitchProfile,
+
   onLogout,
+
   onOpenLanguageModal,
+
   onOpenHistory,
+
   onOpenDoctorDash,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisContainerProps) {
   const [activeTab, setActiveTab] = useState<AloisTab>("home")
+
   const [showSafetyModal, setShowSafetyModal] = useState(false)
+
   const [showDoctorModal, setShowDoctorModal] = useState(false)
+
   const [showCognitiveModal, setShowCognitiveModal] = useState(false)
 
   return (

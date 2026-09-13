@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+
 import {
   ChevronLeft,
   Bell,
@@ -13,8 +14,11 @@ import {
 
 interface AloisProgressProps {
   onBack: () => void
+
   onViewReport: () => void
+
   onOpenSettings: () => void
+
   fontFamily?: string
 }
 
@@ -22,27 +26,39 @@ interface AloisProgressProps {
  * Alois Progress Screen — matching Figma node 512:19216 & app/(main)/progress.tsx.
  * Displays activity curve with Tuesday peak, 2x2 metrics grid, and Monthly Report ABHA export.
  */
+
 export default function AloisProgress({
   onBack,
+
   onViewReport,
+
   onOpenSettings,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisProgressProps) {
   const [activeSegment, setActiveSegment] =
     useState<"cognitive" | "overall" | "health">("overall")
 
   // Curve coordinates tracing the Tuesday peak (95%) from Figma design
+
   const points = [
     { x: 10, y: 55, day: "M" },
+
     { x: 55, y: 15, day: "T" }, // Tuesday Peak
+
     { x: 105, y: 48, day: "W" },
+
     { x: 155, y: 35, day: "T" },
+
     { x: 205, y: 62, day: "F" },
+
     { x: 255, y: 28, day: "S" },
+
     { x: 305, y: 40, day: "S" },
   ]
 
   const pathD = `M 10 55 Q 35 15 55 15 T 105 48 T 155 35 T 205 62 T 255 28 T 305 40`
+
   const areaD = `${pathD} L 305 85 L 10 85 Z`
 
   return (

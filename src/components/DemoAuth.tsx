@@ -117,7 +117,9 @@ export default function DemoAuth({ onAuthenticated }: DemoAuthProps) {
 
         JSON.stringify({
           fullName: fullName.trim(),
+
           phone: cleanPhone,
+
           password,
         }),
       )

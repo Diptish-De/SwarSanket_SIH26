@@ -1,4 +1,5 @@
 import React from "react"
+
 import {
   ChevronLeft,
   Edit2,
@@ -17,16 +18,27 @@ import {
 
 interface AloisProfileProps {
   patientName: string
+
   caregiverName?: string
+
   isAssisted?: boolean
+
   selectedLanguageName: string
+
   onBack: () => void
+
   onOpenHistory?: () => void
+
   onViewReport?: () => void
+
   onSwitchProfile: () => void
+
   onOpenLanguageModal?: () => void
+
   onOpenDoctorDash?: () => void
+
   onLogout: () => void
+
   fontFamily?: string
 }
 
@@ -34,18 +46,30 @@ interface AloisProfileProps {
  * Alois Profile Screen — matching Figma node 528:18409 & app/(main)/profile.tsx.
  * Integrates ABDM ABHA card, clinical records, language switcher, and settings.
  */
+
 export default function AloisProfile({
   patientName,
+
   caregiverName = "Marcus",
+
   isAssisted = false,
+
   selectedLanguageName,
+
   onBack,
+
   onOpenHistory,
+
   onViewReport,
+
   onSwitchProfile,
+
   onOpenLanguageModal,
+
   onOpenDoctorDash,
+
   onLogout,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisProfileProps) {
   return (
