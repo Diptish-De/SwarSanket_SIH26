@@ -10,6 +10,11 @@ import 'screens/setup_screen.dart';
 import 'screens/app_screens.dart';
 import 'screens/voice_check_screens.dart';
 import 'screens/doctor_dashboard_screen.dart';
+import 'screens/games/cognitive_games_hub_screen.dart';
+import 'screens/games/logic_puzzle_screen.dart';
+import 'screens/games/memory_treasure_screen.dart';
+import 'screens/games/selective_attention_screen.dart';
+import 'screens/games/speed_visualisation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -327,6 +332,33 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
           onBack: () => _navigateBack(),
         );
 
+      // ─── Cognitive Games (Completely independent from clinical screening)
+      case 'cognitiveGamesHub':
+        return CognitiveGamesHubScreen(
+          onBack: () => _navigateBack(),
+          onSelectGame: (gameRoute) => _navigateTo(gameRoute),
+        );
+
+      case 'game_logic_puzzle':
+        return LogicPuzzleScreen(
+          onBack: () => _navigateBack(),
+        );
+
+      case 'game_memory_treasure':
+        return MemoryTreasureScreen(
+          onBack: () => _navigateBack(),
+        );
+
+      case 'game_selective_attention':
+        return SelectiveAttentionScreen(
+          onBack: () => _navigateBack(),
+        );
+
+      case 'game_speed_visualisation':
+        return SpeedVisualisationScreen(
+          onBack: () => _navigateBack(),
+        );
+
       // ─── Main Persistent Tabs ─────────────────────────────────────
       case 'tabs':
       default:
@@ -339,6 +371,7 @@ class _MainNavigationControllerState extends State<MainNavigationController> {
           hasError: false,
           onStartCheck: () => _navigateTo('intro'),
           onDoctorPatient: () => _navigateTo('doctorPatient'),
+          onCognitiveGames: () => _navigateTo('cognitiveGamesHub'),
           onLanguageChanged: (lang) => setState(() => _selectedLanguage = lang),
           onLogout: () async {
             await AuthService.resetAll();

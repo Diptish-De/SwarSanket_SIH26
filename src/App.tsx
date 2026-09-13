@@ -17,6 +17,7 @@ import {
   Globe,
   Users,
   User,
+  Brain,
   Home as HomeIcon,
   History as HistoryIcon,
   HelpCircle,
@@ -164,6 +165,8 @@ import VoiceProcessingVisualizer from "./components/VoiceProcessingVisualizer"
 import NoiseCheckCard from "./components/NoiseCheckCard"
 
 import AloisContainer from "./components/alois/AloisContainer"
+
+import CognitiveGamesHub from "./components/cognitiveGames/CognitiveGamesHub"
 
 import { NoiseReading } from "./services/noiseCheck"
 
@@ -5482,9 +5485,22 @@ function SwarSanketApp({
                 onOpenLanguageModal={() => navigate("language")}
                 onOpenHistory={() => navigate("history")}
                 onOpenDoctorDash={() => navigate("doctorDash")}
+                onOpenCognitiveGames={() => navigate("cognitiveGamesHub")}
                 fontFamily={F.display}
               />
             </div>
+            <HomeIndicator />
+          </div>
+        )
+
+      case "cognitiveGamesHub":
+        return (
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#F8FAFC]">
+            <StatusBar />
+            <CognitiveGamesHub
+              onBack={() => navigate("home")}
+              fontFamily={F.display}
+            />
             <HomeIndicator />
           </div>
         )
@@ -9727,13 +9743,27 @@ function SwarSanketApp({
           <button
             onClick={() => navigate("home")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
-              screen !== "doctorDash" && screen !== "doctorPatient"
+              screen !== "doctorDash" &&
+              screen !== "doctorPatient" &&
+              screen !== "cognitiveGamesHub"
                 ? "bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white"
                 : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
             }`}
           >
             <User className="w-3.5 h-3.5" />
             <span>Patient View</span>
+          </button>
+
+          <button
+            onClick={() => navigate("cognitiveGamesHub")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all ${
+              screen === "cognitiveGamesHub"
+                ? "bg-gradient-to-r from-[#0F766E] to-[#0D9488] text-white ring-2 ring-teal-400/40"
+                : "bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-200"
+            }`}
+          >
+            <Brain className="w-3.5 h-3.5 text-teal-300" />
+            <span>Cognitive Games</span>
           </button>
 
           <button

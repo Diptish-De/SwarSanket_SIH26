@@ -1,6 +1,6 @@
 import React from "react"
 
-import { Home, Activity, User } from "lucide-react"
+import { Home, Activity, User, Brain } from "lucide-react"
 
 import { AloisTab } from "./types"
 
@@ -13,7 +13,7 @@ interface AloisBottomNavProps {
 }
 
 /**
- * Alois Tab Bar Light — 3 primary columns (Home, Progress, Profile) with floating active blue pill.
+ * Alois Tab Bar Light — Primary columns (Home, Progress, Games, Profile) with floating active blue pill.
  */
 
 export default function AloisBottomNav({
@@ -44,6 +44,14 @@ export default function AloisBottomNav({
       label: "Progress",
 
       icon: <Activity className="w-5 h-5" />,
+    },
+
+    {
+      id: "games",
+
+      label: "Games",
+
+      icon: <Brain className="w-5 h-5" />,
     },
 
     {
