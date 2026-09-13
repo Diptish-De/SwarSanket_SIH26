@@ -7,7 +7,7 @@
 
 ## 🚀 Live Demo
 
-👉 **[Open SwarSanket Web App](https://swarsanket.vercel.app)**
+👉 **[Open SwarSanket Web App](https://swar-sanket.vercel.app)**
 
 ### Backend
 

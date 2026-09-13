@@ -26,7 +26,7 @@ Configure the following in the Render Dashboard:
 - `PORT`: Automatically injected by Render (defaults to `8001` if unset).
 - `ALLOWED_ORIGINS`: Comma-separated list of allowed frontend origins, e.g.:
   ```text
-  ALLOWED_ORIGINS=https://swarsanket.vercel.app,http://localhost:8443
+  ALLOWED_ORIGINS=https://swar-sanket.vercel.app,http://localhost:8443
   ```
 - `UPLOADS_DIR`: Ephemeral upload directory (defaults to `/tmp/swarsanket_uploads`).
 
