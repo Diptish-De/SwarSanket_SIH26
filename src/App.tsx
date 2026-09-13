@@ -3818,7 +3818,7 @@ function SwarSanketApp({
   const requireCaregiver = (label: string, run: () => void) =>
     setPendingGatedAction({ label, run })
 
-  const [screen, setScreen] = useState<Screen>("splash")
+  const [screen, setScreen] = useState<Screen>("home")
 
   const restoredSession = useRef(loadSession()).current
 
@@ -9394,6 +9394,15 @@ function SwarSanketApp({
           </button>
 
           <button
+            onClick={onLogout}
+            className="px-3 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-rose-950/40 hover:border-rose-600/50 text-slate-300 hover:text-rose-200 text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+            title="Sign out and return to Figma Login Screen"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+
+          <button
             onClick={() => setFullScreenMode(!fullScreenMode)}
             className="px-2.5 py-1.5 rounded-xl bg-[#042a35] border border-[#0d4f5e] hover:bg-[#073c4b] text-slate-300 text-xs font-bold hidden sm:flex items-center gap-1"
           >
@@ -9460,19 +9469,26 @@ function SwarSanketApp({
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("swarsanket-demo-session") === "active"
+      if (
+        typeof window !== "undefined" &&
+        (window.location.search.includes("login") ||
+          window.location.search.includes("auth") ||
+          window.location.hash === "#login")
+      ) {
+        return false
+      }
+
+      return localStorage.getItem("alois-auth-session") === "active"
     } catch {
       return false
     }
   })
 
   const [authenticatedName, setAuthenticatedName] = useState<string>(
-    () => readDemoUser()?.fullName || "Participant",
+    () => readDemoUser()?.fullName || "Jerrold Harrington",
   )
 
-  // Household identity. The caregiver signs in once; after that the person being
-
-  // screened identifies themselves by tapping their photo, never by a credential.
+  // Household identity
 
   const [members, setMembers] = useState<HouseholdMember[] | null>(null)
 
@@ -9495,10 +9511,6 @@ export default function App() {
         const storedId = getActiveMemberId()
 
         const stored = list.find((m) => m.id === storedId)
-
-        // One member means there is nothing to disambiguate, so the picker is
-
-        // skipped entirely - a single-user household never sees an identity step.
 
         const auto = stored ?? (list.length === 1 ? list[0] : null)
 
@@ -9537,11 +9549,13 @@ export default function App() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("swarsanket-demo-session")
+    try {
+      localStorage.removeItem("alois-auth-session")
 
-    // Signing out should return to the start of the flow, not resume someone
-
-    // else mid-screening.
+      localStorage.removeItem("swarsanket-demo-session")
+    } catch {
+      // Ignore
+    }
 
     clearSession()
 
@@ -9557,7 +9571,7 @@ export default function App() {
       <AloisAuthContainer
         onAuthenticated={(fullName) => {
           try {
-            localStorage.setItem("swarsanket-demo-session", "active")
+            localStorage.setItem("alois-auth-session", "active")
           } catch {
             // Ignore localStorage errors
           }

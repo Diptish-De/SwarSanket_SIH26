@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+
 import {
   Calendar as CalendarIcon,
   Eye,
@@ -11,20 +12,31 @@ import {
 
 export interface AloisAuthUser {
   fullName: string
+
   gender: string
+
   dob: string
+
   email: string
+
   phone: string
+
   city: string
+
   diagnosis: string
+
   stage: string
+
   caregiverName: string
+
   caregiverEmail: string
+
   caregiverPhone: string
 }
 
 interface AloisAuthContainerProps {
   onAuthenticated: (fullName: string, caregiverName?: string) => void
+
   fontFamily?: string
 }
 
@@ -32,9 +44,12 @@ type AuthScreen = "credential" | "biometric" | "caregiver" | "caregiverVerify" |
 
 export const ALOIS_USER_STORAGE_KEY = "alois-user-profile"
 
+export const ALOIS_AUTH_SESSION_KEY = "alois-auth-session"
+
 /**
  * Concentric circular blue ring logo matching Figma node 96:732 / 1049:48629.
  */
+
 function AloisLogo() {
   return (
     <div className="w-10 h-10 flex items-center justify-center mx-auto mb-3">
@@ -57,55 +72,88 @@ function AloisLogo() {
  * Figma node 1049:48629 / 96:732 / 206:2535 / 207:2205 / 222:13056 / 210:2277 /
  * 289:12988 / 307:13054 / 307:14675 / 308:14734 / 222:13264.
  */
+
 export default function AloisAuthContainer({
   onAuthenticated,
+
   fontFamily = "'Outfit', sans-serif",
 }: AloisAuthContainerProps) {
   const [screen, setScreen] = useState<AuthScreen>("credential")
 
   // Login credentials
+
   const [username, setUsername] = useState("jerrold")
+
   const [password, setPassword] = useState("password123")
+
   const [showPassword, setShowPassword] = useState(false)
+
   const [rememberMe, setRememberMe] = useState(false)
 
   // Registration
+
   const [regUsername, setRegUsername] = useState("")
+
   const [regPassword, setRegPassword] = useState("")
+
   const [showRegPassword, setShowRegPassword] = useState(false)
+
   const [regAgreeTerms, setRegAgreeTerms] = useState(false)
 
   // 4-Step Account Setup Form
+
   const [formData, setFormData] = useState<AloisAuthUser>({
     fullName: "Jerrold Harrington",
+
     gender: "Select your Gender",
+
     dob: "",
+
     email: "",
+
     phone: "",
+
     city: "",
+
     diagnosis: "Select",
+
     stage: "Select",
+
     caregiverName: "",
+
     caregiverEmail: "",
+
     caregiverPhone: "",
   })
 
   // Caregiver OTP
+
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", ""])
+
   const [resendCountdown, setResendCountdown] = useState(56)
 
   useEffect(() => {
     let timer: NodeJS.Timeout
+
     if (screen === "caregiverVerify" && resendCountdown > 0) {
       timer = setInterval(() => setResendCountdown((c) => c - 1), 1000)
     }
+
     return () => clearInterval(timer)
   }, [screen, resendCountdown])
 
   const handleFinishLogin = () => {
-    localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(formData))
+    try {
+      localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(formData))
+
+      localStorage.setItem(ALOIS_AUTH_SESSION_KEY, "active")
+    } catch {
+      // Ignore
+    }
+
     onAuthenticated(
       formData.fullName || "Jerrold Harrington",
+
       formData.caregiverName || "Marcus Harrington",
     )
   }
@@ -115,16 +163,22 @@ export default function AloisAuthContainer({
       for (let i = otpDigits.length - 1; i >= 0; i--) {
         if (otpDigits[i] !== "") {
           const next = [...otpDigits]
+
           next[i] = ""
+
           setOtpDigits(next)
+
           break
         }
       }
     } else {
       const idx = otpDigits.findIndex((d) => d === "")
+
       if (idx !== -1) {
         const next = [...otpDigits]
+
         next[idx] = val
+
         setOtpDigits(next)
       }
     }
@@ -345,6 +399,7 @@ export default function AloisAuthContainer({
                       type="button"
                       onClick={() => {
                         setOtpDigits(["7", "4", "2", "9"])
+
                         setScreen("caregiverVerify")
                       }}
                       className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
@@ -400,21 +455,33 @@ export default function AloisAuthContainer({
                   <div className="grid grid-cols-3 gap-1 pt-2">
                     {[
                       { num: "1", sub: "" },
+
                       { num: "2", sub: "ABC" },
+
                       { num: "3", sub: "DEF" },
+
                       { num: "4", sub: "GHI" },
+
                       { num: "5", sub: "JKL" },
+
                       { num: "6", sub: "MNO" },
+
                       { num: "7", sub: "PQRS" },
+
                       { num: "8", sub: "TUV" },
+
                       { num: "9", sub: "WXYZ" },
+
                       { num: "", sub: "" },
+
                       { num: "0", sub: "" },
+
                       { num: "backspace", sub: "" },
                     ].map((key, kIdx) => {
                       if (!key.num) {
                         return <div key={kIdx} className="h-11" />
                       }
+
                       return (
                         <button
                           key={kIdx}
@@ -916,6 +983,7 @@ export default function AloisAuthContainer({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
+
                         caregiverName: e.target.value,
                       })
                     }
@@ -934,6 +1002,7 @@ export default function AloisAuthContainer({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
+
                         caregiverEmail: e.target.value,
                       })
                     }
@@ -952,6 +1021,7 @@ export default function AloisAuthContainer({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
+
                         caregiverPhone: e.target.value,
                       })
                     }
