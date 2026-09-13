@@ -17,5 +17,10 @@
         "service": "frontend"
       }
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "DiPS": false
+    }
+  }
 }
