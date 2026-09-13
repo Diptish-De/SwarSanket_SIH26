@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from supabase_service import supabase_service
+from task_scoring import TASKS, score_fluency, score_phonation, score_recall
 
 logger = logging.getLogger("swarsanket.jobs")
 
@@ -76,6 +77,8 @@ class ScreeningJobManager:
         original_filename: str,
         content_type: str,
         size_bytes: int,
+        task: str = "picture",
+        params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Registers a job and returns its public view immediately. The Supabase row
@@ -92,6 +95,8 @@ class ScreeningJobManager:
             "content_type": content_type or "audio/webm",
             "size_bytes": size_bytes,
             "saved_path": saved_path,
+            "task": task if task in TASKS else "picture",
+            "params": dict(params or {}),
             "result": None,
             "error": None,
             "supabase_row": False,
@@ -110,6 +115,7 @@ class ScreeningJobManager:
             "file_size_bytes": size_bytes,
             "processing_status": "queued",
             "prediction_status": "queued",
+            "metadata": {"task": job["task"]},
         })
         job["supabase_row"] = bool(row.get("saved"))
 
@@ -135,6 +141,7 @@ class ScreeningJobManager:
                 return None
             return {
                 "recording_id": recording_id,
+                "task": (row.get("metadata") or {}).get("task", "picture"),
                 "status": row.get("processing_status") or "queued",
                 "queue_position": None,
                 "result": row.get("prediction_result"),
@@ -145,6 +152,7 @@ class ScreeningJobManager:
 
         return {
             "recording_id": recording_id,
+            "task": job["task"],
             "status": job["status"],
             "queue_position": position,
             "result": job["result"] if job["status"] == "completed" else None,
@@ -180,30 +188,24 @@ class ScreeningJobManager:
                     "supabase_storage_url": upload.get("public_url"),
                 })
 
-            from screening_engine import run_screening_pipeline
-
-            result = run_screening_pipeline(
-                str(saved_path),
-                on_stage=lambda stage: self._set(job, stage),
-            )
-
-            if not result.get("success"):
-                # The engine returns success=False only when there is no speech
-                # to transcribe. That is a refusal, not a crash.
-                raise _JobRefused(NO_SPEECH_MESSAGE, detail=result.get("error"))
+            result = self._score(job, saved_path)
 
             result["filename"] = saved_path.name
             result["recording_id"] = recording_id
+            result["task"] = job["task"]
             result["supabase_url"] = job["supabase_url"]
             result["supabase_saved"] = False
             result["processing_seconds"] = round(time.perf_counter() - started, 2)
 
             audio_info = result.get("audio", {}) or {}
-            db_res = supabase_service.save_screening_record({
-                **result,
-                "session_id": f"sess_{recording_id}",
-            })
-            result["supabase_saved"] = bool(db_res.get("saved"))
+            if job["task"] == "picture":
+                # Only the model-scored task is a "screening" row; the
+                # standardized tasks live on their recordings row.
+                db_res = supabase_service.save_screening_record({
+                    **result,
+                    "session_id": f"sess_{recording_id}",
+                })
+                result["supabase_saved"] = bool(db_res.get("saved"))
 
             job["result"] = result
             self._set(job, "completed", extra={
@@ -241,6 +243,53 @@ class ScreeningJobManager:
                 saved_path.unlink(missing_ok=True)
             except Exception:
                 pass
+
+    def _score(self, job: Dict[str, Any], saved_path: Path) -> Dict[str, Any]:
+        """Runs the right scorer for the job's task; raises _JobRefused on refusal."""
+        task = job["task"]
+        on_stage = lambda stage: self._set(job, stage)  # noqa: E731
+
+        if task == "picture":
+            from screening_engine import run_screening_pipeline
+
+            result = run_screening_pipeline(str(saved_path), on_stage=on_stage)
+            if not result.get("success"):
+                # The engine returns success=False only when there is no speech
+                # to transcribe. That is a refusal, not a crash.
+                raise _JobRefused(NO_SPEECH_MESSAGE, detail=result.get("error"))
+            return result
+
+        if task == "phonation":
+            on_stage("scoring")
+            scored = score_phonation(str(saved_path))
+            return {
+                "success": True,
+                "audio": {"duration_seconds": scored.get("details", {}).get("duration_seconds")},
+                "battery": scored,
+            }
+
+        # fluency and recall both start from a transcript
+        from screening_engine import transcribe_for_task
+
+        on_stage("transcribing")
+        tx = transcribe_for_task(str(saved_path))
+        on_stage("scoring")
+        language = (job["params"].get("language") or tx.get("detected_language") or "en")
+        if task == "fluency":
+            scored = score_fluency(
+                tx["transcript"], tx["words"], language,
+                float(tx["audio"].get("duration_seconds") or 0.0),
+            )
+        else:
+            scored = score_recall(tx["transcript"], job["params"].get("target_words") or [], language)
+        return {
+            "success": True,
+            "transcript": tx["transcript"],
+            "word_count": tx["word_count"],
+            "detected_language": tx["detected_language"],
+            "audio": tx["audio"],
+            "battery": scored,
+        }
 
     # ── helpers ─────────────────────────────────────────────────────────────
 

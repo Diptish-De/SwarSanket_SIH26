@@ -7,7 +7,11 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+import json
+
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+
+from task_scoring import TASKS
 from fastapi.middleware.cors import CORSMiddleware
 
 from supabase_service import supabase_service
@@ -199,15 +203,39 @@ def _realtime_config() -> Optional[dict]:
 
 
 @app.post("/api/screenings", status_code=202)
-async def submit_screening(audio: UploadFile = File(...)):
+async def submit_screening(
+    audio: UploadFile = File(...),
+    task: str = Form("picture"),
+    params: Optional[str] = Form(None),
+):
     """
     Asynchronous screening: stores the recording, queues it, and returns at once.
     Follow progress over Supabase Realtime on the returned row, or poll
     GET /api/screenings/{recording_id}. Heavy work never runs inside a request,
     so the hosting proxy's request timeout cannot cut a screening short.
+
+    `task` selects the scorer: "picture" (the 22-feature quantum-hybrid model,
+    default), or one of the standardized tasks "fluency", "recall", "phonation"
+    (see task_scoring.py). `params` is an optional JSON object; recall needs
+    {"target_words": [...]} and both transcript tasks accept {"language": "hi"}.
     """
     if not audio or not audio.filename:
         raise HTTPException(status_code=400, detail="No valid audio file provided.")
+    task = (task or "picture").strip().lower()
+    if task not in TASKS:
+        raise HTTPException(status_code=400, detail=f"Unknown task '{task}'. Expected one of {list(TASKS)}.")
+    parsed_params: dict = {}
+    if params:
+        if len(params) > 4096:
+            raise HTTPException(status_code=400, detail="params too large.")
+        try:
+            parsed_params = json.loads(params)
+            if not isinstance(parsed_params, dict):
+                raise ValueError("params must be a JSON object")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid params: {e}")
+    if task == "recall" and not parsed_params.get("target_words"):
+        raise HTTPException(status_code=400, detail="recall requires params.target_words.")
     try:
         saved_path, size_bytes = _save_upload(audio)
     except HTTPException:
@@ -223,6 +251,8 @@ async def submit_screening(audio: UploadFile = File(...)):
         original_filename=audio.filename,
         content_type=audio.content_type or "audio/webm",
         size_bytes=size_bytes,
+        task=task,
+        params=parsed_params,
     )
     return {
         "success": True,

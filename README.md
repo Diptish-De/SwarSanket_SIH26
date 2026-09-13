@@ -393,6 +393,16 @@ curl http://localhost:8001/api/screenings/a1b2c3d4e5f6
 # … once completed, "result" carries the same object the synchronous endpoint returns.
 ```
 
+**Standardized task battery.** The same endpoint scores three short tasks that sit beside the model (`backend/task_scoring.py`); pass `task` and, where needed, a JSON `params` form field:
+
+| `task` | Recording | Score | Flag (below typical) | Reference |
+|---|---|---|---|---|
+| `fluency` | name animals for 60 s | distinct animals | fewer than 12 | Tombaugh et al. 1999; Canning et al. 2004 |
+| `recall` | say the five words heard earlier (`params.target_words`) | words recalled of 5 | 2 or fewer | MoCA delayed recall, Nasreddine et al. 2005 |
+| `phonation` | hold "aaah" | maximum phonation time (s), jitter/shimmer/HNR | under 10 s, or two perturbation measures out of MDVP range | Maslan et al. 2011; Praat/MDVP thresholds |
+
+Each result carries `scored`, `score`, `flag`, `threshold`, `reference`, `note` and `details`. Animal lexicons exist for `en` (reference) and `hi`/`bn` (provisional); other languages are transcribed but left unscored, and the response says so. The app reports the battery as "N of M in the typical range" beside the model's output and never blends it into the probability.
+
 The `realtime` block is present only when the backend has `SUPABASE_ANON_KEY` set; without it the web client polls. The realtime publication is enabled by the schema (`ALTER PUBLICATION supabase_realtime ADD TABLE public.recordings`).
 
 ### 3. Synchronous Audio Screening Analysis (tests and short clips)

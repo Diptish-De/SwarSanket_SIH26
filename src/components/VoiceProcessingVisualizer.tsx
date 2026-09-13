@@ -33,7 +33,8 @@ const STAGE_BANDS: Record<AnalysisStep, [number, number]> = {
   queued: [18, 22],
   transcribing: [22, 62],
   extracting: [62, 80],
-  scoring: [80, 95],
+  scoring: [80, 92],
+  battery: [92, 98],
   complete: [100, 100],
 }
 
@@ -44,7 +45,8 @@ const STAGE_INDEX: Record<AnalysisStep, number> = {
   transcribing: 3,
   extracting: 4,
   scoring: 5,
-  complete: 6,
+  battery: 6,
+  complete: 7,
 }
 
 function stageLabel(
@@ -67,6 +69,8 @@ function stageLabel(
       return "Extracting acoustic & linguistic features…"
     case "scoring":
       return "Evaluating screening signal…"
+    case "battery":
+      return "Scoring the standardized tests…"
     case "complete":
       return "Screening complete"
     default:

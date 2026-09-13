@@ -2,7 +2,37 @@
 
 export type Screen = "splash" | "language" | "welcome" | "consent" | "profile" | "home" | "voiceIntro" | "instruction" | "recording" | "voiceQuality" | "recordingReview" | "pictureDesc" | "memory" | "conversation" | "completion" | "processing" | "needMoreSpeech" | "resultLow" | "resultElevated" | "resultUncertain" | "screeningDetails" | "shareWithDoctor" | "offlineSaved" | "syncStatus" | "caregiverAlert" | "referral" | "teleconsult" | "privacyScreen" | "reminder" | "doctorDash" | "doctorPatient" | "doctorReport" | "history" | "trend" | "help" | "caregiver" | "healthWorker" | "settings" | "errorScreen" | "emptyHistory"
 
-export type RecordingContext = "freeSpeech" | "pictureDesc" | "memoryRecall" | "conversation"
+export type RecordingContext = "freeSpeech" | "pictureDesc" | "memoryRecall" | "conversation" | "phonation" | "fluency" | "recall"
+
+/**
+ * One standardized task from the battery (backend/task_scoring.py), scored
+ * against a published reference range. `flag` true = below the typical range;
+ * null = could not be scored. Never blended into the model's probability.
+ */
+
+export interface BatteryTaskRecord {
+  task: "fluency" | "recall" | "phonation"
+
+  status: "pending" | "completed" | "failed"
+
+  scored: boolean
+
+  score: number | null
+
+  flag: boolean | null
+
+  threshold: string
+
+  reference: string
+
+  note: string
+
+  transcript?: string
+
+  details?: Record<string, unknown>
+
+  error?: string
+}
 
 export type LanguageCode = "en" | "hi" | "bn" | "mr" | "ta" | "te" | "gu" | "kn" | "ml"
 
@@ -138,6 +168,10 @@ export interface ScreeningSession {
   biomarkers: AcousticBiomarkers
 
   mlResult: MLInferenceResult
+
+  /** Standardized test battery, when the session ran one. */
+
+  battery?: BatteryTaskRecord[]
 
   synced: boolean
 

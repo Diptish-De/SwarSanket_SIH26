@@ -13,6 +13,10 @@
 //
 // Neither path ever holds a long HTTP request open, which is what let the
 // hosting proxy's 100 second cap kill screenings in the previous design.
+//
+// The same job endpoint scores the standardized tasks (animal fluency, delayed
+// recall, sustained vowel) when a `task` is passed; those jobs are submitted as
+// soon as each recording is reviewed and collected at the end of the session.
 
 import {
   createClient,
@@ -28,11 +32,19 @@ import { getExtensionForBlob, type ScreeningApiResponse } from "./audioRecorder"
 
 export type ScreeningJobStage = "queued" | "uploading" | "transcribing" | "extracting" | "scoring" | "completed" | "failed"
 
-/** What the processing screen renders. "complete" is the app's historical spelling. */
+/**
+ * What the processing screen renders. "complete" is the app's historical
+ * spelling; "battery" means the model result is in and the standardized task
+ * jobs are being collected.
+ */
 
-export type AnalysisStep = "idle" | "uploading" | "queued" | "transcribing" | "extracting" | "scoring" | "complete"
+export type AnalysisStep = "idle" | "uploading" | "queued" | "transcribing" | "extracting" | "scoring" | "battery" | "complete"
 
 export type JobTransport = "http" | "realtime" | "poll"
+
+/** Backend task names (backend/task_scoring.py). */
+
+export type ScreeningTask = "picture" | "fluency" | "recall" | "phonation"
 
 export interface ScreeningJobProgress {
   stage: AnalysisStep
@@ -46,6 +58,53 @@ export interface ScreeningJobProgress {
   transport: JobTransport
 
   recordingId: string
+
+  task: ScreeningTask
+}
+
+/**
+ * One standardized task's score as the backend reports it. `flag` true means
+ * below the published typical range; null means it could not be scored.
+ */
+
+export interface BatteryTaskResult {
+  task: Exclude<ScreeningTask, "picture">
+
+  scored: boolean
+
+  score: number | null
+
+  flag: boolean | null
+
+  threshold: string
+
+  reference: string
+
+  note: string
+
+  details: Record<string, unknown>
+}
+
+/** Job result for a standardized task (the picture task returns ScreeningApiResponse). */
+
+export interface TaskJobResponse {
+  success: boolean
+
+  task: ScreeningTask
+
+  transcript?: string
+
+  word_count?: number
+
+  detected_language?: string | null
+
+  audio?: { duration_seconds?: number }
+
+  battery: BatteryTaskResult
+
+  recording_id: string
+
+  processing_seconds?: number
 }
 
 export interface RunScreeningJobOptions {
@@ -60,6 +119,12 @@ export interface RunScreeningJobOptions {
   overallTimeoutMs?: number
 
   pollIntervalMs?: number
+
+  task?: ScreeningTask
+
+  /** Task parameters, e.g. { target_words: [...], language: "hi" } for recall. */
+
+  params?: Record<string, unknown>
 }
 
 interface RealtimeConfig {
@@ -79,6 +144,8 @@ interface SubmitResponse {
 
   recording_id: string
 
+  task: ScreeningTask
+
   status: ScreeningJobStage
 
   queue_position: number | null
@@ -88,26 +155,44 @@ interface SubmitResponse {
   realtime: RealtimeConfig | null
 }
 
-interface JobStatusResponse {
+interface JobStatusResponse<T> {
   recording_id: string
+
+  task: ScreeningTask
 
   status: ScreeningJobStage
 
   queue_position: number | null
 
-  result: ScreeningApiResponse | null
+  result: T | null
 
   error: string | null
 }
 
-interface RecordingRow {
+interface RecordingRow<T> {
   recording_id?: string
 
   processing_status?: string
 
-  prediction_result?: ScreeningApiResponse | null
+  prediction_result?: T | null
 
   error_message?: string | null
+}
+
+/** Handle returned by submitScreeningJob; pass it to followScreeningJob. */
+
+export interface ScreeningJobHandle {
+  recordingId: string
+
+  task: ScreeningTask
+
+  status: ScreeningJobStage
+
+  queuePosition: number | null
+
+  realtime: RealtimeConfig | null
+
+  baseUrl: string
 }
 
 const STAGE_ORDER: ScreeningJobStage[] = [
@@ -193,22 +278,52 @@ function getSupabaseClient(cfg: RealtimeConfig): SupabaseClient {
   return client
 }
 
-async function submitRecording(
+/**
+ * Uploads a recording and returns as soon as the backend has queued it. The
+ * handle can be followed later, so a task can be submitted the moment its
+ * recording is reviewed while the person moves on to the next task.
+ */
+
+export async function submitScreeningJob(
   blob: Blob,
 
-  filename: string,
+  filename?: string,
 
-  timeoutMs: number,
-): Promise<SubmitResponse> {
-  const endpoint = `${getApiBaseUrl()}/api/screenings`
+  options: Pick<RunScreeningJobOptions, "task" | "params" | "submitTimeoutMs"> = {},
+): Promise<ScreeningJobHandle> {
+  const { task = "picture", params, submitTimeoutMs = 90000 } = options
+
+  const baseUrl = getApiBaseUrl()
+
+  const endpoint = `${baseUrl}/api/screenings`
+
+  const targetFilename = filename || `${task}${getExtensionForBlob(blob)}`
 
   const formData = new FormData()
 
-  formData.append("audio", blob, filename)
+  formData.append("audio", blob, targetFilename)
+
+  formData.append("task", task)
+
+  if (params && Object.keys(params).length > 0) {
+    formData.append("params", JSON.stringify(params))
+  }
+
+  console.log("[SwarSanket] Submitting recording as a screening job", {
+    endpoint,
+
+    task,
+
+    filename: targetFilename,
+
+    sizeBytes: blob.size,
+  })
 
   const controller = new AbortController()
 
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const timeoutId = setTimeout(() => controller.abort(), submitTimeoutMs)
+
+  let submitted: SubmitResponse
 
   try {
     const response = await fetch(endpoint, {
@@ -235,7 +350,7 @@ async function submitRecording(
       throw new Error(detail)
     }
 
-    return (await response.json()) as SubmitResponse
+    submitted = ((await response.json()) as SubmitResponse)
   } catch (err: unknown) {
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error(SERVER_SLOW_MESSAGE)
@@ -255,70 +370,56 @@ async function submitRecording(
   } finally {
     clearTimeout(timeoutId)
   }
-}
 
-/**
- * Uploads a recording, then follows its job to completion. Resolves with the
- * same contract the synchronous endpoint returned, so callers need no changes
- * beyond swapping the function.
- */
-
-export async function runScreeningJob(
-  blob: Blob,
-
-  filename?: string,
-
-  options: RunScreeningJobOptions = {},
-): Promise<ScreeningApiResponse> {
-  const {
-    onProgress,
-
-    submitTimeoutMs = 90000,
-
-    overallTimeoutMs = 600000,
-
-    pollIntervalMs = 4000,
-  } = options
-
-  const targetFilename = filename || `voice_check${getExtensionForBlob(blob)}`
-
-  const baseUrl = getApiBaseUrl()
-
-  onProgress?.({
-    stage: "uploading",
-
-    queuePosition: null,
-
-    transport: "http",
-
-    recordingId: "",
-  })
-
-  console.log("[SwarSanket] Submitting recording as a screening job", {
-    endpoint: `${baseUrl}/api/screenings`,
-
-    filename: targetFilename,
-
-    sizeBytes: blob.size,
-  })
-
-  const submitted = await submitRecording(blob, targetFilename, submitTimeoutMs)
-
-  const recordingId = submitted.recording_id
-
-  const realtimeCfg = resolveRealtimeConfig(submitted.realtime)
+  const realtime = resolveRealtimeConfig(submitted.realtime)
 
   console.log("[SwarSanket] Screening job accepted", {
-    recordingId,
+    recordingId: submitted.recording_id,
+
+    task: submitted.task,
 
     status: submitted.status,
 
     queuePosition: submitted.queue_position,
 
-    realtime: realtimeCfg ? "available" : "polling only",
+    realtime: realtime ? "available" : "polling only",
   })
 
-  return new Promise<ScreeningApiResponse>((resolve, reject) => {
+  return {
+    recordingId: submitted.recording_id,
+
+    task: submitted.task ?? task,
+
+    status: submitted.status,
+
+    queuePosition: submitted.queue_position,
+
+    realtime,
+
+    baseUrl,
+  }
+}
+
+/**
+ * Follows a submitted job to completion over Realtime and polling. Resolves
+ * with the job's result object: a ScreeningApiResponse for the picture task,
+ * a TaskJobResponse for the standardized tasks.
+ */
+
+export function followScreeningJob<T = ScreeningApiResponse>(
+  handle: ScreeningJobHandle,
+
+  options: Pick<RunScreeningJobOptions, "onProgress" | "overallTimeoutMs" | "pollIntervalMs"> = {},
+): Promise<T> {
+  const {
+    onProgress,
+    overallTimeoutMs = 600000,
+    pollIntervalMs = 4000,
+  } = options
+
+  const { recordingId, realtime: realtimeCfg, baseUrl, task } = handle
+
+  return new Promise<T>((resolve, reject) => {
     let settled = false
 
     let highestStage = -1
@@ -346,7 +447,7 @@ export async function runScreeningJob(
       }
     }
 
-    const finish = (outcome: Error | ScreeningApiResponse) => {
+    const finish = (outcome: Error | T) => {
       if (settled) return
 
       settled = true
@@ -376,14 +477,50 @@ export async function runScreeningJob(
       const step = toAnalysisStep(stage)
 
       if (step) {
-        onProgress?.({ stage: step, queuePosition, transport, recordingId })
+        onProgress?.({
+          stage: step,
+          queuePosition,
+          transport,
+          recordingId,
+          task,
+        })
       }
+    }
+
+    const fetchResult = async (preferred: JobTransport): Promise<T | null> => {
+      if (preferred === "realtime" && realtimeCfg) {
+        try {
+          const { data } = await getSupabaseClient(realtimeCfg)
+            .from(realtimeCfg.table)
+            .select("prediction_result")
+            .eq(realtimeCfg.id_column, recordingId)
+            .maybeSingle<RecordingRow<T>>()
+
+          if (data?.prediction_result) return data.prediction_result
+        } catch {
+          // fall through to HTTP
+        }
+      }
+
+      try {
+        const res = await fetch(`${baseUrl}/api/screenings/${recordingId}`)
+
+        if (res.ok) {
+          const body = (await res.json()) as JobStatusResponse<T>
+
+          if (body.result) return body.result
+        }
+      } catch {
+        // caller keeps waiting; the poll loop will retry
+      }
+
+      return null
     }
 
     const handleTerminal = async (
       status: string,
 
-      result: ScreeningApiResponse | null | undefined,
+      result: T | null | undefined,
 
       error: string | null | undefined,
 
@@ -402,18 +539,14 @@ export async function runScreeningJob(
 
       if (status !== "completed") return false
 
-      let full = result ?? null
-
-      if (!full) {
-        // Realtime trims oversized rows; fetch the result explicitly.
-        full = await fetchResult(transport)
-      }
+      // Realtime trims oversized rows; fetch the result explicitly then.
+      const full = result ?? (await fetchResult(transport))
 
       if (full) {
         console.log("[SwarSanket] Screening job completed via", transport, {
-          predictedClass: full.screening?.predicted_class,
+          task,
 
-          probability: full.screening?.probability,
+          recordingId,
         })
 
         finish(full)
@@ -422,38 +555,6 @@ export async function runScreeningJob(
       }
 
       return false
-    }
-
-    const fetchResult = async (
-      preferred: JobTransport,
-    ): Promise<ScreeningApiResponse | null> => {
-      if (preferred === "realtime" && realtimeCfg) {
-        try {
-          const { data } = await getSupabaseClient(realtimeCfg)
-            .from(realtimeCfg.table)
-            .select("prediction_result")
-            .eq(realtimeCfg.id_column, recordingId)
-            .maybeSingle<RecordingRow>()
-
-          if (data?.prediction_result) return data.prediction_result
-        } catch {
-          // fall through to HTTP
-        }
-      }
-
-      try {
-        const res = await fetch(`${baseUrl}/api/screenings/${recordingId}`)
-
-        if (res.ok) {
-          const body = (await res.json()) as JobStatusResponse
-
-          if (body.result) return body.result
-        }
-      } catch {
-        // caller keeps waiting; the poll loop will retry
-      }
-
-      return null
     }
 
     // ── Transport 1: Supabase Realtime ────────────────────────────────────
@@ -478,7 +579,7 @@ export async function runScreeningJob(
             },
 
             (payload) => {
-              const row = (payload.new ?? {}) as RecordingRow
+              const row = (payload.new ?? {}) as RecordingRow<T>
 
               const status = row.processing_status ?? ""
 
@@ -527,7 +628,7 @@ export async function runScreeningJob(
         const res = await fetch(`${baseUrl}/api/screenings/${recordingId}`)
 
         if (res.ok) {
-          const body = (await res.json()) as JobStatusResponse
+          const body = (await res.json()) as JobStatusResponse<T>
 
           report(body.status, body.queue_position, "poll")
 
@@ -549,8 +650,40 @@ export async function runScreeningJob(
       if (!settled) pollTimer = setTimeout(poll, pollIntervalMs)
     }
 
-    report(submitted.status, submitted.queue_position, "http")
+    report(handle.status, handle.queuePosition, "http")
 
     pollTimer = setTimeout(poll, Math.min(pollIntervalMs, 2500))
   })
+}
+
+/**
+ * Uploads a recording, then follows its job to completion. Resolves with the
+ * same contract the synchronous endpoint returned, so callers need no changes
+ * beyond swapping the function.
+ */
+
+export async function runScreeningJob(
+  blob: Blob,
+
+  filename?: string,
+
+  options: RunScreeningJobOptions = {},
+): Promise<ScreeningApiResponse> {
+  const task = options.task ?? "picture"
+
+  options.onProgress?.({
+    stage: "uploading",
+
+    queuePosition: null,
+
+    transport: "http",
+
+    recordingId: "",
+
+    task,
+  })
+
+  const handle = await submitScreeningJob(blob, filename, options)
+
+  return followScreeningJob<ScreeningApiResponse>(handle, options)
 }

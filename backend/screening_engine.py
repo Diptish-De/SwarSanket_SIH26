@@ -344,6 +344,55 @@ def _calibrate_to_training_support(
     return calibrated, clamped
 
 
+def transcribe_for_task(
+    audio_source: Union[str, Path, BinaryIO, bytes],
+) -> Dict[str, Any]:
+    """
+    Word-timestamped transcription plus basic audio metrics, for the
+    standardized tasks that need words but not the 22-feature vector.
+    """
+    audio_metrics = decode_and_inspect_audio(audio_source)
+    whisper = get_whisper_model()
+    if isinstance(audio_source, Path):
+        whisper_input: Union[str, BinaryIO, np.ndarray] = str(audio_source)
+    elif isinstance(audio_source, bytes):
+        whisper_input = io.BytesIO(audio_source)
+    else:
+        whisper_input = audio_source
+
+    segments, info = whisper.transcribe(
+        whisper_input,
+        beam_size=5,
+        word_timestamps=True,
+        vad_filter=True,
+    )
+    words_list: List[Dict[str, Any]] = []
+    transcript_parts: List[str] = []
+    for seg in segments:
+        transcript_parts.append(seg.text.strip())
+        if seg.words:
+            for w in seg.words:
+                words_list.append({
+                    "word": w.word.strip(),
+                    "start": round(w.start, 2),
+                    "end": round(w.end, 2),
+                })
+    return {
+        "transcript": " ".join(transcript_parts).strip(),
+        "words": words_list,
+        "word_count": len(words_list),
+        "detected_language": getattr(info, "language", None),
+        "language_probability": round(float(getattr(info, "language_probability", 0.0) or 0.0), 3),
+        "audio": {
+            "duration_seconds": audio_metrics.get("duration_seconds", 0.0),
+            "sample_rate": audio_metrics.get("sample_rate", 16000),
+            "rms_energy": audio_metrics.get("rms_energy", 0.0),
+            "peak_amplitude": audio_metrics.get("peak_amplitude", 0.0),
+            "silence_percentage": audio_metrics.get("silence_percentage", 100.0),
+        },
+    }
+
+
 def run_screening_pipeline(
     audio_source: Union[str, Path, BinaryIO, bytes],
     require_minimum_sample: bool = True,

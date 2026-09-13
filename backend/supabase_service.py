@@ -256,6 +256,7 @@ class SupabaseService:
                 "file_size_bytes": data.get("file_size_bytes", 0),
                 "processing_status": data.get("processing_status", "uploaded"),
                 "prediction_status": data.get("prediction_status", "not_started"),
+                "metadata": data.get("metadata") or {},
             }
 
             res = self.client.table("recordings").insert(row).execute()

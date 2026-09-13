@@ -102,14 +102,22 @@ import {
   AudioRecordingResult,
   getLastRecordedAudioBlob,
   uploadAudioToBackend,
+  getExtensionForBlob,
   ScreeningApiResponse,
 } from "./services/audioRecorder"
 
 import {
   runScreeningJob,
+  submitScreeningJob,
+  followScreeningJob,
   type AnalysisStep,
   type JobTransport,
+  type TaskJobResponse,
 } from "./services/screeningJob"
+
+import type { BatteryTaskRecord } from "./types"
+
+import BatteryCard from "./components/BatteryCard"
 
 import {
   getApiBaseUrl,
@@ -383,6 +391,17 @@ const TX: Record<string, Record<string, string>> = {
 
     describeSceneHint: "Take your time and describe as much as you notice.",
 
+    batteryPhonationHint:
+      'Take a deep breath, then hold one steady "aaah" for as long as you comfortably can. Stop when you run out of breath.',
+
+    batteryFluencyHint:
+      "Say the names of as many different animals as you can: pets, farm animals, wild animals, birds, fish, insects. The recording stops by itself after 60 seconds.",
+
+    batteryRecallHint:
+      "Say every word you remember from the list you heard earlier, in any order. Guessing is fine.",
+
+    autoStopsAt: "stops at",
+
     pictureDescSub: "Tell us what you see in the picture.",
 
     listenCarefully: "Listen carefully",
@@ -595,6 +614,17 @@ const TX: Record<string, Record<string, string>> = {
     beginVoiceCheck: "Voice Check शुरू करें",
 
     listenToQuestion: "सवाल सुनें",
+
+    batteryPhonationHint:
+      'गहरी साँस लें, फिर जितनी देर आराम से हो सके एक ही स्वर में "आ..." बोलते रहें। साँस खत्म होने पर रुक जाएँ।',
+
+    batteryFluencyHint:
+      "जितने अलग-अलग जानवरों के नाम बोल सकते हैं, बोलिए: पालतू, खेत के, जंगली, पक्षी, मछली, कीड़े। 60 सेकंड बाद रिकॉर्डिंग अपने आप रुक जाएगी।",
+
+    batteryRecallHint:
+      "पहले सुनी गई सूची के जितने शब्द याद हों, किसी भी क्रम में बोलिए। अंदाज़ा लगाना भी ठीक है।",
+
+    autoStopsAt: "यहाँ रुकेगा",
 
     playAgain: "फिर से सुनें",
 
@@ -2275,112 +2305,195 @@ function t(lang: string, key: string): string {
     ...(RECORDING_INDIC_TX[lang] ?? {}),
   }
 
-  return (locale[key] ?? key).normalize("NFC")
+  // English before the raw key: an untranslated string is readable, a
+  // bare identifier like "tapMicrophone" is not.
+  return (locale[key] ?? TX.en?.[key] ?? key).normalize("NFC")
 }
 
-const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
-  en: {
-    freeSpeech: "Tell us about your day.",
+const TASK_PROMPTS: Record<string, Partial<Record<RecordingContext, string>>> =
+  {
+    en: {
+      phonation:
+        'Take a deep breath and say "aaah" in one steady voice for as long as you comfortably can.',
 
-    pictureDesc:
-      "Describe everything you see happening in this picture (who is there, what they are doing, and what is happening around them).",
+      fluency:
+        "Name as many different animals as you can. Keep going until the time runs out.",
 
-    memoryRecall: "Cow, River, Book, House, Flower",
+      recall:
+        "Earlier you heard five words. Say all the words you can remember.",
 
-    conversation: "Tell us about something you enjoy doing.",
+      freeSpeech: "Tell us about your day.",
+
+      pictureDesc:
+        "Describe everything you see happening in this picture (who is there, what they are doing, and what is happening around them).",
+
+      memoryRecall: "Cow, River, Book, House, Flower",
+
+      conversation: "Tell us about something you enjoy doing.",
+    },
+
+    hi: {
+      phonation:
+        'गहरी साँस लें और जितनी देर आराम से हो सके, एक ही स्वर में "आ..." बोलते रहें।',
+
+      fluency:
+        "जितने भी अलग-अलग जानवरों के नाम आप बोल सकते हैं, बोलिए। समय खत्म होने तक बोलते रहिए।",
+
+      recall: "थोड़ी देर पहले आपने पाँच शब्द सुने थे। जितने शब्द याद हों, बोलिए।",
+
+      freeSpeech: "हमें अपने दिन के बारे में बताइए।",
+
+      pictureDesc:
+        "इस तस्वीर में जो कुछ हो रहा है, वह सब बताइए — वहाँ कौन-कौन है, वे क्या कर रहे हैं, और उनके आसपास क्या हो रहा है।",
+
+      memoryRecall: "गाय, नदी, किताब, घर, फूल",
+
+      conversation: "हमें बताइए कि आपको क्या करना पसंद है।",
+    },
+
+    bn: {
+      freeSpeech: "আপনার আজকের দিনটি কেমন কেটেছে, সে সম্পর্কে বলুন।",
+
+      pictureDesc:
+        "এই ছবিতে যা কিছু ঘটছে সব বলুন — সেখানে কে কে আছে, তাঁরা কী করছেন, এবং তাঁদের চারপাশে কী ঘটছে।",
+
+      memoryRecall: "গরু, নদী, বই, বাড়ি, ফুল",
+
+      conversation: "আপনি যে কাজটি করতে ভালোবাসেন, সে সম্পর্কে বলুন।",
+    },
+
+    mr: {
+      freeSpeech: "तुमचा आजचा दिवस कसा गेला, याबद्दल आम्हाला सांगा.",
+
+      pictureDesc:
+        "या चित्रात जे काही घडत आहे ते सर्व सांगा — तिथे कोण कोण आहे, ते काय करत आहेत, आणि त्यांच्या आजूबाजूला काय घडत आहे.",
+
+      memoryRecall: "गाय, नदी, पुस्तक, घर, फूल",
+
+      conversation: "तुम्हाला आवडणाऱ्या एखाद्या गोष्टीबद्दल आम्हाला सांगा.",
+    },
+
+    ta: {
+      freeSpeech: "இன்று உங்கள் நாள் எப்படி சென்றது என்பதைப் பற்றி சொல்லுங்கள்.",
+
+      pictureDesc:
+        "இந்தப் படத்தில் நடப்பது அனைத்தையும் விவரியுங்கள் — அங்கு யார் யார் இருக்கிறார்கள், அவர்கள் என்ன செய்கிறார்கள், அவர்களைச் சுற்றி என்ன நடக்கிறது.",
+
+      memoryRecall: "பசு, ஆறு, புத்தகம், வீடு, பூ",
+
+      conversation: "உங்களுக்கு பிடித்த ஒரு செயலைப் பற்றி சொல்லுங்கள்.",
+    },
+
+    te: {
+      freeSpeech: "ఈ రోజు మీ రోజు ఎలా గడిచిందో మాకు చెప్పండి.",
+
+      pictureDesc:
+        "ఈ చిత్రంలో జరుగుతున్నదంతా చెప్పండి — అక్కడ ఎవరెవరు ఉన్నారు, వారు ఏమి చేస్తున్నారు, వారి చుట్టూ ఏమి జరుగుతోంది.",
+
+      memoryRecall: "ఆవు, నది, పుస్తకం, ఇల్లు, పువ్వు",
+
+      conversation: "మీకు ఇష్టమైన ఒక పని గురించి మాకు చెప్పండి.",
+    },
+
+    gu: {
+      freeSpeech: "તમારો આજનો દિવસ કેવો રહ્યો તે અમને જણાવો.",
+
+      pictureDesc:
+        "આ ચિત્રમાં જે કંઈ થઈ રહ્યું છે તે બધું જણાવો — ત્યાં કોણ કોણ છે, તેઓ શું કરી રહ્યા છે, અને તેમની આસપાસ શું થઈ રહ્યું છે.",
+
+      memoryRecall: "ગાય, નદી, પુસ્તક, ઘર, ફૂલ",
+
+      conversation: "તમને ગમતી કોઈ એક પ્રવૃત્તિ વિશે અમને જણાવો.",
+    },
+
+    kn: {
+      freeSpeech: "ನಿಮ್ಮ ಇಂದಿನ ದಿನ ಹೇಗಿತ್ತು ಎಂಬುದನ್ನು ನಮಗೆ ತಿಳಿಸಿ.",
+
+      pictureDesc:
+        "ಈ ಚಿತ್ರದಲ್ಲಿ ನಡೆಯುತ್ತಿರುವ ಎಲ್ಲವನ್ನೂ ವಿವರಿಸಿ — ಅಲ್ಲಿ ಯಾರು ಯಾರು ಇದ್ದಾರೆ, ಅವರು ಏನು ಮಾಡುತ್ತಿದ್ದಾರೆ, ಮತ್ತು ಅವರ ಸುತ್ತಲೂ ಏನು ನಡೆಯುತ್ತಿದೆ.",
+
+      memoryRecall: "ಹಸು, ನದಿ, ಪುಸ್ತಕ, ಮನೆ, ಹೂವು",
+
+      conversation: "ನಿಮಗೆ ಇಷ್ಟವಾದ ಒಂದು ಕೆಲಸದ ಬಗ್ಗೆ ನಮಗೆ ತಿಳಿಸಿ.",
+    },
+
+    ml: {
+      freeSpeech: "നിങ്ങളുടെ ഇന്നത്തെ ദിവസം എങ്ങനെയായിരുന്നു എന്ന് ഞങ്ങളോട് പറയൂ.",
+
+      pictureDesc:
+        "ഈ ചിത്രത്തിൽ നടക്കുന്നതെല്ലാം വിവരിക്കൂ — അവിടെ ആരൊക്കെയുണ്ട്, അവർ എന്തു ചെയ്യുന്നു, അവർക്കു ചുറ്റും എന്തു സംഭവിക്കുന്നു.",
+
+      memoryRecall: "പശു, നദി, പുസ്തകം, വീട്, പൂവ്",
+
+      conversation: "നിങ്ങൾക്ക് ഇഷ്ടമുള്ള ഒരു കാര്യത്തെക്കുറിച്ച് ഞങ്ങളോട് പറയൂ.",
+    },
+  }
+
+/**
+ * Per-task recording rules. The picture task feeds the model and keeps the
+ * 30-second floor; the standardized tasks have their own lengths, and the
+ * timed ones stop themselves so the clock, not the person, ends them.
+ */
+interface TaskRecordingRule {
+  minSeconds: number
+  maxSeconds: number | null
+  autoStop: boolean
+}
+
+const TASK_RULES: Partial<Record<RecordingContext, TaskRecordingRule>> = {
+  pictureDesc: {
+    minSeconds: MIN_RECORDING_SECONDS,
+    maxSeconds: null,
+    autoStop: false,
   },
+  phonation: { minSeconds: 2, maxSeconds: 25, autoStop: true },
+  fluency: { minSeconds: 45, maxSeconds: 60, autoStop: true },
+  recall: { minSeconds: 2, maxSeconds: 30, autoStop: true },
+}
 
-  hi: {
-    freeSpeech: "हमें अपने दिन के बारे में बताइए।",
+function taskRule(ctx: RecordingContext): TaskRecordingRule {
+  return (
+    TASK_RULES[ctx] ?? {
+      minSeconds: MIN_RECORDING_SECONDS,
+      maxSeconds: null,
+      autoStop: false,
+    }
+  )
+}
 
-    pictureDesc:
-      "इस तस्वीर में जो कुछ हो रहा है, वह सब बताइए — वहाँ कौन-कौन है, वे क्या कर रहे हैं, और उनके आसपास क्या हो रहा है।",
+/** Step numbers for the header: vowel, picture, five words, animals, recall. */
+const BATTERY_STEP: Partial<Record<RecordingContext, number>> = {
+  phonation: 1,
+  pictureDesc: 2,
+  fluency: 4,
+  recall: 5,
+}
 
-    memoryRecall: "गाय, नदी, किताब, घर, फूल",
+const BATTERY_TOTAL = 5
 
-    conversation: "हमें बताइए कि आपको क्या करना पसंद है।",
-  },
+function batteryHint(lang: string, ctx: RecordingContext): string | null {
+  switch (ctx) {
+    case "phonation":
+      return t(lang, "batteryPhonationHint")
+    case "fluency":
+      return t(lang, "batteryFluencyHint")
+    case "recall":
+      return t(lang, "batteryRecallHint")
+    default:
+      return null
+  }
+}
 
-  bn: {
-    freeSpeech: "আপনার আজকের দিনটি কেমন কেটেছে, সে সম্পর্কে বলুন।",
-
-    pictureDesc:
-      "এই ছবিতে যা কিছু ঘটছে সব বলুন — সেখানে কে কে আছে, তাঁরা কী করছেন, এবং তাঁদের চারপাশে কী ঘটছে।",
-
-    memoryRecall: "গরু, নদী, বই, বাড়ি, ফুল",
-
-    conversation: "আপনি যে কাজটি করতে ভালোবাসেন, সে সম্পর্কে বলুন।",
-  },
-
-  mr: {
-    freeSpeech: "तुमचा आजचा दिवस कसा गेला, याबद्दल आम्हाला सांगा.",
-
-    pictureDesc:
-      "या चित्रात जे काही घडत आहे ते सर्व सांगा — तिथे कोण कोण आहे, ते काय करत आहेत, आणि त्यांच्या आजूबाजूला काय घडत आहे.",
-
-    memoryRecall: "गाय, नदी, पुस्तक, घर, फूल",
-
-    conversation: "तुम्हाला आवडणाऱ्या एखाद्या गोष्टीबद्दल आम्हाला सांगा.",
-  },
-
-  ta: {
-    freeSpeech: "இன்று உங்கள் நாள் எப்படி சென்றது என்பதைப் பற்றி சொல்லுங்கள்.",
-
-    pictureDesc:
-      "இந்தப் படத்தில் நடப்பது அனைத்தையும் விவரியுங்கள் — அங்கு யார் யார் இருக்கிறார்கள், அவர்கள் என்ன செய்கிறார்கள், அவர்களைச் சுற்றி என்ன நடக்கிறது.",
-
-    memoryRecall: "பசு, ஆறு, புத்தகம், வீடு, பூ",
-
-    conversation: "உங்களுக்கு பிடித்த ஒரு செயலைப் பற்றி சொல்லுங்கள்.",
-  },
-
-  te: {
-    freeSpeech: "ఈ రోజు మీ రోజు ఎలా గడిచిందో మాకు చెప్పండి.",
-
-    pictureDesc:
-      "ఈ చిత్రంలో జరుగుతున్నదంతా చెప్పండి — అక్కడ ఎవరెవరు ఉన్నారు, వారు ఏమి చేస్తున్నారు, వారి చుట్టూ ఏమి జరుగుతోంది.",
-
-    memoryRecall: "ఆవు, నది, పుస్తకం, ఇల్లు, పువ్వు",
-
-    conversation: "మీకు ఇష్టమైన ఒక పని గురించి మాకు చెప్పండి.",
-  },
-
-  gu: {
-    freeSpeech: "તમારો આજનો દિવસ કેવો રહ્યો તે અમને જણાવો.",
-
-    pictureDesc:
-      "આ ચિત્રમાં જે કંઈ થઈ રહ્યું છે તે બધું જણાવો — ત્યાં કોણ કોણ છે, તેઓ શું કરી રહ્યા છે, અને તેમની આસપાસ શું થઈ રહ્યું છે.",
-
-    memoryRecall: "ગાય, નદી, પુસ્તક, ઘર, ફૂલ",
-
-    conversation: "તમને ગમતી કોઈ એક પ્રવૃત્તિ વિશે અમને જણાવો.",
-  },
-
-  kn: {
-    freeSpeech: "ನಿಮ್ಮ ಇಂದಿನ ದಿನ ಹೇಗಿತ್ತು ಎಂಬುದನ್ನು ನಮಗೆ ತಿಳಿಸಿ.",
-
-    pictureDesc:
-      "ಈ ಚಿತ್ರದಲ್ಲಿ ನಡೆಯುತ್ತಿರುವ ಎಲ್ಲವನ್ನೂ ವಿವರಿಸಿ — ಅಲ್ಲಿ ಯಾರು ಯಾರು ಇದ್ದಾರೆ, ಅವರು ಏನು ಮಾಡುತ್ತಿದ್ದಾರೆ, ಮತ್ತು ಅವರ ಸುತ್ತಲೂ ಏನು ನಡೆಯುತ್ತಿದೆ.",
-
-    memoryRecall: "ಹಸು, ನದಿ, ಪುಸ್ತಕ, ಮನೆ, ಹೂವು",
-
-    conversation: "ನಿಮಗೆ ಇಷ್ಟವಾದ ಒಂದು ಕೆಲಸದ ಬಗ್ಗೆ ನಮಗೆ ತಿಳಿಸಿ.",
-  },
-
-  ml: {
-    freeSpeech: "നിങ്ങളുടെ ഇന്നത്തെ ദിവസം എങ്ങനെയായിരുന്നു എന്ന് ഞങ്ങളോട് പറയൂ.",
-
-    pictureDesc:
-      "ഈ ചിത്രത്തിൽ നടക്കുന്നതെല്ലാം വിവരിക്കൂ — അവിടെ ആരൊക്കെയുണ്ട്, അവർ എന്തു ചെയ്യുന്നു, അവർക്കു ചുറ്റും എന്തു സംഭവിക്കുന്നു.",
-
-    memoryRecall: "പശു, നദി, പുസ്തകം, വീട്, പൂവ്",
-
-    conversation: "നിങ്ങൾക്ക് ഇഷ്ടമുള്ള ഒരു കാര്യത്തെക്കുറിച്ച് ഞങ്ങളോട് പറയൂ.",
-  },
+function fmtClock(seconds: number): string {
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
 }
 
 function getTaskPrompt(lang: string, ctx: RecordingContext): string {
-  return ((TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx])
+  return (
+    (TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ??
+    TASK_PROMPTS.en[ctx] ??
+    ""
+  )
 
     .normalize("NFC")
 }
@@ -3977,6 +4090,20 @@ function SwarSanketApp({
 
   const [jobTransport, setJobTransport] = useState<JobTransport | null>(null)
 
+  // Standardized task jobs are submitted as each recording is reviewed and
+  // collected once the model result is in. The picture clip is kept apart
+  // because the later tasks overwrite the "last recording".
+  const pictureBlobRef = useRef<Blob | null>(null)
+
+  const pictureDurationRef = useRef<number | null>(null)
+
+  const batteryJobsRef =
+    useRef<Partial<Record<BatteryTaskRecord["task"], Promise<BatteryTaskRecord>>>>(
+      {},
+    )
+
+  const [batteryResults, setBatteryResults] = useState<BatteryTaskRecord[]>([])
+
   // Backend API URL & Health state (Android & Web dynamic configuration)
 
   const [currentApiUrl, setCurrentApiUrl] = useState<string>(getApiBaseUrl())
@@ -4247,7 +4374,12 @@ function SwarSanketApp({
         return
       }
 
-      if (res.quality === "poor" || res.quality === "low") {
+      // The duration-based quality grade only means something for the
+      // picture task; a three-second recall answer is a complete answer.
+      if (
+        recordingContext === "pictureDesc" &&
+        (res.quality === "poor" || res.quality === "low")
+      ) {
         navigate("voiceQuality")
       } else {
         navigate(nextScreen)
@@ -4257,9 +4389,137 @@ function SwarSanketApp({
     }
   }
 
+  // Timed tasks end themselves: 60 s for animal fluency, capped vowel and
+  // recall clips. handleFinishRecording flips isRecording first, so this
+  // cannot fire twice for one clip.
+  useEffect(() => {
+    const rule = taskRule(recordingContext)
+
+    if (
+      isRecording &&
+      rule.autoStop &&
+      rule.maxSeconds !== null &&
+      recordingSecs >= rule.maxSeconds
+    ) {
+      handleFinishRecording()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingSecs, isRecording, recordingContext])
+
+  const startBattery = () => {
+    pictureBlobRef.current = null
+
+    pictureDurationRef.current = null
+
+    batteryJobsRef.current = {}
+
+    setBatteryResults([])
+
+    setRecordingContext("phonation")
+
+    navigate("instruction")
+  }
+
+  // Submits a standardized task the moment its recording is reviewed. The
+  // job queues behind whatever the worker is doing and is collected later,
+  // so the person never waits for it.
+  const queueBatteryTask = (ctx: RecordingContext, blob: Blob | null) => {
+    const task =
+      ctx === "phonation" || ctx === "fluency" || ctx === "recall" ? ctx : null
+
+    if (!task || !blob || blob.size < 500) return
+
+    const params: Record<string, unknown> = { language: lang }
+
+    if (task === "recall") {
+      params.target_words = getTaskPrompt(lang, "memoryRecall")
+        .split(",")
+        .map((w) => w.trim())
+        .filter(Boolean)
+    }
+
+    const failed = (message: string): BatteryTaskRecord => ({
+      task,
+      status: "failed",
+      scored: false,
+      score: null,
+      flag: null,
+      threshold: "",
+      reference: "",
+      note: "",
+      error: message,
+    })
+
+    const job = submitScreeningJob(
+      blob,
+      `${task}${getExtensionForBlob(blob)}`,
+      {
+        task,
+        params,
+      },
+    )
+      .then((handle) => followScreeningJob<TaskJobResponse>(handle))
+      .then(
+        (res): BatteryTaskRecord => ({
+          ...res.battery,
+          task,
+          status: "completed",
+          transcript: res.transcript,
+        }),
+      )
+      .catch((err: unknown) =>
+        failed(err instanceof Error ? err.message : "Could not be scored."),
+      )
+
+    batteryJobsRef.current[task] = job
+
+    console.log("[SwarSanket] Standardized task queued:", task)
+  }
+
+  const collectBatteryResults = async (): Promise<BatteryTaskRecord[]> => {
+    const order: BatteryTaskRecord["task"][] = [
+      "phonation",
+      "fluency",
+      "recall",
+    ]
+
+    const jobs = order
+      .map((t) => batteryJobsRef.current[t])
+      .filter((j): j is Promise<BatteryTaskRecord> => Boolean(j))
+
+    if (jobs.length === 0) return []
+
+    const timeout = new Promise<null>((r) => setTimeout(() => r(null), 180000))
+
+    const settled = await Promise.race([Promise.all(jobs), timeout])
+
+    if (settled === null) {
+      return order
+        .filter((t) => batteryJobsRef.current[t])
+        .map(
+          (t): BatteryTaskRecord => ({
+            task: t,
+            status: "failed",
+            scored: false,
+            score: null,
+            flag: null,
+            threshold: "",
+            reference: "",
+            note: "",
+            error: "Timed out waiting for the score.",
+          }),
+        )
+    }
+
+    return settled
+  }
+
   const handleRunRealScreening = useCallback(async () => {
     const audioBlob =
-      audioBlobRef.current || currentAudioBlob || getLastRecordedAudioBlob()
+      pictureBlobRef.current ||
+      audioBlobRef.current ||
+      currentAudioBlob ||
+      getLastRecordedAudioBlob()
 
     if (!audioBlob || audioBlob.size < 1000) {
       console.warn(
@@ -4282,7 +4542,9 @@ function SwarSanketApp({
     // Same floor the backend enforces. Refusing here costs nothing; refusing
     // after upload costs the person a multi-minute wait for the same answer.
     const recordedSeconds =
-      getLastAudioRecordingResult()?.durationSeconds ?? recordingSecs
+      pictureDurationRef.current ??
+      getLastAudioRecordingResult()?.durationSeconds ??
+      recordingSecs
 
     if (recordedSeconds > 0 && recordedSeconds < MIN_RECORDING_SECONDS) {
       setScreeningApiResult({
@@ -4347,6 +4609,14 @@ function SwarSanketApp({
           setJobTransport(p.transport)
         },
       })
+
+      // The standardized tasks were queued on the same worker before this
+      // job, so they are normally already scored; collecting them is quick.
+      setAnalysisStep("battery")
+
+      const battery = await collectBatteryResults()
+
+      setBatteryResults(battery)
 
       console.log("[SwarSanket] Analysis complete")
 
@@ -4491,11 +4761,14 @@ function SwarSanketApp({
 
         audioQuality: vqState,
 
+        battery,
+
         tasks: [
           {
-            taskId: recordingContext,
+            // The model scored the picture clip whatever task came last.
+            taskId: "pictureDesc",
 
-            prompt: getTaskPrompt(lang, recordingContext),
+            prompt: getTaskPrompt(lang, "pictureDesc"),
 
             durationSeconds: Math.round(
               apiResult.audio?.duration_seconds || 15,
@@ -5277,11 +5550,11 @@ function SwarSanketApp({
               <div className="w-full space-y-3 pt-4">
                 <Btn
                   label={t(lang, "beginVoiceCheck")}
-                  onClick={() => navigate("instruction")}
+                  onClick={startBattery}
                 />
                 <Btn
                   label={t(lang, "someoneHelping")}
-                  onClick={() => navigate("instruction")}
+                  onClick={startBattery}
                   variant="ghost"
                 />
               </div>
@@ -5295,8 +5568,8 @@ function SwarSanketApp({
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader
-              step={0}
-              total={3}
+              step={BATTERY_STEP[recordingContext] ?? 0}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("voiceIntro")}
               onExit={() => navigate("home")}
             />
@@ -5328,7 +5601,8 @@ function SwarSanketApp({
               )}
 
               <p className="text-xs text-[#5e7380] text-center">
-                {t(lang, "describeSceneHint")}
+                {batteryHint(lang, recordingContext) ??
+                  t(lang, "describeSceneHint")}
               </p>
 
               <AudioBtn
@@ -5358,7 +5632,12 @@ function SwarSanketApp({
               ) : (
                 <Btn
                   label={t(lang, "startSpeaking")}
-                  onClick={() => setShowNoiseCheck(true)}
+                  // One room check per session is enough.
+                  onClick={() =>
+                    noiseReading
+                      ? navigate("recording")
+                      : setShowNoiseCheck(true)
+                  }
                 />
               )}
             </div>
@@ -5371,8 +5650,8 @@ function SwarSanketApp({
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader
-              step={0}
-              total={3}
+              step={BATTERY_STEP[recordingContext] ?? 0}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("instruction")}
               onExit={() => navigate("home")}
             />
@@ -5382,6 +5661,16 @@ function SwarSanketApp({
                   describing it rather than speaking from memory. */}
               {recordingContext === "pictureDesc" && (
                 <PictureTaskCard lang={lang} compact />
+              )}
+              {recordingContext !== "pictureDesc" && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] text-center shadow-xs">
+                  <p
+                    className="text-sm font-medium text-[#0c1e27] leading-relaxed"
+                    style={{ fontFamily: F.body }}
+                  >
+                    {getTaskPrompt(lang, recordingContext)}
+                  </p>
+                </div>
               )}
 
               {/* Interactive Big Mic Button */}
@@ -5426,7 +5715,8 @@ function SwarSanketApp({
                       {t(lang, "tapToSpeak")}
                     </p>
                     <p className="text-xs text-[#5e7380]">
-                      {t(lang, "tapMicrophone")}
+                      {batteryHint(lang, recordingContext) ??
+                        t(lang, "tapMicrophone")}
                     </p>
                   </>
                 ) : (
@@ -5441,7 +5731,7 @@ function SwarSanketApp({
                     </div>
                     <p
                       className={`text-4xl font-bold tracking-wider transition-colors ${
-                        recordingSecs >= MIN_RECORDING_SECONDS
+                        recordingSecs >= taskRule(recordingContext).minSeconds
                           ? "text-emerald-700"
                           : "text-[#0c1e27]"
                       }`}
@@ -5453,9 +5743,13 @@ function SwarSanketApp({
                     {/* Numeric floor: language-neutral, so no unverified
                         translations are needed for it to be understood. */}
                     <p className="text-xs text-[#5e7380] tabular-nums">
-                      {recordingSecs >= MIN_RECORDING_SECONDS
-                        ? "\u2713 00:30"
-                        : `\u2192 00:${String(MIN_RECORDING_SECONDS).padStart(2, "0")}`}
+                      {recordingSecs >= taskRule(recordingContext).minSeconds
+                        ? `\u2713 ${fmtClock(taskRule(recordingContext).minSeconds)}`
+                        : `\u2192 ${fmtClock(taskRule(recordingContext).minSeconds)}`}
+                      {taskRule(recordingContext).autoStop &&
+                      taskRule(recordingContext).maxSeconds !== null
+                        ? ` \u00b7 ${t(lang, "autoStopsAt")} ${fmtClock(taskRule(recordingContext).maxSeconds ?? 0)}`
+                        : ""}
                     </p>
                     <p className="text-xs text-[#5e7380]">
                       {t(lang, "speakNaturally")}
@@ -5536,10 +5830,29 @@ function SwarSanketApp({
                 <Btn
                   label={t(lang, "continue")}
                   onClick={() => {
-                    if (recordingContext === "freeSpeech") {
+                    const reviewedBlob = audioBlobRef.current
+
+                    if (recordingContext === "pictureDesc") {
+                      // Keep the model's clip apart from the later tasks.
+                      pictureBlobRef.current = reviewedBlob
+
+                      pictureDurationRef.current =
+                        getLastAudioRecordingResult()?.durationSeconds ??
+                        recordingSecs
+                    } else {
+                      queueBatteryTask(recordingContext, reviewedBlob)
+                    }
+
+                    if (recordingContext === "phonation") {
                       navigate("pictureDesc")
                     } else if (recordingContext === "pictureDesc") {
                       navigate("memory")
+                    } else if (recordingContext === "fluency") {
+                      setRecordingContext("recall")
+
+                      navigate("instruction")
+                    } else if (recordingContext === "freeSpeech") {
+                      navigate("pictureDesc")
                     } else if (recordingContext === "memoryRecall") {
                       navigate("conversation")
                     } else {
@@ -5563,8 +5876,8 @@ function SwarSanketApp({
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader
-              step={1}
-              total={3}
+              step={BATTERY_STEP.pictureDesc ?? 2}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("recordingReview")}
               onExit={() => navigate("home")}
             />
@@ -5611,8 +5924,8 @@ function SwarSanketApp({
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
             <StatusBar />
             <CheckHeader
-              step={2}
-              total={3}
+              step={3}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("pictureDesc")}
               onExit={() => navigate("home")}
             />
@@ -5651,9 +5964,10 @@ function SwarSanketApp({
                 <Btn
                   label={t(lang, "iHeardWords")}
                   onClick={() => {
-                    setRecordingContext("memoryRecall")
+                    // Animal fluency doubles as the delay before recall.
+                    setRecordingContext("fluency")
 
-                    navigate("conversation")
+                    navigate("instruction")
                   }}
                 />
               </div>
@@ -5782,6 +6096,12 @@ function SwarSanketApp({
               onRecordAgain={() => {
                 setAnalysisError(null)
 
+                pictureBlobRef.current = null
+
+                pictureDurationRef.current = null
+
+                setRecordingContext("pictureDesc")
+
                 navigate("recording")
               }}
               onServerSettings={() => {
@@ -5860,6 +6180,13 @@ function SwarSanketApp({
                 </div>
               </div>
 
+              {batteryResults.length > 0 && (
+                <BatteryCard
+                  battery={batteryResults}
+                  compact
+                  fontFamily={F.display}
+                />
+              )}
               {/* Keeping Your Mind Healthy Card */}
               <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -6012,6 +6339,13 @@ function SwarSanketApp({
                 </div>
               </div>
 
+              {batteryResults.length > 0 && (
+                <BatteryCard
+                  battery={batteryResults}
+                  compact
+                  fontFamily={F.display}
+                />
+              )}
               {/* What Does This Mean for You? (Empathetic Patient Advice) */}
               <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -6173,6 +6507,19 @@ function SwarSanketApp({
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
+              {(activeScreening
+                ? (activeScreening.battery ?? [])
+                : batteryResults
+              ).length > 0 && (
+                <BatteryCard
+                  battery={
+                    activeScreening
+                      ? (activeScreening.battery ?? [])
+                      : batteryResults
+                  }
+                  fontFamily={F.display}
+                />
+              )}
               {/* Doctor Consultation Card - highlighted when opened via "Talk to a Healthcare Professional" */}
               {detailedReportFocus === "doctor" && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-[#e4f4f7] to-[#d8f0f5] border-2 border-[#02738a]/30 shadow-xs space-y-3 animate-fade-in">
