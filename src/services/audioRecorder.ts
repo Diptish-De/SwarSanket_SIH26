@@ -2,6 +2,14 @@
 
 import { VoiceQualityGrade } from "../types"
 
+/**
+ * Minimum recording length the backend will score. Kept in step with
+ * MIN_SPEECH_SECONDS_FOR_SCORING in backend/screening_engine.py so a clip
+ * that is going to be refused is refused here, instantly, instead of after a
+ * multi-minute upload and transcription.
+ */
+export const MIN_RECORDING_SECONDS = 30
+
 export interface AudioRecordingResult {
   blob: Blob
 
@@ -506,7 +514,7 @@ export interface ScreeningApiResponse {
   sample_sufficient?: boolean
 
   sample_requirements?: {
-    words_recorded: number
+    words_recorded: number | null
 
     words_required: number
 
@@ -678,7 +686,7 @@ export async function analyzeAudioWithBackend(
 
   filename?: string,
 
-  timeoutMs = 60000,
+  timeoutMs = 240000,
 ): Promise<ScreeningApiResponse> {
   const baseUrl = getApiBaseUrl()
 
@@ -753,7 +761,7 @@ export async function analyzeAudioWithBackend(
 
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error(
-        "Voice analysis timed out. Please check your network connection and try again.",
+        "The screening server is taking longer than expected. It may be waking up or busy - please wait a minute and try again. Your recording is kept.",
       )
     }
 
@@ -764,7 +772,10 @@ export async function analyzeAudioWithBackend(
       message.includes("Failed to fetch") ||
       message.includes("NetworkError")
     ) {
-      message = `Cannot reach screening backend at ${baseUrl}. If testing on a mobile device, please check your network connection or configure the server IP in Settings.`
+      // A 502 from the hosting proxy carries no CORS headers, so the browser
+      // reports it as a network failure. Do not tell the person their
+      // connection is broken when it is the server that did not answer.
+      message = `The screening server did not respond. It may be restarting or overloaded - please wait a minute and try again. On a phone, also check your connection or the server address in Settings.`
     }
 
     console.error("[SwarSanket] analyzeAudioWithBackend failed:", err)
