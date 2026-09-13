@@ -3,7 +3,6 @@ export type AloisTab =
   | "appointments"
   | "doctorInfo"
   | "progress"
-  | "messages"
   | "profile"
   | "medications"
   | "dailyCare"

@@ -79,7 +79,7 @@ export default function AloisHomeDashboard({
           {/* Notifications */}
           <button
             type="button"
-            onClick={() => onSelectTab("messages")}
+            onClick={() => onSelectTab("profile")}
             aria-label="Notifications"
             className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] hover:border-slate-300 active:scale-95 transition-all"
           >

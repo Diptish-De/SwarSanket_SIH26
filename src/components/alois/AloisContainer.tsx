@@ -12,8 +12,6 @@ import AloisDoctorInfo from "./AloisDoctorInfo"
 
 import AloisProgress from "./AloisProgress"
 
-import AloisMessages from "./AloisMessages"
-
 import AloisProfile from "./AloisProfile"
 
 import AloisMedicationTracker from "./AloisMedicationTracker"
@@ -137,7 +135,7 @@ export default function AloisContainer({
             onBack={() => setActiveTab("appointments")}
             onBookAppointment={() => setShowDoctorModal(true)}
             onOpenSettings={() => setActiveTab("profile")}
-            onOpenChat={() => setActiveTab("messages")}
+            onOpenChat={() => setShowDoctorModal(true)}
             fontFamily={fontFamily}
           />
         )}
@@ -146,14 +144,6 @@ export default function AloisContainer({
           <AloisProgress
             onBack={() => setActiveTab("home")}
             onViewReport={onViewReport}
-            onOpenSettings={() => setActiveTab("profile")}
-            fontFamily={fontFamily}
-          />
-        )}
-
-        {activeTab === "messages" && (
-          <AloisMessages
-            onBack={() => setActiveTab("home")}
             onOpenSettings={() => setActiveTab("profile")}
             fontFamily={fontFamily}
           />
