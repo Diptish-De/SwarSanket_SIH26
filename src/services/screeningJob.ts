@@ -26,7 +26,11 @@ import {
 
 import { getApiBaseUrl } from "./apiConfig"
 
-import { getExtensionForBlob, type ScreeningApiResponse } from "./audioRecorder"
+import {
+  analyzeAudioWithBackend,
+  getExtensionForBlob,
+  type ScreeningApiResponse,
+} from "./audioRecorder"
 
 /** Stages exactly as the backend writes them (backend/screening_jobs.py). */
 
@@ -221,6 +225,22 @@ export const SERVER_SLOW_MESSAGE =
 export const SERVER_UNREACHABLE_MESSAGE =
   "The screening server did not respond. It may be restarting or overloaded - please wait a minute and try again. On a phone, also check your connection or the server address in Settings."
 
+/**
+ * The backend has no job endpoint: it is older than the client.
+ *
+ * Frontend and backend deploy separately, so a browser can be running new code
+ * against a server that has not rolled over yet. Raised so the caller can fall
+ * back rather than telling the person their screening failed.
+ */
+
+export class JobEndpointMissingError extends Error {
+  constructor() {
+    super("The screening server does not support queued screenings yet.")
+
+    this.name = "JobEndpointMissingError"
+  }
+}
+
 function toAnalysisStep(stage: string): AnalysisStep | null {
   switch (stage) {
     case "queued":
@@ -357,11 +377,22 @@ export async function submitScreeningJob(
         // keep the fallback detail
       }
 
+      // A 404 on the route itself means an older server, not a bad request.
+      // The endpoint's own 404 names a recording id, so the two are distinct.
+      if (
+        response.status === 404 &&
+        !detail.toLowerCase().includes("recording")
+      ) {
+        throw new JobEndpointMissingError()
+      }
+
       throw new Error(detail)
     }
 
     submitted = ((await response.json()) as SubmitResponse)
   } catch (err: unknown) {
+    if (err instanceof JobEndpointMissingError) throw err
+
     if (err instanceof Error && err.name === "AbortError") {
       throw new Error(SERVER_SLOW_MESSAGE)
     }
@@ -693,7 +724,38 @@ export async function runScreeningJob(
     task,
   })
 
-  const handle = await submitScreeningJob(blob, filename, options)
+  let handle: ScreeningJobHandle
+
+  try {
+    handle = await submitScreeningJob(blob, filename, options)
+  } catch (err) {
+    // Deploy skew: this browser has the new client, the server does not have
+    // the job endpoint yet. The old synchronous endpoint returns the identical
+    // payload, so a screening still works. It holds one long request open,
+    // which is the thing the job pipeline exists to avoid, so this is a
+    // fallback and not a second supported path.
+    if (err instanceof JobEndpointMissingError && task === "picture") {
+      console.warn(
+        "[SwarSanket] Screening server has no job endpoint; using the synchronous one.",
+      )
+
+      options.onProgress?.({
+        stage: "transcribing",
+
+        queuePosition: null,
+
+        transport: "http",
+
+        recordingId: "",
+
+        task,
+      })
+
+      return analyzeAudioWithBackend(blob, filename, options.overallTimeoutMs)
+    }
+
+    throw err
+  }
 
   return followScreeningJob<ScreeningApiResponse>(handle, options)
 }
