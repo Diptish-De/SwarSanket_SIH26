@@ -3,6 +3,8 @@ dist/
 build/
 .cache/
 .env*
+backend/.env
+backend/.env.*
 !.env.example
 .vite/
 vite.config.*.timestamp-*

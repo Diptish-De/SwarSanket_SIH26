@@ -41,6 +41,7 @@ import {
 } from "../../services/dailyCheckIn"
 
 /** Long enough to describe a morning; short enough that nobody quits on day 8. */
+
 const MIN_RECORD_SECONDS = 15
 
 const MAX_RECORD_SECONDS = 60
@@ -53,6 +54,7 @@ interface AloisDailyCheckInProps {
   memberId?: string | null
 
   /** True when a family member, not the patient, is holding the device. */
+
   assistedMode?: boolean
 
   onBack?: () => void
@@ -72,6 +74,7 @@ interface AloisDailyCheckInProps {
  * question for a family member. Everything is read against the same person's
  * own earlier check-ins, never a population cut-off.
  */
+
 export default function AloisDailyCheckIn({
   patientName,
 
@@ -139,11 +142,14 @@ export default function AloisDailyCheckIn({
   }, [])
 
   // Already checked in today: show the summary instead of asking again. The
+
   // record is keyed by date, so a second run would overwrite it anyway.
+
   useEffect(() => {
     let cancelled = false
 
     Promise.all([getTodayCheckIn(), listCheckIns()])
+
       .then(([today, all]) => {
         if (cancelled) return
 
@@ -157,6 +163,7 @@ export default function AloisDailyCheckIn({
           setStep("done")
         }
       })
+
       .catch(() => undefined)
 
     return () => {
@@ -165,7 +172,9 @@ export default function AloisDailyCheckIn({
   }, [todayKey])
 
   // Recording clock. Stops itself at the cap so the clock, not the person,
+
   // decides when a timed task is over.
+
   useEffect(() => {
     if (!isRecording) return
 
@@ -186,6 +195,7 @@ export default function AloisDailyCheckIn({
 
       setTrend(computeTrend(all, todayKey))
     },
+
     [todayKey],
   )
 
@@ -261,7 +271,9 @@ export default function AloisDailyCheckIn({
     }
 
     // Saved before the job is submitted, so the day is recorded even if the
+
     // network, the server or the app dies in the next second.
+
     await persist(base)
 
     setScoring(true)
@@ -311,7 +323,9 @@ export default function AloisDailyCheckIn({
       })
     } catch (err) {
       // The person did their part. The day still counts; only the score is
+
       // missing, and it says so rather than showing a zero.
+
       await persist({
         ...base,
 
@@ -332,6 +346,7 @@ export default function AloisDailyCheckIn({
   }, [assistedMode, memberId, orientationAnswers, persist, todayKey])
 
   // Auto-stop at the cap.
+
   useEffect(() => {
     if (isRecording && elapsed >= MAX_RECORD_SECONDS) {
       finishRecording()
@@ -376,7 +391,9 @@ export default function AloisDailyCheckIn({
         answer,
 
         // Only an assisted session can produce an informant report. A patient
+
         // answering this about themselves is self-report, and is stored as such.
+
         answeredBy: assistedMode ? "caregiver" : "self",
 
         at: new Date().toISOString(),
@@ -532,7 +549,9 @@ export default function AloisDailyCheckIn({
                   className="absolute rounded-full bg-rose-500/15"
                   style={{
                     width: `${112 + micLevel * 70}px`,
+
                     height: `${112 + micLevel * 70}px`,
+
                     transition: "width 120ms linear, height 120ms linear",
                   }}
                 />
@@ -704,6 +723,7 @@ export default function AloisDailyCheckIn({
  * no published cut-off for an automated detail count, so no absolute judgement
  * is available and none is shown.
  */
+
 export function DailyTrendCard({
   trend,
 
@@ -763,13 +783,16 @@ export function DailyTrendCard({
           <div className="grid grid-cols-3 gap-2 pt-1">
             {[
               { label: "Details", value: String(today.internalDetails) },
+
               {
                 label: "Specific",
+
                 value:
                   typeof today.specificity === "number"
                     ? `${Math.round(today.specificity * 100)}%`
                     : "—",
               },
+
               { label: "Words", value: String(today.wordCount ?? "—") },
             ].map((m) => (
               <div
@@ -819,6 +842,7 @@ export function DailyTrendCard({
 }
 
 /** Detail count per day, oldest to newest, with the person's own lower edge. */
+
 function Sparkline({
   points,
 
@@ -861,7 +885,9 @@ function Sparkline({
     h - pad - ((v - min) / Math.max(1, max - min)) * (h - pad * 2)
 
   const path = shown
+
     .map((p, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(p.value)}`)
+
     .join(" ")
 
   return (

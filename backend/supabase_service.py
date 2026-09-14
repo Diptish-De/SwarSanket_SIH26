@@ -24,6 +24,7 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Union
 from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 from dotenv import load_dotenv
 
@@ -192,6 +193,7 @@ class SupabaseService:
             row = {
                 "session_id": data.get("session_id") or data.get("recording_id") or f"session_{int(time.time())}",
                 "recording_id": data.get("recording_id"),
+                "patient_id": data.get("patient_id"),
                 "model_name": screening_data.get("model_name", "SwarSanket Quantum-Classical Hybrid"),
                 "predicted_class": screening_data.get("predicted_class"),
                 "probability": screening_data.get("probability"),
@@ -245,6 +247,7 @@ class SupabaseService:
         try:
             row = {
                 "recording_id": data.get("recording_id"),
+                "patient_id": data.get("patient_id"),
                 "original_filename": data.get("original_filename", "unnamed.wav"),
                 "stored_filename": data.get("stored_filename", data.get("filename", "")),
                 "storage_path": data.get("storage_path"),
@@ -268,43 +271,167 @@ class SupabaseService:
             logger.warning(f"[Supabase] Failed to persist recording record: {e}")
             return {"saved": False, "error": err_str}
 
-    def update_recording_status(self, recording_id: str, fields: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Updates the job columns of a 'recordings' row. This is the write that the
-        phone's Realtime subscription is listening for, so it is issued once per
-        pipeline stage. Fails soft: the screening itself never depends on it.
-        """
-        if not self.is_configured() or not USE_SUPABASE_DB or not recording_id:
+    def upsert_patient_profile(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Creates or updates the stable profile used by the current demo identity."""
+        if not self.is_configured() or not USE_SUPABASE_DB:
             return {"saved": False, "reason": "Supabase database disabled or unconfigured."}
+
+        patient_id = data.get("id")
+        if not patient_id:
+            return {"saved": False, "reason": "patient_id is required."}
+
         try:
-            res = (
-                self.client.table("recordings")
-                .update(fields)
-                .eq("recording_id", recording_id)
-                .execute()
-            )
-            return {"saved": True, "data": res.data}
+            UUID(str(patient_id))
+        except ValueError:
+            return {"saved": False, "reason": "patient_id must be a UUID."}
+
+        row = {
+            "id": str(patient_id),
+            "username": data.get("username"),
+            "full_name": data.get("full_name") or "Participant",
+            "age": data.get("age"),
+            "gender": data.get("gender"),
+            "phone": data.get("phone"),
+            "abha_id": data.get("abha_id"),
+            "caregiver_name": data.get("caregiver_name"),
+            "caregiver_phone": data.get("caregiver_phone"),
+            "caregiver_email": data.get("caregiver_email"),
+        }
+
+        try:
+            result = self.client.table("patient_profiles").upsert(row).execute()
+            return {"saved": True, "data": result.data}
         except Exception as e:
-            logger.warning(f"[Supabase] Failed to update recording '{recording_id}': {e}")
+            logger.warning(f"[Supabase] Failed to persist patient profile: {e}")
             return {"saved": False, "error": str(e)}
 
-    def get_recording(self, recording_id: str) -> Optional[Dict[str, Any]]:
-        """Fetches one 'recordings' row by its public recording_id, or None."""
-        if not self.is_configured() or not USE_SUPABASE_DB or not recording_id:
+    def get_patient_profile_by_auth_user_id(self, auth_user_id: str) -> Optional[Dict[str, Any]]:
+        if not self.is_configured() or not USE_SUPABASE_DB:
             return None
+
         try:
-            res = (
-                self.client.table("recordings")
+            UUID(str(auth_user_id))
+        except ValueError:
+            return None
+
+        try:
+            result = (
+                self.client.table("patient_profiles")
                 .select("*")
-                .eq("recording_id", recording_id)
+                .eq("auth_user_id", str(auth_user_id))
                 .limit(1)
                 .execute()
             )
-            rows = res.data or []
-            return rows[0] if rows else None
+            return result.data[0] if result.data else None
         except Exception as e:
-            logger.info(f"[Supabase] Unable to fetch recording '{recording_id}': {e}")
+            logger.warning(f"[Supabase] Failed to load patient profile: {e}")
             return None
+
+    def get_or_create_authenticated_profile(
+        self,
+        auth_user_id: str,
+        data: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        existing = self.get_patient_profile_by_auth_user_id(auth_user_id)
+
+        if existing is None and data.get("legacy_patient_id"):
+            try:
+                UUID(str(data["legacy_patient_id"]))
+                candidate_result = (
+                    self.client.table("patient_profiles")
+                    .select("*")
+                    .eq("id", str(data["legacy_patient_id"]))
+                    .limit(1)
+                    .execute()
+                )
+                candidate = candidate_result.data[0] if candidate_result.data else None
+                identity_matches = candidate and not candidate.get("auth_user_id") and (
+                    (
+                        data.get("username")
+                        and candidate.get("username") == data.get("username")
+                    )
+                    or (
+                        data.get("phone")
+                        and candidate.get("phone") == data.get("phone")
+                    )
+                )
+                if identity_matches:
+                    existing = candidate
+            except Exception as e:
+                logger.info(f"[Supabase] Legacy profile lookup skipped: {e}")
+
+        if existing:
+            update = {
+                key: value
+                for key, value in {
+                    "username": data.get("username"),
+                    "full_name": data.get("full_name"),
+                    "age": data.get("age"),
+                    "gender": data.get("gender"),
+                    "phone": data.get("phone"),
+                    "caregiver_name": data.get("caregiver_name"),
+                    "caregiver_phone": data.get("caregiver_phone"),
+                    "caregiver_email": data.get("caregiver_email"),
+                    "auth_user_id": str(auth_user_id),
+                }.items()
+                if value is not None
+            }
+
+            try:
+                result = (
+                    self.client.table("patient_profiles")
+                    .update(update)
+                    .eq("id", existing["id"])
+                    .execute()
+                )
+                return result.data[0] if result.data else existing
+            except Exception as e:
+                logger.warning(f"[Supabase] Failed to update patient profile: {e}")
+                return None
+
+        row = {
+            "id": str(uuid4()),
+            "auth_user_id": str(auth_user_id),
+            "username": data.get("username"),
+            "full_name": data.get("full_name") or "Participant",
+            "age": data.get("age"),
+            "gender": data.get("gender"),
+            "phone": data.get("phone"),
+            "caregiver_name": data.get("caregiver_name"),
+            "caregiver_phone": data.get("caregiver_phone"),
+            "caregiver_email": data.get("caregiver_email"),
+        }
+
+        try:
+            result = self.client.table("patient_profiles").insert(row).execute()
+            return result.data[0] if result.data else row
+        except Exception as e:
+            logger.warning(f"[Supabase] Failed to create patient profile: {e}")
+            return None
+
+    def get_patient_screening_history(self, patient_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Fetches only screenings linked to one validated patient profile."""
+        if not self.is_configured() or not USE_SUPABASE_DB:
+            return []
+
+        try:
+            UUID(str(patient_id))
+        except ValueError:
+            return []
+
+        try:
+            result = (
+                self.client.table("screenings")
+                .select("*")
+                .eq("patient_id", str(patient_id))
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            logger.info(f"[Supabase] Unable to fetch patient screening history: {e}")
+            return []
 
     def get_screening_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Fetches past screening sessions ordered by created_at descending."""
