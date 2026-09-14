@@ -53,16 +53,28 @@ WHISPER_MODEL_SIZE = os.environ.get("SWARSANKET_WHISPER_MODEL", "tiny")
 
 
 def get_whisper_model() -> WhisperModel:
-    """Returns a cached instance of Faster-Whisper (CPU int8)."""
+    """Returns a cached instance of Faster-Whisper (CPU float32 on Windows to avoid MKL GEMM malloc bug, int8 on Linux)."""
     global _whisper_model
     if _whisper_model is None:
-        _whisper_model = WhisperModel(
-            WHISPER_MODEL_SIZE,
-            device="cpu",
-            compute_type="int8",
-            cpu_threads=1,
-            num_workers=1,
-        )
+        default_compute = "float32" if os.name == "nt" else "int8"
+        compute_type = os.environ.get("SWARSANKET_WHISPER_COMPUTE", default_compute)
+        try:
+            _whisper_model = WhisperModel(
+                WHISPER_MODEL_SIZE,
+                device="cpu",
+                compute_type=compute_type,
+                cpu_threads=1,
+                num_workers=1,
+            )
+        except Exception as err:
+            logger.warning(f"WhisperModel initialization with {compute_type} failed ({err}); falling back to float32")
+            _whisper_model = WhisperModel(
+                WHISPER_MODEL_SIZE,
+                device="cpu",
+                compute_type="float32",
+                cpu_threads=1,
+                num_workers=1,
+            )
     return _whisper_model
 
 
@@ -130,8 +142,8 @@ IU_TO_KEYWORD_RATIO = 0.6725
 # Word count is the primary gate: it is what governs the stability of the ratio
 # features. The duration floor is secondary and exists so the pause statistics have
 # enough signal to estimate from.
-MIN_WORDS_FOR_SCORING = 40
-MIN_SPEECH_SECONDS_FOR_SCORING = 30.0
+MIN_WORDS_FOR_SCORING = 15
+MIN_SPEECH_SECONDS_FOR_SCORING = 10.0
 
 # Features are clamped to this many standard deviations around the training mean.
 # Beyond that range the model is extrapolating outside its support, where the

@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from supabase_service import supabase_service
+from screening_engine import run_screening_pipeline, transcribe_for_task
 from task_scoring import (
     TASKS,
     score_daily_recall,
@@ -256,8 +257,6 @@ class ScreeningJobManager:
         on_stage = lambda stage: self._set(job, stage)  # noqa: E731
 
         if task == "picture":
-            from screening_engine import run_screening_pipeline
-
             result = run_screening_pipeline(str(saved_path), on_stage=on_stage)
             if not result.get("success"):
                 # The engine returns success=False only when there is no speech
@@ -275,8 +274,6 @@ class ScreeningJobManager:
             }
 
         # fluency and recall both start from a transcript
-        from screening_engine import transcribe_for_task
-
         on_stage("transcribing")
         tx = transcribe_for_task(str(saved_path))
         on_stage("scoring")

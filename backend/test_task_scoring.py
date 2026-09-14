@@ -209,5 +209,11 @@ check(res.status_code == 400, "unknown task is refused with 400")
 res = client.post("/api/screenings", files={"audio": ("x.wav", io.BytesIO(steady), "audio/wav")},
                   data={"task": "recall", "params": json.dumps({"target_words": ["a"], "language": "en"})})
 check(res.status_code == 202, "recall with target_words is accepted")
+rid2 = res.json()["recording_id"]
+while time.time() < deadline:
+    body = client.get(f"/api/screenings/{rid2}").json()
+    if body["status"] in ("completed", "failed"):
+        break
+    time.sleep(0.2)
 
 print(f"\nALL {passed} TASK SCORING CHECKS PASSED.")

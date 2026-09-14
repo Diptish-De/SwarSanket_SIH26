@@ -115,6 +115,9 @@ ABSTRACT_NOUNS: Set[str] = {
     "thing", "things", "stuff", "something", "anything", "nothing", "lot",
     "bit", "kind", "sort", "way", "time", "day", "life", "work", "problem",
     "idea", "reason", "point", "part", "case", "fact", "matter",
+    # Quantity and clock fragments that sit under a locative preposition
+    # without naming a place: "at half past eight", "for a couple of hours".
+    "half", "quarter", "couple", "number", "side", "end", "middle", "front",
 }
 
 LOCATIVE_PREPS: Set[str] = {
@@ -311,7 +314,9 @@ def score_daily_recall(
                 and tok.head.pos_ == "ADP"
                 and tok.head.lemma_.lower() in LOCATIVE_PREPS
             )
-            if is_place_word or is_locative_object:
+            # "on the way", "at half past eight": grammatically locative, but
+            # not a place. The abstract list filters them out of the count.
+            if (is_place_word or is_locative_object) and lemma not in ABSTRACT_NOUNS:
                 if lemma not in places:
                     places.append(lemma)
                 counted.add(tok.i)

@@ -1,0 +1,374 @@
+{
+  "corpus": {
+    "path": "D:\\repo\\SIH-26\\SwarSanket(Kaggle)\\rad csv",
+    "rows": 468,
+    "recordings": 156,
+    "engines": [
+      "aliyun",
+      "tencent",
+      "xunfei"
+    ],
+    "features": [
+      "CTP_F0 SD(st)",
+      "CTP_DPI(ms)",
+      "CTP_RST(-/s)",
+      "CTP_EST",
+      "CTP_Voiced Rate(1/s)",
+      "CTP_Hesitation Ratio",
+      "CTP_Energy Mean(Pa^2\u00b7s)",
+      "CTP_verb_num",
+      "CTP_noun_ratio",
+      "CTP_Pronouns_ratio",
+      "CTP_noun to verb",
+      "CTP_Word Rate(-/s)",
+      "CTP_Noun No Phrase Rate",
+      "CTP_Verb phrase type proportion",
+      "CTP_Prep phrase type proportion",
+      "CTP_Prep average phrase type length 1",
+      "CTP_num_unique_IU",
+      "CTP_num_unique_keywords",
+      "CTP_unique_IU_densitys",
+      "CTP_total_IU_density",
+      "CTP_keyword_to_non_keyword_ratio",
+      "CTP_unique_IU_efficiency"
+    ],
+    "class_balance": {
+      "0": 234,
+      "1": 234
+    }
+  },
+  "protocol_note": "random_row reproduces final.ipynb and leaks: the three ASR transcripts of one recording can straddle the split. grouped splits on role+id so they cannot. Compare like with like.",
+  "hyperparameters": {
+    "epochs": 120,
+    "batch_size": 16,
+    "learning_rate": 0.01,
+    "weight_decay": 0.0001,
+    "seeds": 1
+  },
+  "results": {
+    "random_row": {
+      "Logistic Regression": {
+        "roc_auc": {
+          "mean": 0.9157990040742418,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9226580702385911,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.8085106382978723,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.7872340425531915,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.8297872340425532,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.8043478260869565,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.6175806794999419,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 0.010014400002546608,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.006980850965656499,
+          "sd": 0.0
+        }
+      },
+      "SVM (RBF)": {
+        "roc_auc": {
+          "mean": 0.954730647351743,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9468616598601418,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.8617021276595744,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.8723404255319149,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.851063829787234,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.8631578947368421,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.7235680511449364,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 0.015899600024567917,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.01745531923741974,
+          "sd": 0.0
+        }
+      },
+      "Random Forest": {
+        "roc_auc": {
+          "mean": 0.987324581258488,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9885425406569948,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.9468085106382979,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.9361702127659575,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.9574468085106383,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.946236559139785,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.893819357296686,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 0.325396100000944,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.3913053193134553,
+          "sd": 0.0
+        }
+      },
+      "XGBoost": {
+        "roc_auc": {
+          "mean": 0.9977365323675871,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9979541734860886,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.9787234042553191,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.9787234042553191,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.9787234042553191,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.9787234042553191,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.9574468085106383,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 2.7318092999921646,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.024054255187907752,
+          "sd": 0.0
+        }
+      }
+    },
+    "grouped": {
+      "Logistic Regression": {
+        "roc_auc": {
+          "mean": 0.8968253968253969,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9211878216749428,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.7916666666666666,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.8333333333333334,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.7380952380952381,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.8181818181818182,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.5749889084999459,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 0.012087100010830909,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.006805208310349069,
+          "sd": 0.0
+        }
+      },
+      "SVM (RBF)": {
+        "roc_auc": {
+          "mean": 0.8994708994708995,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9213306596434652,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.8229166666666666,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.8703703703703703,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.7619047619047619,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.8468468468468469,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.6386426154904875,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 0.02215160001651384,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.020382291647062328,
+          "sd": 0.0
+        }
+      },
+      "Random Forest": {
+        "roc_auc": {
+          "mean": 0.8941798941798942,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9224645437137112,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.78125,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.7222222222222222,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.8571428571428571,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.7878787878787878,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.5759469664695669,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 0.6008700999955181,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.5219499998929678,
+          "sd": 0.0
+        }
+      },
+      "XGBoost": {
+        "roc_auc": {
+          "mean": 0.9122574955908289,
+          "sd": 0.0
+        },
+        "pr_auc": {
+          "mean": 0.9336528777172461,
+          "sd": 0.0
+        },
+        "accuracy": {
+          "mean": 0.8229166666666666,
+          "sd": 0.0
+        },
+        "sensitivity": {
+          "mean": 0.8333333333333334,
+          "sd": 0.0
+        },
+        "specificity": {
+          "mean": 0.8095238095238095,
+          "sd": 0.0
+        },
+        "f1": {
+          "mean": 0.8411214953271028,
+          "sd": 0.0
+        },
+        "mcc": {
+          "mean": 0.6413038339268406,
+          "sd": 0.0
+        },
+        "fit_seconds": {
+          "mean": 0.09665040002437308,
+          "sd": 0.0
+        },
+        "inference_ms_per_sample": {
+          "mean": 0.018941666894534137,
+          "sd": 0.0
+        }
+      }
+    }
+  },
+  "severity": {
+    "available": true,
+    "model": "Logistic Regression",
+    "bands": {
+      "mild (MMSE >= 21)": {
+        "roc_auc_mean": 0.8242424242424242,
+        "roc_auc_sd": 0.0,
+        "test_rows_mean": 41.0
+      },
+      "moderate or worse (MMSE < 21)": {
+        "roc_auc_mean": 0.9171717171717172,
+        "roc_auc_sd": 0.0,
+        "test_rows_mean": 63.0
+      }
+    }
+  }
+}

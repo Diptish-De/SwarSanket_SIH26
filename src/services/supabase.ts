@@ -50,21 +50,20 @@ export async function getSupabaseAccessToken(): Promise<string | null> {
   return session?.access_token ?? null
 }
 
+export interface RegisteredUserResult {
+  email: string
+  userId: string
+}
+
 export async function registerVerifiedSupabaseUser(params: {
   fullName: string
-
   phone: string
-
   password: string
-
   age?: number
-
   gender?: string
-
   caregiverName?: string
-
   caregiverPhone?: string
-}): Promise<{ email: string userId: string }> {
+}): Promise<RegisteredUserResult> {
   const digits = params.phone.replace(/\D/g, "")
 
   const phoneKey = digits.slice(-10) || digits

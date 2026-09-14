@@ -193,7 +193,6 @@ class SupabaseService:
             row = {
                 "session_id": data.get("session_id") or data.get("recording_id") or f"session_{int(time.time())}",
                 "recording_id": data.get("recording_id"),
-                "patient_id": data.get("patient_id"),
                 "model_name": screening_data.get("model_name", "SwarSanket Quantum-Classical Hybrid"),
                 "predicted_class": screening_data.get("predicted_class"),
                 "probability": screening_data.get("probability"),
@@ -211,6 +210,8 @@ class SupabaseService:
                 "quantum_specs": screening_data.get("quantum_specs"),
                 "notes": f"Screening audio duration: {audio_metrics.get('duration_seconds', 0)}s",
             }
+            if data.get("patient_id"):
+                row["patient_id"] = data.get("patient_id")
 
             try:
                 res = self.client.table("screenings").insert(row).execute()
@@ -219,6 +220,17 @@ class SupabaseService:
                 if ("23503" in err_str or "foreign key" in err_str.lower()) and row.get("recording_id"):
                     logger.info("[Supabase] recording_id not found in recordings table; saving screening standalone.")
                     row["recording_id"] = None
+                    try:
+                        res = self.client.table("screenings").insert(row).execute()
+                    except Exception as err2:
+                        if ("23503" in str(err2) or "patient_id" in str(err2).lower()) and "patient_id" in row:
+                            row.pop("patient_id", None)
+                            res = self.client.table("screenings").insert(row).execute()
+                        else:
+                            raise err2
+                elif ("23503" in err_str or "patient_id" in err_str.lower() or "PGRST204" in err_str) and "patient_id" in row:
+                    logger.info("[Supabase] patient_id constraint/column error; retrying insert without patient_id.")
+                    row.pop("patient_id", None)
                     res = self.client.table("screenings").insert(row).execute()
                 else:
                     raise insert_err
@@ -247,7 +259,6 @@ class SupabaseService:
         try:
             row = {
                 "recording_id": data.get("recording_id"),
-                "patient_id": data.get("patient_id"),
                 "original_filename": data.get("original_filename", "unnamed.wav"),
                 "stored_filename": data.get("stored_filename", data.get("filename", "")),
                 "storage_path": data.get("storage_path"),
@@ -261,6 +272,8 @@ class SupabaseService:
                 "prediction_status": data.get("prediction_status", "not_started"),
                 "metadata": data.get("metadata") or {},
             }
+            if data.get("patient_id"):
+                row["patient_id"] = data.get("patient_id")
 
             res = self.client.table("recordings").insert(row).execute()
             return {"saved": True, "data": res.data}
@@ -270,6 +283,44 @@ class SupabaseService:
                 return {"saved": False, "reason": "Table not created yet."}
             logger.warning(f"[Supabase] Failed to persist recording record: {e}")
             return {"saved": False, "error": err_str}
+
+    def update_recording_status(self, recording_id: str, fields: Dict[str, Any]) -> Dict[str, Any]:
+        """Updates processing stage and metadata on the recordings row."""
+        if not self.is_configured() or not USE_SUPABASE_DB:
+            return {"updated": False, "reason": "Supabase database disabled or unconfigured."}
+
+        try:
+            update_data = {k: v for k, v in fields.items() if v is not None}
+            res = (
+                self.client.table("recordings")
+                .update(update_data)
+                .eq("recording_id", recording_id)
+                .execute()
+            )
+            return {"updated": True, "data": res.data}
+        except Exception as e:
+            logger.warning(f"[Supabase] Failed to update recording {recording_id}: {e}")
+            return {"updated": False, "error": str(e)}
+
+    def get_recording(self, recording_id: str) -> Optional[Dict[str, Any]]:
+        """Fetches a recording row by recording_id."""
+        if not self.is_configured() or not USE_SUPABASE_DB:
+            return None
+
+        try:
+            res = (
+                self.client.table("recordings")
+                .select("*")
+                .eq("recording_id", recording_id)
+                .limit(1)
+                .execute()
+            )
+            if res.data and len(res.data) > 0:
+                return res.data[0]
+            return None
+        except Exception as e:
+            logger.warning(f"[Supabase] Failed to fetch recording {recording_id}: {e}")
+            return None
 
     def upsert_patient_profile(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Creates or updates the stable profile used by the current demo identity."""

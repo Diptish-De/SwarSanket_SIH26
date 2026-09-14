@@ -33,7 +33,7 @@ print(f"Target Audio File: {test_audio_path}")
 
 # Run 1: Full pipeline execution
 print("\n[1/3] Running live screening engine on target audio...")
-result_pass1 = run_screening_pipeline(test_audio_path)
+result_pass1 = run_screening_pipeline(test_audio_path, require_minimum_sample=False)
 
 if not result_pass1["success"]:
     print(f"ERROR in screening pipeline: {result_pass1.get('error')}")

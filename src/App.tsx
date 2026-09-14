@@ -368,7 +368,7 @@ const TX: Record<string, Record<string, string>> = {
     tapToSpeak: "Tap to speak",
 
     tapMicrophone:
-      "Tap the microphone when you are ready. Aim for about 45 to 60 seconds.",
+      "Tap the microphone when you are ready. Aim for about 10 to 15 seconds.",
 
     speakNaturally: "Speak naturally…",
 
@@ -8725,10 +8725,10 @@ function SwarSanketApp({
 
                                 const promptText =
                                   lang === "hi"
-                                    ? "नमस्ते। इस आवाज़ जांच में, आप एक चित्र देखेंगे और 45 से 60 सेकंड तक अपनी सामान्य गति से बोलेंगे। शांत जगह पर बैठें और स्पष्ट बोलें।"
+                                    ? "नमस्ते। इस आवाज़ जांच में, आप एक चित्र देखेंगे और 10 से 15 सेकंड तक अपनी सामान्य गति से बोलेंगे। शांत जगह पर बैठें और स्पष्ट बोलें।"
                                     : lang === "bn"
-                                      ? "নমস্কার। এই স্ক্রিনিংয়ে আপনি একটি ছবি দেখবেন এবং স্বাভাবিক গতিতে ৪৫ থেকে ৬০ সেকেন্ড বলবেন।"
-                                      : "Hello. In this voice check, you will view a picture and describe what you see in your own words. Please sit in a quiet room and speak naturally at your normal pace for 45 to 60 seconds."
+                                      ? "নমস্কার। এই স্ক্রিনিংয়ে আপনি একটি ছবি দেখবেন এবং স্বাভাবিক গতিতে ১০ থেকে ১৫ সেকেন্ড বলবেন।"
+                                      : "Hello. In this voice check, you will view a picture and describe what you see in your own words. Please sit in a quiet room and speak naturally at your normal pace for about 10 to 15 seconds."
 
                                 speakText(promptText, lang)
 
@@ -8880,7 +8880,7 @@ function SwarSanketApp({
 
                             title: "Standardized Picture Description",
 
-                            desc: "You look at an everyday visual scene and speak naturally for 45–60 seconds in your mother tongue.",
+                            desc: "You look at an everyday visual scene and speak naturally for 10–15 seconds in your mother tongue.",
                           },
 
                           {

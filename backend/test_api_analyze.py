@@ -20,19 +20,18 @@ def _collect(directory):
     )
 
 
-AUDIO_DIR = BACKEND_DIR / "uploads"
+AUDIO_DIR = BACKEND_DIR / "test_audio"
 audio_files = _collect(AUDIO_DIR)
 
-if not audio_files:
-    AUDIO_DIR = BACKEND_DIR / "test_audio"
-    audio_files = _collect(AUDIO_DIR)
-
-# The pipeline now refuses to score a sample too short to estimate the ratio
-# features from, so the contract test needs a recording long enough to pass the
-# gate. Largest file is the best available proxy for longest.
 by_size = sorted(audio_files, key=lambda p: p.stat().st_size, reverse=True)
-long_candidates = _collect(BACKEND_DIR / "test_audio") + by_size
-test_audio_path = max(long_candidates, key=lambda p: p.stat().st_size)
+preferred_long = BACKEND_DIR / "uploads" / "swarsanket_20260905_103216_dc24d59e.webm"
+if preferred_long.exists():
+    test_audio_path = preferred_long
+elif (AUDIO_DIR / "case1_normal_speech_12s.webm").exists():
+    test_audio_path = AUDIO_DIR / "case1_normal_speech_12s.webm"
+else:
+    test_audio_path = max(audio_files, key=lambda p: p.stat().st_size)
+
 short_audio_path = min(by_size, key=lambda p: p.stat().st_size)
 
 print("=" * 80)

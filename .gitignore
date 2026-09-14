@@ -45,3 +45,11 @@ package-lock.json
 yarn.lock
 .vercel/
 
+
+# Training corpus and Kaggle working copy. The six *_asr.csv files are a
+# clinical speech dataset with its own data-use terms, and the folder also
+# carries model artifacts already tracked under backend/models/. Keep it on
+# disk, out of the repository.
+SwarSanket(Kaggle)/
+data/
+*_asr.csv

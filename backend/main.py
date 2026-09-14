@@ -1,21 +1,21 @@
-import os
-import uuid
-import shutil
+import json
 import logging
-import tempfile
+import os
 from pathlib import Path
+import shutil
+import tempfile
 from datetime import datetime, timezone
-from typing import Optional
-
 from typing import Any, Dict, Optional
+import uuid
 
-from fastapi import Depends, FastAPI, UploadFile, File, Form, Header, HTTPException
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from auth import optional_supabase_user, require_supabase_user
-from supabase_service import supabase_service
 from screening_jobs import job_manager
+from supabase_service import supabase_service
+from task_scoring import TASKS
 
 # Configure backend logger
 logging.basicConfig(level=logging.INFO)

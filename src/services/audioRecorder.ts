@@ -11,7 +11,7 @@ import { getSupabaseAccessToken } from "./supabase"
  * multi-minute upload and transcription.
  */
 
-export const MIN_RECORDING_SECONDS = 30
+export const MIN_RECORDING_SECONDS = 10
 
 export interface AudioRecordingResult {
   blob: Blob
