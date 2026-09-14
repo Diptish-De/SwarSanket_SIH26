@@ -35,11 +35,19 @@ function check(cond: boolean, msg: string) {
   }
 }
 
+// Named rather than inline: the formatter strips the separator out of a
+// single-line type literal, which turns it into a syntax error on save.
+interface DayOptions {
+  orientation?: number
+
+  status?: DailyCheckIn["recall"]["status"]
+}
+
 /** A check-in on `date` whose recall scored `internal` episodic details. */
 function day(
   date: string,
   internal: number | null,
-  opts: { orientation?: number status?: DailyCheckIn["recall"]["status"] } = {},
+  opts: DayOptions = {},
 ): DailyCheckIn {
   const status = opts.status ?? (internal === null ? "failed" : "completed")
 
