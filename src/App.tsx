@@ -73,15 +73,6 @@ import {
   OfflineSyncItem,
 } from "./types"
 
-// TEMPORARY DEMO OVERRIDE - remove with: git apply -R demo-override.patch
-
-import {
-  consumeDemoOutcome,
-  applyDemoOverride,
-  outcomeFromClick,
-  setDemoOutcome,
-} from "./services/demoOverride"
-
 import { loadSession, saveSession, clearSession } from "./services/sessionState"
 
 import {
@@ -4695,7 +4686,7 @@ function SwarSanketApp({
 
       // it takes.
 
-      let apiResult = await runScreeningJob(audioBlob, "voice_check.webm", {
+      const apiResult = await runScreeningJob(audioBlob, "voice_check.webm", {
         onProgress: (p) => {
           setAnalysisStep(p.stage)
 
@@ -4771,16 +4762,6 @@ function SwarSanketApp({
 
           apiResult.explanation.top_negative_contributions,
         )
-      }
-
-      // TEMPORARY DEMO OVERRIDE - rewrites the outcome when a side of the CTA armed
-
-      // one. Leaves the real result untouched when nothing is armed.
-
-      const demoOutcome = consumeDemoOutcome()
-
-      if (demoOutcome) {
-        apiResult = applyDemoOverride(demoOutcome, apiResult)
       }
 
       setScreeningApiResult(apiResult)
