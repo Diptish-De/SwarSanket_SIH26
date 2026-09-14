@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
+
 import {
   ArrowLeft,
   Timer as TimerIcon,
@@ -7,87 +8,125 @@ import {
   Star,
   HelpCircle,
 } from "lucide-react"
+
 import { recordGameSession, formatGameTime } from "./storage"
 
 interface MemoryTreasureGameProps {
   onBack: () => void
+
   fontFamily?: string
 }
 
 interface TreasureItem {
   id: number
+
   icon: string
+
   name: string
 }
 
 const TREASURE_ITEMS: TreasureItem[] = [
   { id: 0, icon: "💎", name: "Ruby" },
+
   { id: 1, icon: "🪙", name: "Coin" },
+
   { id: 2, icon: "👑", name: "Crown" },
+
   { id: 3, icon: "🗝️", name: "Key" },
+
   { id: 4, icon: "🏺", name: "Vase" },
+
   { id: 5, icon: "🧭", name: "Compass" },
+
   { id: 6, icon: "🗺️", name: "Map" },
+
   { id: 7, icon: "💍", name: "Ring" },
 ]
 
 export default function MemoryTreasureGame({
   onBack,
+
   fontFamily = "'Outfit', sans-serif",
 }: MemoryTreasureGameProps) {
   const [level, setLevel] = useState(1)
+
   const [moves, setMoves] = useState(0)
+
   const [pairsFound, setPairsFound] = useState(0)
+
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
   const [isWon, setIsWon] = useState(false)
 
   const [deck, setDeck] = useState<number[]>([])
+
   const [flipped, setFlipped] = useState<boolean[]>(Array(16).fill(false))
+
   const [matched, setMatched] = useState<boolean[]>(Array(16).fill(false))
 
   const [firstChoice, setFirstChoice] = useState<number | null>(null)
+
   const [secondChoice, setSecondChoice] = useState<number | null>(null)
+
   const [isBusy, setIsBusy] = useState(false)
 
   const startTimeRef = useRef(Date.now())
+
   const flipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     startNewGame()
+
     return () => {
       if (flipTimerRef.current) clearTimeout(flipTimerRef.current)
     }
   }, [level])
 
   // Timer
+
   useEffect(() => {
     if (isWon) return
+
     const interval = setInterval(() => {
       setElapsedSeconds((s) => s + 1)
     }, 1000)
+
     return () => clearInterval(interval)
   }, [isWon])
 
   const startNewGame = () => {
     if (flipTimerRef.current) clearTimeout(flipTimerRef.current)
+
     startTimeRef.current = Date.now()
+
     setElapsedSeconds(0)
+
     setMoves(0)
+
     setPairsFound(0)
+
     setIsWon(false)
+
     setFirstChoice(null)
+
     setSecondChoice(null)
+
     setIsBusy(false)
 
     // Generate 8 pairs (16 cards)
+
     const pairs: number[] = []
+
     for (let i = 0; i < 8; i++) {
       pairs.push(i, i)
     }
+
     pairs.sort(() => Math.random() - 0.5)
 
     setDeck(pairs)
+
     setFlipped(Array(16).fill(false))
+
     setMatched(Array(16).fill(false))
   }
 
@@ -95,50 +134,72 @@ export default function MemoryTreasureGame({
     if (isBusy || matched[index] || flipped[index]) return
 
     const newFlipped = [...flipped]
+
     newFlipped[index] = true
+
     setFlipped(newFlipped)
 
     if (firstChoice === null) {
       setFirstChoice(index)
     } else {
       setSecondChoice(index)
+
       setMoves((m) => m + 1)
+
       setIsBusy(true)
 
       const card1 = deck[firstChoice]
+
       const card2 = deck[index]
 
       if (card1 === card2) {
         // MATCH!
+
         flipTimerRef.current = setTimeout(() => {
           setMatched((prev) => {
             const next = [...prev]
+
             next[firstChoice] = true
+
             next[index] = true
+
             return next
           })
+
           setPairsFound((p) => {
             const newCount = p + 1
+
             if (newCount === 8) {
               handleGameWin()
             }
+
             return newCount
           })
+
           setFirstChoice(null)
+
           setSecondChoice(null)
+
           setIsBusy(false)
         }, 300)
       } else {
         // MISMATCH
+
         flipTimerRef.current = setTimeout(() => {
           setFlipped((prev) => {
             const next = [...prev]
+
             next[firstChoice] = false
+
             next[index] = false
+
             return next
           })
+
           setFirstChoice(null)
+
           setSecondChoice(null)
+
           setIsBusy(false)
         }, 700)
       }
@@ -147,29 +208,42 @@ export default function MemoryTreasureGame({
 
   const handleGameWin = () => {
     setIsWon(true)
+
     const movePenalty = (moves - 8) * 30
+
     const timePenalty = elapsedSeconds * 4
+
     const score = Math.max(250, 1000 - movePenalty - timePenalty)
 
     let stars = 3
+
     if (moves > 22) stars = 1
     else if (moves > 16) stars = 2
 
     recordGameSession({
       id: `mt_${Date.now()}`,
+
       gameId: "memory_treasure",
+
       startedAt: new Date(startTimeRef.current).toISOString(),
+
       completedAt: new Date().toISOString(),
+
       score,
+
       level,
+
       durationSeconds: elapsedSeconds,
+
       moves: moves + 1,
+
       stars,
     })
   }
 
   const scoreEstimate = Math.max(
     250,
+
     1000 - Math.max(0, moves - 8) * 30 - elapsedSeconds * 4,
   )
 
@@ -253,7 +327,9 @@ export default function MemoryTreasureGame({
           <div className="w-full max-w-[340px] aspect-square mx-auto grid grid-cols-4 gap-2.5">
             {deck.map((cardId, idx) => {
               const isCardFlipped = flipped[idx] || matched[idx]
+
               const isCardMatched = matched[idx]
+
               const item = TREASURE_ITEMS[cardId]
 
               return (

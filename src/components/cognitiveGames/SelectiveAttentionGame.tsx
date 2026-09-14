@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
+
 import {
   ArrowLeft,
   Timer as TimerIcon,
@@ -6,90 +7,131 @@ import {
   Star,
   Flame,
 } from "lucide-react"
+
 import { recordGameSession } from "./storage"
 
 interface SelectiveAttentionGameProps {
   onBack: () => void
+
   fontFamily?: string
 }
 
 interface AttentionItem {
   id: number
+
   icon: string
+
   name: string
 }
 
 const ATTENTION_ITEMS: AttentionItem[] = [
   { id: 0, icon: "🌟", name: "Gold Star" },
+
   { id: 1, icon: "⭐", name: "Star" },
+
   { id: 2, icon: "✨", name: "Sparkles" },
+
   { id: 3, icon: "🌙", name: "Moon" },
+
   { id: 4, icon: "☀️", name: "Sun" },
+
   { id: 5, icon: "⚡", name: "Lightning" },
+
   { id: 6, icon: "🎯", name: "Target" },
+
   { id: 7, icon: "🔥", name: "Flame" },
+
   { id: 8, icon: "💎", name: "Gem" },
+
   { id: 9, icon: "🍀", name: "Clover" },
+
   { id: 10, icon: "🌸", name: "Blossom" },
+
   { id: 11, icon: "🍎", name: "Apple" },
+
   { id: 12, icon: "🍓", name: "Berry" },
+
   { id: 13, icon: "🍒", name: "Cherry" },
+
   { id: 14, icon: "🎈", name: "Balloon" },
+
   { id: 15, icon: "🔔", name: "Bell" },
 ]
 
 export default function SelectiveAttentionGame({
   onBack,
+
   fontFamily = "'Outfit', sans-serif",
 }: SelectiveAttentionGameProps) {
   const TOTAL_ROUNDS = 10
+
   const [currentRound, setCurrentRound] = useState(1)
+
   const [score, setScore] = useState(0)
+
   const [correctCount, setCorrectCount] = useState(0)
+
   const [incorrectCount, setIncorrectCount] = useState(0)
+
   const [streak, setStreak] = useState(0)
+
   const [maxStreak, setMaxStreak] = useState(0)
+
   const [roundTimeLeft, setRoundTimeLeft] = useState(14)
+
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
   const [feedback, setFeedback] = useState<{
     text: string
+
     isCorrect: boolean
   } | null>(null)
+
   const [isCompleted, setIsCompleted] = useState(false)
 
   const [targetItem, setTargetItem] = useState<AttentionItem>(
     ATTENTION_ITEMS[0],
   )
+
   const [gridItems, setGridItems] = useState<AttentionItem[]>([])
 
   const startTimeRef = useRef(Date.now())
+
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     startSession()
+
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current)
     }
   }, [])
 
   // Elapsed game timer
+
   useEffect(() => {
     if (isCompleted) return
+
     const interval = setInterval(() => {
       setElapsedSeconds((s) => s + 1)
     }, 1000)
+
     return () => clearInterval(interval)
   }, [isCompleted])
 
   // Round countdown timer
+
   useEffect(() => {
     if (isCompleted) return
+
     const roundInterval = setInterval(() => {
       setRoundTimeLeft((t) => {
         if (t <= 1) {
           handleTimeExpired()
+
           return 0
         }
+
         return t - 1
       })
     }, 1000)
@@ -99,57 +141,83 @@ export default function SelectiveAttentionGame({
 
   const startSession = () => {
     startTimeRef.current = Date.now()
+
     setCurrentRound(1)
+
     setScore(0)
+
     setCorrectCount(0)
+
     setIncorrectCount(0)
+
     setStreak(0)
+
     setMaxStreak(0)
+
     setElapsedSeconds(0)
+
     setIsCompleted(false)
+
     setupRound(1)
   }
 
   const setupRound = (round: number) => {
     let count = 6
+
     let time = 14
 
     if (round > 8) {
       count = 16
+
       time = 8
     } else if (round > 5) {
       count = 12
+
       time = 10
     } else if (round > 2) {
       count = 9
+
       time = 12
     }
 
     setRoundTimeLeft(time)
 
     // Select target
+
     const targetIdx = Math.floor(Math.random() * ATTENTION_ITEMS.length)
+
     const target = ATTENTION_ITEMS[targetIdx]
+
     setTargetItem(target)
 
     // Select distractors
+
     const poolWithoutTarget = ATTENTION_ITEMS.filter(
       (_, i) => i !== targetIdx,
     ).sort(() => Math.random() - 0.5)
+
     const distractors = poolWithoutTarget.slice(0, count - 1)
 
     // Insert target at random position
+
     const randPos = Math.floor(Math.random() * count)
+
     const items = [...distractors]
+
     items.splice(randPos, 0, target)
+
     setGridItems(items)
+
     setFeedback(null)
   }
 
   const handleTimeExpired = () => {
     setIncorrectCount((i) => i + 1)
+
     setStreak(0)
+
     setFeedback({ text: "Time expired!", isCorrect: false })
+
     advanceRound()
   }
 
@@ -158,25 +226,39 @@ export default function SelectiveAttentionGame({
 
     if (item.id === targetItem.id) {
       // MATCH
+
       const speedBonus = roundTimeLeft * 10
+
       const streakBonus = streak * 15
+
       const roundPoints = 100 + speedBonus + streakBonus
 
       const newStreak = streak + 1
+
       setStreak(newStreak)
+
       setMaxStreak((m) => Math.max(m, newStreak))
+
       setCorrectCount((c) => c + 1)
+
       setScore((s) => s + roundPoints)
+
       setFeedback({
         text: `Target found! +${roundPoints} pts`,
+
         isCorrect: true,
       })
+
       advanceRound()
     } else {
       // MISMATCH
+
       setIncorrectCount((i) => i + 1)
+
       setStreak(0)
+
       setScore((s) => Math.max(0, s - 20))
+
       setFeedback({ text: "Distractor tapped! Keep looking", isCorrect: false })
     }
   }
@@ -188,7 +270,9 @@ export default function SelectiveAttentionGame({
       } else {
         setCurrentRound((r) => {
           const next = r + 1
+
           setupRound(next)
+
           return next
         })
       }
@@ -197,31 +281,46 @@ export default function SelectiveAttentionGame({
 
   const handleSessionComplete = () => {
     setIsCompleted(true)
+
     const total = correctCount + incorrectCount
+
     const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0
 
     let stars = 1
+
     if (accuracy >= 85 && correctCount >= 7) stars = 3
     else if (accuracy >= 65 && correctCount >= 5) stars = 2
 
     recordGameSession({
       id: `sa_${Date.now()}`,
+
       gameId: "selective_attention",
+
       startedAt: new Date(startTimeRef.current).toISOString(),
+
       completedAt: new Date().toISOString(),
+
       score,
+
       level: currentRound > 5 ? 2 : 1,
+
       durationSeconds: elapsedSeconds,
+
       moves: total,
+
       mistakes: incorrectCount,
+
       streak: maxStreak,
+
       stars,
     })
   }
 
   const totalAttempts = correctCount + incorrectCount
+
   const accuracy =
     totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0
+
   const gridColsClass = gridItems.length === 16 ? "grid-cols-4" : "grid-cols-3"
 
   return (

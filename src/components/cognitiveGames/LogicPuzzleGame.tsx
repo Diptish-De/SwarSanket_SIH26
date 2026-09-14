@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
+
 import {
   ArrowLeft,
   Timer as TimerIcon,
@@ -7,121 +8,177 @@ import {
   Star,
   Sparkles,
 } from "lucide-react"
+
 import { recordGameSession } from "./storage"
 
 interface LogicPuzzleGameProps {
   onBack: () => void
+
   fontFamily?: string
 }
 
 interface PuzzleSymbol {
   id: number
+
   label: string
+
   icon: string
+
   color: string
+
   bgLight: string
 }
 
 const PUZZLE_SYMBOLS: PuzzleSymbol[] = [
   {
     id: 0,
+
     label: "Clover",
+
     icon: "🍀",
+
     color: "text-emerald-600 border-emerald-300",
+
     bgLight: "bg-emerald-50",
   },
+
   {
     id: 1,
+
     label: "Spark",
+
     icon: "⚡",
+
     color: "text-amber-600 border-amber-300",
+
     bgLight: "bg-amber-50",
   },
+
   {
     id: 2,
+
     label: "Water",
+
     icon: "💧",
+
     color: "text-sky-600 border-sky-300",
+
     bgLight: "bg-sky-50",
   },
+
   {
     id: 3,
+
     label: "Flame",
+
     icon: "🔥",
+
     color: "text-rose-600 border-rose-300",
+
     bgLight: "bg-rose-50",
   },
 ]
 
 const SOLUTION_TEMPLATES = [
   [0, 1, 2, 3, 2, 3, 0, 1, 3, 0, 1, 2, 1, 2, 3, 0],
+
   [1, 2, 3, 0, 3, 0, 1, 2, 0, 1, 2, 3, 2, 3, 0, 1],
+
   [2, 3, 0, 1, 0, 1, 2, 3, 1, 2, 3, 0, 3, 0, 1, 2],
 ]
 
 export default function LogicPuzzleGame({
   onBack,
+
   fontFamily = "'Outfit', sans-serif",
 }: LogicPuzzleGameProps) {
   const [level, setLevel] = useState(1)
+
   const [score, setScore] = useState(0)
+
   const [lives, setLives] = useState(3)
+
   const [selectedCell, setSelectedCell] = useState<number | null>(null)
+
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
   const [feedback, setFeedback] = useState<string | null>(null)
+
   const [isWon, setIsWon] = useState(false)
+
   const [isGameOver, setIsGameOver] = useState(false)
 
   const [board, setBoard] = useState<(number | null)[]>(Array(16).fill(null))
+
   const [clueIndices, setClueIndices] = useState<Set<number>>(new Set())
+
   const [solution, setSolution] = useState<number[]>([])
 
   const startTimeRef = useRef(Date.now())
 
   // Initialize level
+
   useEffect(() => {
     startLevel(level)
   }, [level])
 
   // Timer
+
   useEffect(() => {
     if (isWon || isGameOver) return
+
     const interval = setInterval(() => {
       setElapsedSeconds((s) => s + 1)
     }, 1000)
+
     return () => clearInterval(interval)
   }, [isWon, isGameOver])
 
   const startLevel = (lvl: number) => {
     startTimeRef.current = Date.now()
+
     setElapsedSeconds(0)
+
     setLives(3)
+
     setSelectedCell(null)
+
     setFeedback(null)
+
     setIsWon(false)
+
     setIsGameOver(false)
 
     const templateIndex = (lvl - 1) % SOLUTION_TEMPLATES.length
+
     const currentSolution = [...SOLUTION_TEMPLATES[templateIndex]]
+
     setSolution(currentSolution)
 
     // Calculate prefilled clues (Level 1: 10, Level 2: 8, Level 3: 6, Level 4: 5, Level 5: 4)
+
     const clueCount = Math.max(4, Math.min(10, 12 - lvl * 2))
+
     const indices = Array.from({ length: 16 }, (_, i) => i).sort(
       () => Math.random() - 0.5,
     )
+
     const clues = new Set(indices.slice(0, clueCount))
+
     setClueIndices(clues)
 
     const initialBoard = Array.from({ length: 16 }, (_, i) =>
       clues.has(i) ? currentSolution[i] : null,
     )
+
     setBoard(initialBoard)
   }
 
   const handleCellClick = (index: number) => {
     if (clueIndices.has(index)) return
+
     setSelectedCell(index)
+
     setFeedback(null)
   }
 
@@ -135,23 +192,31 @@ export default function LogicPuzzleGame({
       return
 
     const row = Math.floor(selectedCell / 4)
+
     const col = selectedCell % 4
 
     // Check conflicts
+
     let rowConflict = false
+
     for (let c = 0; c < 4; c++) {
       const idx = row * 4 + c
+
       if (idx !== selectedCell && board[idx] === symbolId) {
         rowConflict = true
+
         break
       }
     }
 
     let colConflict = false
+
     for (let r = 0; r < 4; r++) {
       const idx = r * 4 + col
+
       if (idx !== selectedCell && board[idx] === symbolId) {
         colConflict = true
+
         break
       }
     }
@@ -160,24 +225,34 @@ export default function LogicPuzzleGame({
 
     if (rowConflict || colConflict || !isMatch) {
       const newLives = lives - 1
+
       setLives(newLives)
+
       setFeedback("Duplicate symbol in row or column!")
 
       if (newLives <= 0) {
         setIsGameOver(true)
       }
+
       return
     }
 
     // Valid placement
+
     const newBoard = [...board]
+
     newBoard[selectedCell] = symbolId
+
     setBoard(newBoard)
+
     setScore((s) => s + 100)
+
     setFeedback("Nice deduction! ⭐")
 
     // Check completion
+
     const complete = newBoard.every((cell) => cell !== null)
+
     if (complete) {
       handleGameComplete(newBoard)
     }
@@ -191,35 +266,52 @@ export default function LogicPuzzleGame({
       isGameOver
     )
       return
+
     const newBoard = [...board]
+
     newBoard[selectedCell] = null
+
     setBoard(newBoard)
+
     setFeedback(null)
   }
 
   const handleGameComplete = (finalBoard: (number | null)[]) => {
     setIsWon(true)
+
     const bonus = lives * 60 + Math.max(10, 120 - elapsedSeconds)
+
     const finalScore = score + 100 + bonus
 
     let stars = 3
+
     if (lives === 2) stars = 2
+
     if (lives === 1) stars = 1
 
     recordGameSession({
       id: `lp_${Date.now()}`,
+
       gameId: "logic_puzzle",
+
       startedAt: new Date(startTimeRef.current).toISOString(),
+
       completedAt: new Date().toISOString(),
+
       score: finalScore,
+
       level,
+
       durationSeconds: elapsedSeconds,
+
       mistakes: 3 - lives,
+
       stars,
     })
   }
 
   const filledCount = board.filter((x) => x !== null).length
+
   const progressPercent = Math.round((filledCount / 16) * 100)
 
   return (
@@ -313,7 +405,9 @@ export default function LogicPuzzleGame({
           <div className="w-full max-w-[340px] aspect-square mx-auto bg-white p-3 rounded-2xl border-2 border-slate-300 shadow-md grid grid-cols-4 gap-2">
             {board.map((cellValue, idx) => {
               const isClue = clueIndices.has(idx)
+
               const isSelected = selectedCell === idx
+
               const sym = cellValue !== null ? PUZZLE_SYMBOLS[cellValue] : null
 
               return (

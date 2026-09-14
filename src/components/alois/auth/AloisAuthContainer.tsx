@@ -522,6 +522,7 @@ export default function AloisAuthContainer({
             try {
               const lookupRes = await fetch(
                 `${getApiBaseUrl()}/api/auth/lookup`,
+
                 {
                   method: "POST",
 

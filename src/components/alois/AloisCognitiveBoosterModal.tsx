@@ -259,6 +259,7 @@ export default function AloisCognitiveBoosterModal({
               type="button"
               onClick={() => {
                 onClose()
+
                 onOpenCognitiveGames?.()
               }}
               className="px-3.5 py-2 rounded-xl bg-white text-teal-800 text-xs font-bold shadow-sm hover:bg-teal-50 active:scale-95 transition-all shrink-0"
@@ -279,6 +280,7 @@ export default function AloisCognitiveBoosterModal({
                   type="button"
                   onClick={() => {
                     onClose()
+
                     onOpenCognitiveGames()
                   }}
                   className="text-[11px] text-[#0F62FE] font-medium hover:underline"
@@ -294,6 +296,7 @@ export default function AloisCognitiveBoosterModal({
                   key={act.id}
                   onClick={() => {
                     onClose()
+
                     onOpenCognitiveGames?.()
                   }}
                   className={`p-3 rounded-2xl border ${act.color} bg-white flex flex-col justify-between h-[128px] shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-98`}

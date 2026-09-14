@@ -1,5 +1,7 @@
 import React from "react"
+
 import { CheckCircle2, AlertTriangle, MinusCircle, Clock } from "lucide-react"
+
 import type { BatteryTaskRecord } from "../types"
 
 /**
@@ -11,7 +13,9 @@ import type { BatteryTaskRecord } from "../types"
 
 const TASK_LABEL: Record<BatteryTaskRecord["task"], string> = {
   fluency: "Animal fluency (60 s)",
+
   recall: "Delayed 5-word recall",
+
   phonation: "Sustained vowel /a/",
 }
 
@@ -19,65 +23,87 @@ const TASK_UNIT: Record<BatteryTaskRecord["task"], (
   r: BatteryTaskRecord,
 ) => string> = {
   fluency: (r) => (r.score === null ? "—" : `${r.score} animals`),
+
   recall: (r) => (r.score === null ? "—" : `${r.score} of 5 words`),
+
   phonation: (r) => (r.score === null ? "—" : `${r.score.toFixed(1)} s held`),
 }
 
 const TASK_RANGE: Record<BatteryTaskRecord["task"], string> = {
   fluency: "typical: 12 or more",
+
   recall: "typical: 3 or more",
+
   phonation: "typical: 10 s or more, steady voice",
 }
 
 export function summarizeBattery(battery: BatteryTaskRecord[]) {
   const scored = battery.filter((r) => r.status === "completed" && r.scored)
+
   const typical = scored.filter((r) => r.flag === false).length
+
   return { scored: scored.length, typical }
 }
 
 function extraDetail(r: BatteryTaskRecord): string | null {
   const d = r.details ?? {}
+
   if (r.task === "fluency") {
     const animals = d.animals as string[] | undefined
+
     if (animals && animals.length > 0) {
       return animals.slice(0, 8).join(", ") + (animals.length > 8 ? "…" : "")
     }
   }
+
   if (r.task === "recall") {
     const recalled = d.recalled as string[] | undefined
+
     const missed = d.missed as string[] | undefined
+
     if (recalled || missed) {
       return `recalled: ${(recalled ?? []).join(", ") || "none"}${
         missed && missed.length ? ` · missed: ${missed.join(", ")}` : ""
       }`
     }
   }
+
   if (r.task === "phonation") {
     const vq = d.voice_quality as {
       measured?: boolean
+
       jitter_local_percent?: number
+
       shimmer_local_db?: number
+
       hnr_db?: number
     } | undefined
+
     if (vq?.measured) {
       return `jitter ${vq.jitter_local_percent?.toFixed(2)} % · shimmer ${vq.shimmer_local_db?.toFixed(2)} dB · HNR ${vq.hnr_db?.toFixed(1)} dB`
     }
   }
+
   return null
 }
 
 export default function BatteryCard({
   battery,
+
   compact = false,
+
   fontFamily,
 }: {
   battery: BatteryTaskRecord[]
+
   compact?: boolean
+
   fontFamily?: string
 }) {
   if (!battery || battery.length === 0) return null
 
   const { scored, typical } = summarizeBattery(battery)
+
   const pending = battery.some((r) => r.status === "pending")
 
   return (
@@ -120,8 +146,11 @@ export default function BatteryCard({
       <div className="space-y-2">
         {battery.map((r) => {
           const ok = r.status === "completed" && r.scored && r.flag === false
+
           const below = r.status === "completed" && r.scored && r.flag === true
+
           const detail = compact ? null : extraDetail(r)
+
           return (
             <div
               key={r.task}

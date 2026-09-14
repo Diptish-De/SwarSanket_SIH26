@@ -1,29 +1,49 @@
 // ─── Daily check-in: storage, orientation items and within-person trend ──────
+
 //
+
 // A once-a-day, roughly one-minute check that replaces the household-chore list
+
 // in Secondary Care. Chores are a caregiving feature; this app is for early
+
 // detection, and the earliest thing to go in Alzheimer's disease is memory for
+
 // recent personal events. Asking for that every day is the only practical way
+
 // to watch it change.
+
 //
+
 // Three parts, in this order:
+
 //   1. Orientation  - what day of the week, which month (MMSE/MoCA time items).
+
 //   2. Daily recall - "tell me about your day", scored by the backend for
+
 //                     episodic detail (backend/daily_recall.py).
+
 //   3. Informant    - one question for a family member, adapted from the AD8.
+
 //
+
 // The whole point is the trend. A single day says nothing: sleep, mood and how
+
 // much actually happened all move these numbers. Everything below is therefore
+
 // computed against the same person's own earlier check-ins, never against a
+
 // population cut-off.
 
 import { getDB } from "./db"
 
 // Matches BASELINE_MIN_CHECKINS in backend/daily_recall.py. Fewer than this and
+
 // no trend is shown at all, only "building your baseline".
+
 export const BASELINE_MIN_CHECKINS = 5
 
 /** How many recent days the current reading is averaged over. */
+
 export const RECENT_WINDOW = 3
 
 export type OrientationQuestionId = "dayOfWeek" | "month"
@@ -32,9 +52,11 @@ export interface OrientationAnswer {
   question: OrientationQuestionId
 
   /** What the person picked. */
+
   answered: string
 
   /** What the device clock says. */
+
   expected: string
 
   isCorrect: boolean
@@ -49,6 +71,7 @@ export interface OrientationAnswer {
  * is neither its administration nor its scoring. These answers are observations
  * for a clinician to read. They are never summed into an AD8 score.
  */
+
 export interface InformantAnswer {
   itemId: string
 
@@ -60,6 +83,7 @@ export interface InformantAnswer {
    * Who actually tapped it. A patient answering an informant question is not an
    * informant report, so the two are never mixed.
    */
+
   answeredBy: "caregiver" | "self"
 
   at: string
@@ -75,25 +99,33 @@ export interface DailyRecallResult {
   transcript?: string
 
   /** Episodic ("internal") detail count. The headline measurement. */
+
   internalDetails?: number
 
   /** Generic, habitual or repeated content ("external"). */
+
   externalDetails?: number
 
   /** internal / (internal + external). */
+
   specificity?: number
 
   breakdown?: {
     events: number
+
     time: number
+
     place: number
+
     people: number
+
     perceptual: number
   }
 
   wordCount?: number
 
   /** Present when the backend transcribed but could not score, with the reason. */
+
   unscoredReason?: string
 
   error?: string
@@ -101,16 +133,20 @@ export interface DailyRecallResult {
 
 export interface DailyCheckIn {
   /** Local calendar date, YYYY-MM-DD. One check-in per day, so this is the key. */
+
   id: string
 
   /** Household member, when the app knows who is using it. */
+
   memberId: string | null
 
   createdAt: string
 
   orientation: {
     answers: OrientationAnswer[]
+
     score: number
+
     total: number
   }
 
@@ -123,30 +159,48 @@ export interface DailyCheckIn {
 
 const WEEKDAYS = [
   "Sunday",
+
   "Monday",
+
   "Tuesday",
+
   "Wednesday",
+
   "Thursday",
+
   "Friday",
+
   "Saturday",
 ]
 
 const MONTHS = [
   "January",
+
   "February",
+
   "March",
+
   "April",
+
   "May",
+
   "June",
+
   "July",
+
   "August",
+
   "September",
+
   "October",
+
   "November",
+
   "December",
 ]
 
 /** YYYY-MM-DD in the device's own timezone, not UTC. */
+
 export function localDateKey(d: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0")
 
@@ -179,6 +233,7 @@ export interface OrientationQuestion {
  * Deterministic shuffle seeded on the date, so the options do not jump around
  * if the person backs out and returns, but do differ from day to day.
  */
+
 function seededShuffle<T>(items: T[], seed: string): T[] {
   let h = 2166136261
 
@@ -208,6 +263,7 @@ function seededShuffle<T>(items: T[], seed: string): T[] {
  * The screen that asks these must not display the date. Showing a person the
  * answer and then asking for it measures nothing.
  */
+
 export function buildOrientationQuestions(
   now: Date = new Date(),
 ): OrientationQuestion[] {
@@ -218,33 +274,47 @@ export function buildOrientationQuestions(
   const correctMonth = MONTHS[now.getMonth()]
 
   // Distractors are the neighbouring days and months: a near miss is the
+
   // informative answer, and picking from far-apart options is too easy.
+
   const dayOptions = [
     WEEKDAYS[(now.getDay() + 6) % 7],
+
     correctDay,
+
     WEEKDAYS[(now.getDay() + 1) % 7],
+
     WEEKDAYS[(now.getDay() + 3) % 7],
   ]
 
   const monthOptions = [
     MONTHS[(now.getMonth() + 11) % 12],
+
     correctMonth,
+
     MONTHS[(now.getMonth() + 1) % 12],
+
     MONTHS[(now.getMonth() + 2) % 12],
   ]
 
   return [
     {
       id: "dayOfWeek",
+
       prompt: "What day of the week is it today?",
+
       options: seededShuffle(dayOptions, `${todayKey}-day`),
+
       expected: correctDay,
     },
 
     {
       id: "month",
+
       prompt: "Which month are we in?",
+
       options: seededShuffle(monthOptions, `${todayKey}-month`),
+
       expected: correctMonth,
     },
   ]
@@ -254,6 +324,7 @@ export function buildOrientationQuestions(
 
 interface InformantItem {
   id: string
+
   question: string
 }
 
@@ -263,39 +334,54 @@ interface InformantItem {
  * years" every morning. One item is asked per day, rotating, so the family
  * member is never faced with a questionnaire.
  */
+
 const INFORMANT_ITEMS: InformantItem[] = [
   {
     id: "ad8_repeat",
+
     question: "Did they repeat the same question or story today?",
   },
+
   {
     id: "ad8_misplace",
+
     question: "Did they misplace something and struggle to find it today?",
   },
+
   {
     id: "ad8_appointment",
+
     question: "Did they forget an appointment, a plan or a medicine today?",
   },
+
   {
     id: "ad8_device",
+
     question:
       "Did they have trouble using something familiar today, like the phone or the TV remote?",
   },
+
   {
     id: "ad8_interest",
+
     question: "Did they lose interest in something they normally enjoy today?",
   },
+
   {
     id: "ad8_judgment",
+
     question: "Did they make a decision today that seemed unlike them?",
   },
+
   {
     id: "ad8_date",
+
     question: "Did they seem unsure of the day or the date today?",
   },
 ]
 
 /** Rotates by day so the same item is not asked twice in a week. */
+
 export function informantItemForDate(
   dateKey: string = localDateKey(),
 ): InformantItem {
@@ -330,6 +416,7 @@ export async function getTodayCheckIn(): Promise<DailyCheckIn | undefined> {
 }
 
 /** Every check-in, oldest first. */
+
 export async function listCheckIns(): Promise<DailyCheckIn[]> {
   const db = await getDB()
 
@@ -357,6 +444,7 @@ function median(values: number[]): number {
 }
 
 /** Median absolute deviation: a spread estimate one bad day cannot dominate. */
+
 function mad(values: number[], centre: number): number {
   if (values.length === 0) return 0
 
@@ -364,6 +452,7 @@ function mad(values: number[], centre: number): number {
 }
 
 /** Orientation items answered correctly out of those asked. */
+
 export interface OrientationTally {
   correct: number
 
@@ -371,6 +460,7 @@ export interface OrientationTally {
 }
 
 /** One scored day on the trend line. */
+
 export interface SeriesPoint {
   date: string
 
@@ -393,9 +483,11 @@ export interface DailyTrend {
   status: TrendStatus
 
   /** Completed, scored check-ins used for the baseline. */
+
   baselineCount: number
 
   /** Days still needed before a trend is shown. */
+
   needed: number
 
   baselineMedian: number | null
@@ -403,15 +495,19 @@ export interface DailyTrend {
   recentMedian: number | null
 
   /** The lower edge of this person's usual range. */
+
   lowerBound: number | null
 
   /** Internal-detail counts, oldest first, for the sparkline. */
+
   series: SeriesPoint[]
 
   /** Consecutive days ending today (or yesterday) with a completed check-in. */
+
   streak: number
 
   /** Orientation items answered correctly over the last 7 check-ins. */
+
   orientationRecent: OrientationTally
 }
 
@@ -431,15 +527,19 @@ function scoredValue(c: DailyCheckIn): number | null {
  * A day whose scoring failed still counts: they did their part, and a server
  * outage is not theirs to pay for. A skipped day does not.
  */
+
 export function computeStreak(
   checkIns: DailyCheckIn[],
+
   today: string = localDateKey(),
 ): number {
   const done = new Set(
     checkIns
+
       .filter(
         (c) => c.recall.status === "completed" || c.recall.status === "failed",
       )
+
       .map((c) => c.id),
   )
 
@@ -468,14 +568,18 @@ export function computeStreak(
  * person whose first five days happened to be identical would have a spread of
  * zero and would be called "below" for a difference of one detail.
  */
+
 export function computeTrend(
   checkIns: DailyCheckIn[],
+
   today: string = localDateKey(),
 ): DailyTrend {
   const sorted = checkIns.slice().sort((a, b) => a.id.localeCompare(b.id))
 
   const series = sorted
+
     .map((c) => ({ date: c.id, value: scoredValue(c) }))
+
     .filter((p): p is SeriesPoint => p.value !== null)
 
   const streak = computeStreak(sorted, today)
@@ -485,33 +589,46 @@ export function computeTrend(
   const orientationRecent = lastSeven.reduce(
     (acc, c) => ({
       correct: acc.correct + c.orientation.score,
+
       total: acc.total + c.orientation.total,
     }),
+
     { correct: 0, total: 0 },
   )
 
   if (series.length < BASELINE_MIN_CHECKINS) {
     return {
       status: "building",
+
       baselineCount: series.length,
+
       needed: BASELINE_MIN_CHECKINS - series.length,
+
       baselineMedian: null,
+
       recentMedian: null,
+
       lowerBound: null,
+
       series,
+
       streak,
+
       orientationRecent,
     }
   }
 
   const baselineValues = series
+
     .slice(0, BASELINE_MIN_CHECKINS)
+
     .map((p) => p.value)
 
   const baselineMedian = median(baselineValues)
 
   const spread = Math.max(
     mad(baselineValues, baselineMedian),
+
     0.15 * baselineMedian,
   )
 
@@ -523,13 +640,21 @@ export function computeTrend(
 
   return {
     status: recentMedian < lowerBound ? "below" : "typical",
+
     baselineCount: series.length,
+
     needed: 0,
+
     baselineMedian,
+
     recentMedian,
+
     lowerBound: Math.round(lowerBound * 10) / 10,
+
     series,
+
     streak,
+
     orientationRecent,
   }
 }

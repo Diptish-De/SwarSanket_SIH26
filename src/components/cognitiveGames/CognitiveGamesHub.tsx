@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react"
+
 import {
   ArrowLeft,
   Sparkles,
@@ -10,27 +11,38 @@ import {
   Compass,
   RotateCcw,
 } from "lucide-react"
+
 import { CognitiveGameId, COGNITIVE_GAMES_META, GameProgress } from "./types"
+
 import { getAllGamesProgress, formatGameTime } from "./storage"
+
 import LogicPuzzleGame from "./LogicPuzzleGame"
+
 import MemoryTreasureGame from "./MemoryTreasureGame"
+
 import SelectiveAttentionGame from "./SelectiveAttentionGame"
+
 import SpeedVisualisationGame from "./SpeedVisualisationGame"
 
 interface CognitiveGamesHubProps {
   onBack: () => void
+
   initialGame?: CognitiveGameId | null
+
   fontFamily?: string
 }
 
 export default function CognitiveGamesHub({
   onBack,
+
   initialGame = null,
+
   fontFamily = "'Outfit', sans-serif",
 }: CognitiveGamesHubProps) {
   const [activeGame, setActiveGame] = useState<CognitiveGameId | null>(
     initialGame,
   )
+
   const [progressMap, setProgressMap] =
     useState<Record<CognitiveGameId, GameProgress>>(() => getAllGamesProgress())
 
@@ -39,6 +51,7 @@ export default function CognitiveGamesHub({
   }, [activeGame])
 
   // If a game is active, render that game
+
   if (activeGame === "logic_puzzle") {
     return (
       <LogicPuzzleGame
@@ -47,6 +60,7 @@ export default function CognitiveGamesHub({
       />
     )
   }
+
   if (activeGame === "memory_treasure") {
     return (
       <MemoryTreasureGame
@@ -55,6 +69,7 @@ export default function CognitiveGamesHub({
       />
     )
   }
+
   if (activeGame === "selective_attention") {
     return (
       <SelectiveAttentionGame
@@ -63,6 +78,7 @@ export default function CognitiveGamesHub({
       />
     )
   }
+
   if (activeGame === "speed_visualisation") {
     return (
       <SpeedVisualisationGame
@@ -136,7 +152,9 @@ export default function CognitiveGamesHub({
         <div className="space-y-3">
           {COGNITIVE_GAMES_META.map((meta) => {
             const prog = progressMap[meta.id]
+
             let statText = "New • Tap to play"
+
             if (prog && prog.bestScore > 0) {
               if (meta.id === "logic_puzzle") {
                 statText = `Best: ${prog.bestScore} pts • Level ${prog.highestLevel}`

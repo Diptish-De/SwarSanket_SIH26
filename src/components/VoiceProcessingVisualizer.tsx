@@ -1,23 +1,38 @@
 import React, { useState, useEffect } from "react"
+
 import { CheckCircle2, AlertCircle, RefreshCw, Radio } from "lucide-react"
+
 import type { AnalysisStep, JobTransport } from "../services/screeningJob"
 
 export interface VoiceProcessingVisualizerProps {
   analysisStep: AnalysisStep
+
   analysisError: string | null
+
   /** 0 = running now, n = n screenings ahead; null when not queued. */
+
   queuePosition?: number | null
+
   /** Which channel the latest stage arrived on. */
+
   transport?: JobTransport | null
+
   lang: string
+
   t: (lang: string, key: string) => string
+
   F: {
     display: string
+
     body: string
   }
+
   onRetry: () => void
+
   onSaveOffline: () => void
+
   onRecordAgain: () => void
+
   onServerSettings: () => void
 }
 
@@ -27,52 +42,76 @@ export interface VoiceProcessingVisualizerProps {
  * the next band when the backend actually reports the next stage. The number
  * therefore reflects where the job really is rather than a stopwatch.
  */
+
 const STAGE_BANDS: Record<AnalysisStep, [number, number]> = {
   idle: [0, 5],
+
   uploading: [5, 18],
+
   queued: [18, 22],
+
   transcribing: [22, 62],
+
   extracting: [62, 80],
+
   scoring: [80, 92],
+
   battery: [92, 98],
+
   complete: [100, 100],
 }
 
 const STAGE_INDEX: Record<AnalysisStep, number> = {
   idle: 0,
+
   uploading: 1,
+
   queued: 2,
+
   transcribing: 3,
+
   extracting: 4,
+
   scoring: 5,
+
   battery: 6,
+
   complete: 7,
 }
 
 function stageLabel(
   step: AnalysisStep,
+
   queuePosition: number | null | undefined,
 ) {
   switch (step) {
     case "uploading":
       return "Uploading voice recording…"
+
     case "queued":
       if (queuePosition && queuePosition > 0) {
         return queuePosition === 1
           ? "Waiting for 1 screening ahead of you…"
           : `Waiting for ${queuePosition} screenings ahead of you…`
       }
+
       return "Queued on the screening server…"
+
     case "transcribing":
       return "Transcribing speech word by word…"
+
     case "extracting":
       return "Extracting acoustic & linguistic features…"
+
     case "scoring":
       return "Evaluating screening signal…"
+
     case "battery":
       return "Scoring the standardized tests…"
+
     case "complete":
       return "Screening complete"
+
     default:
       return "Preparing…"
   }
@@ -80,15 +119,25 @@ function stageLabel(
 
 export default function VoiceProcessingVisualizer({
   analysisStep,
+
   analysisError,
+
   queuePosition = null,
+
   transport = null,
+
   lang,
+
   t,
+
   F,
+
   onRetry,
+
   onSaveOffline,
+
   onRecordAgain,
+
   onServerSettings,
 }: VoiceProcessingVisualizerProps) {
   const [progress, setProgress] = useState<number>(
@@ -102,17 +151,22 @@ export default function VoiceProcessingVisualizer({
 
     if (analysisStep === "complete") {
       setProgress(100)
+
       return
     }
 
     // Jump to the band's floor when a new stage arrives, then creep towards
+
     // its ceiling, slowing as it approaches so it never quite arrives early.
+
     setProgress((prev) => Math.max(prev, low))
 
     const interval = setInterval(() => {
       setProgress((prev) => {
         const remaining = high - prev
+
         if (remaining <= 0.05) return prev
+
         return Math.min(high, prev + Math.max(0.05, remaining * 0.025))
       })
     }, 100)
@@ -123,30 +177,45 @@ export default function VoiceProcessingVisualizer({
   const stageIdx = STAGE_INDEX[analysisStep]
 
   // Multi-line on purpose: the formatter strips separators from a one-line
+
   // type literal here.
+
   const checklist: {
     label: string
+
     doneAfter: number
+
     activeAt: number
   }[] = [
     {
       label: "Recording stored & queued",
+
       doneAfter: STAGE_INDEX.queued,
+
       activeAt: STAGE_INDEX.uploading,
     },
+
     {
       label: "Whisper ASR word-level transcription",
+
       doneAfter: STAGE_INDEX.transcribing,
+
       activeAt: STAGE_INDEX.transcribing,
     },
+
     {
       label: "spaCy linguistic & acoustic feature extraction",
+
       doneAfter: STAGE_INDEX.extracting,
+
       activeAt: STAGE_INDEX.extracting,
     },
+
     {
       label: "Validated 22-feature Quantum-Hybrid VQC screening engine",
+
       doneAfter: STAGE_INDEX.scoring,
+
       activeAt: STAGE_INDEX.scoring,
     },
   ]
@@ -156,6 +225,7 @@ export default function VoiceProcessingVisualizer({
       <div className="w-full max-w-sm flex flex-col items-center space-y-6">
         {analysisError ? (
           /* Error State */
+
           <div className="w-full space-y-4 animate-fade-in">
             <div className="p-5 rounded-3xl bg-rose-50 border border-rose-200 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
@@ -211,9 +281,13 @@ export default function VoiceProcessingVisualizer({
                 <div className="flex items-center gap-1.5 h-11">
                   {[
                     { h: "14px", delay: "0.15s" },
+
                     { h: "28px", delay: "0.35s" },
+
                     { h: "38px", delay: "0s" },
+
                     { h: "26px", delay: "0.2s" },
+
                     { h: "16px", delay: "0.4s" },
                   ].map((bar, i) => (
                     <div
@@ -221,7 +295,9 @@ export default function VoiceProcessingVisualizer({
                       className="w-1.5 rounded-full bg-[#0F62FE] animate-pulse"
                       style={{
                         height: bar.h,
+
                         animationDelay: bar.delay,
+
                         animationDuration: "1.3s",
                       }}
                     />
@@ -261,7 +337,9 @@ export default function VoiceProcessingVisualizer({
             <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] space-y-3 text-xs text-[#161616] shadow-xs">
               {checklist.map((item) => {
                 const done = stageIdx > item.doneAfter
+
                 const active = !done && stageIdx >= item.activeAt
+
                 return (
                   <div key={item.label} className="flex items-center gap-2.5">
                     {done ? (

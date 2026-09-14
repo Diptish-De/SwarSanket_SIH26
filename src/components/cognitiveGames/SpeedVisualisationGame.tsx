@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from "react"
+
 import { ArrowLeft, Timer as TimerIcon, Zap, Star } from "lucide-react"
+
 import { recordGameSession } from "./storage"
 
 interface SpeedVisualisationGameProps {
   onBack: () => void
+
   fontFamily?: string
 }
 
@@ -11,127 +14,187 @@ const SYMBOL_POOL = ["🔷", "🔶", "🟢", "🔺", "⭐", "🟣", "⬛", "💛
 
 export default function SpeedVisualisationGame({
   onBack,
+
   fontFamily = "'Outfit', sans-serif",
 }: SpeedVisualisationGameProps) {
   const TOTAL_ROUNDS = 10
+
   const [currentRound, setCurrentRound] = useState(1)
+
   const [score, setScore] = useState(0)
+
   const [correctCount, setCorrectCount] = useState(0)
+
   const [incorrectCount, setIncorrectCount] = useState(0)
+
   const [streak, setStreak] = useState(0)
+
   const [maxStreak, setMaxStreak] = useState(0)
+
   const [responseTimes, setResponseTimes] = useState<number[]>([])
+
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
   const [feedback, setFeedback] = useState<{
     text: string
+
     isCorrect: boolean
   } | null>(null)
+
   const [isCompleted, setIsCompleted] = useState(false)
 
   const [referencePattern, setReferencePattern] = useState<string[]>([])
+
   const [choices, setChoices] = useState<string[][]>([])
+
   const [correctChoiceIndex, setCorrectChoiceIndex] = useState(0)
 
   const roundStartTimeRef = useRef(performance.now())
+
   const sessionStartTimeRef = useRef(Date.now())
+
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     startSession()
+
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current)
     }
   }, [])
 
   // Timer
+
   useEffect(() => {
     if (isCompleted) return
+
     const interval = setInterval(() => {
       setElapsedSeconds((s) => s + 1)
     }, 1000)
+
     return () => clearInterval(interval)
   }, [isCompleted])
 
   const startSession = () => {
     sessionStartTimeRef.current = Date.now()
+
     setCurrentRound(1)
+
     setScore(0)
+
     setCorrectCount(0)
+
     setIncorrectCount(0)
+
     setStreak(0)
+
     setMaxStreak(0)
+
     setResponseTimes([])
+
     setElapsedSeconds(0)
+
     setIsCompleted(false)
+
     setupRound(1)
   }
 
   const setupRound = (round: number) => {
     const patternLen = round > 4 ? 4 : 3
+
     const choiceCount = round > 5 ? 4 : 3
 
     // Create reference pattern
+
     const poolShuffled = [...SYMBOL_POOL].sort(() => Math.random() - 0.5)
+
     const ref = poolShuffled.slice(0, patternLen)
+
     setReferencePattern(ref)
 
     // Generate choices
+
     const correctIdx = Math.floor(Math.random() * choiceCount)
+
     setCorrectChoiceIndex(correctIdx)
 
     const newChoices: string[][] = []
+
     for (let i = 0; i < choiceCount; i++) {
       if (i === correctIdx) {
         newChoices.push([...ref])
       } else {
         // Modify one symbol
+
         const distractor = [...ref]
+
         const alterPos = Math.floor(Math.random() * patternLen)
+
         const unused = SYMBOL_POOL.filter((s) => !ref.includes(s))
+
         if (unused.length > 0) {
           distractor[alterPos] =
             unused[Math.floor(Math.random() * unused.length)]
         } else {
           // Swap positions
+
           const swapPos = (alterPos + 1) % patternLen
+
           const tmp = distractor[alterPos]
+
           distractor[alterPos] = distractor[swapPos]
+
           distractor[swapPos] = tmp
         }
+
         newChoices.push(distractor)
       }
     }
 
     setChoices(newChoices)
+
     setFeedback(null)
+
     roundStartTimeRef.current = performance.now()
   }
 
   const handleChoiceClick = (choiceIndex: number) => {
     if (feedback) return // prevent double-tap during transition
+
     const latency = Math.round(performance.now() - roundStartTimeRef.current)
+
     setResponseTimes((prev) => [...prev, latency])
 
     const isMatch = choiceIndex === correctChoiceIndex
 
     if (isMatch) {
       let speedBonus = 50
+
       if (latency < 800) speedBonus = 150
       else if (latency < 1400) speedBonus = 100
 
       const roundPoints = 100 + speedBonus + streak * 20
+
       const newStreak = streak + 1
+
       setStreak(newStreak)
+
       setMaxStreak((m) => Math.max(m, newStreak))
+
       setCorrectCount((c) => c + 1)
+
       setScore((s) => s + roundPoints)
+
       setFeedback({
         text: `⚡ Fast! ${latency}ms (+${roundPoints} pts)`,
+
         isCorrect: true,
       })
     } else {
       setIncorrectCount((i) => i + 1)
+
       setStreak(0)
+
       setFeedback({ text: "Mismatched pattern!", isCorrect: false })
     }
 
@@ -141,7 +204,9 @@ export default function SpeedVisualisationGame({
       } else {
         setCurrentRound((r) => {
           const next = r + 1
+
           setupRound(next)
+
           return next
         })
       }
@@ -150,7 +215,9 @@ export default function SpeedVisualisationGame({
 
   const handleSessionComplete = () => {
     setIsCompleted(true)
+
     const accuracy = Math.round((correctCount / TOTAL_ROUNDS) * 100)
+
     const avgLatency =
       responseTimes.length > 0
         ? Math.round(
@@ -159,20 +226,31 @@ export default function SpeedVisualisationGame({
         : 0
 
     let stars = 1
+
     if (accuracy >= 80 && avgLatency < 1300) stars = 3
     else if (accuracy >= 60) stars = 2
 
     recordGameSession({
       id: `sv_${Date.now()}`,
+
       gameId: "speed_visualisation",
+
       startedAt: new Date(sessionStartTimeRef.current).toISOString(),
+
       completedAt: new Date().toISOString(),
+
       score,
+
       level: currentRound > 5 ? 2 : 1,
+
       durationSeconds: elapsedSeconds,
+
       moves: TOTAL_ROUNDS,
+
       mistakes: incorrectCount,
+
       streak: maxStreak,
+
       stars,
     })
   }

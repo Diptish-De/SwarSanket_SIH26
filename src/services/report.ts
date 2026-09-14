@@ -27,31 +27,42 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
   const voiceQualityMeasured = session.biomarkers.voiceQualityMeasured === true
 
   // Standardized test battery: each task against its own published reference
+
   // range, summarised as "N of M in the typical range". Never fused with the
+
   // model's probability.
+
   const batteryLabels: Record<string, string> = {
     fluency: "Animal fluency (60 s)",
+
     recall: "Delayed 5-word recall",
+
     phonation: "Sustained vowel /a/ (max phonation time)",
   }
+
   const batteryValue = (
     r: NonNullable<ScreeningSession["battery"]>[number],
   ) => {
     if (r.status !== "completed" || !r.scored || r.score === null) {
       return r.status === "failed" ? "Not scored (error)" : "Not scored"
     }
+
     const v =
       r.task === "fluency"
         ? `${r.score} animals`
         : r.task === "recall"
           ? `${r.score} of 5`
           : `${r.score.toFixed(1)} s`
+
     return `${v} · ${r.flag ? "below typical range" : "typical range"}`
   }
+
   const scoredBattery = (session.battery ?? []).filter(
     (r) => r.status === "completed" && r.scored,
   )
+
   const typicalCount = scoredBattery.filter((r) => r.flag === false).length
+
   const batteryCard =
     session.battery && session.battery.length > 0
       ? `<div class="card">
@@ -62,10 +73,12 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
             : "Not scored"
         }</span></div>
         ${session.battery
+
           .map(
             (r) =>
               `<div class="stat-row"><span class="stat-label">${batteryLabels[r.task] ?? r.task}</span><span class="stat-val">${batteryValue(r)}</span></div>`,
           )
+
           .join("\n        ")}
         <div style="margin-top:8px;font-size:11px;color:#64748b;line-height:1.45;">Reference ranges: animal fluency ≥ 12 in 60 s (Tombaugh et al. 1999; Canning et al. 2004); delayed recall ≥ 3 of 5 (MoCA, Nasreddine et al. 2005); maximum phonation time ≥ 10 s with jitter, shimmer and HNR inside MDVP thresholds. Reported beside the model output, not combined with it.</div>
       </div>`

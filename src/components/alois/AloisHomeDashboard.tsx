@@ -69,13 +69,16 @@ export default function AloisHomeDashboard({
   const [today, setToday] = useState<DailyCheckIn | null>(null)
 
   // Loaded here rather than passed down: the card is the only consumer, and it
+
   // has to re-read after a check-in without the whole shell re-rendering.
+
   useEffect(() => {
     let cancelled = false
 
     const todayKey = localDateKey()
 
     listCheckIns()
+
       .then((all) => {
         if (cancelled) return
 
@@ -83,6 +86,7 @@ export default function AloisHomeDashboard({
 
         setToday(all.find((c) => c.id === todayKey) ?? null)
       })
+
       .catch(() => undefined)
 
     return () => {
@@ -350,19 +354,25 @@ export default function AloisHomeDashboard({
               {[
                 {
                   icon: CalendarClock,
+
                   title: "Two quick questions",
+
                   sub: "Day and month",
                 },
 
                 {
                   icon: Mic,
+
                   title: "Tell me about your day",
+
                   sub: "About 40 seconds",
                 },
 
                 {
                   icon: Users,
+
                   title: "One question for family",
+
                   sub: "Optional",
                 },
               ].map((row) => (

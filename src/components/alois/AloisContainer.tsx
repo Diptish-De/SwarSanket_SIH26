@@ -226,7 +226,9 @@ export default function AloisContainer({
         onStartVoiceCheck={onStartVoiceCheck}
         onOpenCognitiveGames={() => {
           setShowCognitiveModal(false)
+
           setActiveTab("games")
+
           onOpenCognitiveGames?.()
         }}
         fontFamily={fontFamily}
