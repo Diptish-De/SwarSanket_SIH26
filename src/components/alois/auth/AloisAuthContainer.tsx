@@ -16,7 +16,12 @@ import {
   upsertMyPatientProfile,
 } from "../../../services/patientProfile"
 
-import { isSupabaseConfigured, supabase } from "../../../services/supabase"
+import {
+  isSupabaseConfigured,
+  lookupVerifiedSupabaseUser,
+  registerVerifiedSupabaseUser,
+  supabase,
+} from "../../../services/supabase"
 
 export interface AloisAuthUser {
   patientId: string
@@ -220,28 +225,42 @@ export default function AloisAuthContainer({
     if (digits.length >= 10) {
       phoneWithCode = digits.length === 10 ? `91${digits}` : digits
     } else {
-      // Query lookup by name
+      // Direct Cloud Supabase lookup + backend fallback
 
       try {
-        const res = await fetch(`${getApiBaseUrl()}/api/auth/lookup`, {
-          method: "POST",
+        const lookup = await lookupVerifiedSupabaseUser(raw)
 
-          headers: { "Content-Type": "application/json" },
+        if (lookup.found && lookup.phone) {
+          const d = lookup.phone.replace(/\D/g, "")
 
-          body: JSON.stringify({ identifier: raw }),
-        })
-
-        if (res.ok) {
-          const data = await res.json()
-
-          if (data.phone) {
-            const d = data.phone.replace(/\D/g, "")
-
-            phoneWithCode = d.length === 10 ? `91${d}` : d
-          }
+          phoneWithCode = d.length === 10 ? `91${d}` : d
         }
       } catch {
-        // Backend offline fallback
+        // fallback
+      }
+
+      if (!phoneWithCode) {
+        try {
+          const res = await fetch(`${getApiBaseUrl()}/api/auth/lookup`, {
+            method: "POST",
+
+            headers: { "Content-Type": "application/json" },
+
+            body: JSON.stringify({ identifier: raw }),
+          })
+
+          if (res.ok) {
+            const data = await res.json()
+
+            if (data.phone) {
+              const d = data.phone.replace(/\D/g, "")
+
+              phoneWithCode = d.length === 10 ? `91${d}` : d
+            }
+          }
+        } catch {
+          // Backend offline fallback
+        }
       }
     }
 
@@ -330,76 +349,51 @@ export default function AloisAuthContainer({
         // Popup blocker fallback
       }
 
-      // Step 1: Register in Supabase via backend (creates user auto-confirmed with user_metadata)
+      // Step 1: Register or sync user directly in Supabase Cloud
 
-      try {
-        await fetch(`${getApiBaseUrl()}/api/auth/register`, {
-          method: "POST",
+      const regResult = await registerVerifiedSupabaseUser({
+        fullName: formData.fullName.trim(),
 
-          headers: { "Content-Type": "application/json" },
+        phone: formData.phone.trim(),
 
-          body: JSON.stringify({
-            full_name: formData.fullName.trim(),
+        password: password.trim(),
 
-            phone: formData.phone.trim(),
+        age: Number(formData.age),
 
-            password: password.trim(),
+        gender: formData.gender,
+      })
 
-            age: Number(formData.age),
+      // Also notify backend in background if available
 
-            gender: formData.gender,
-          }),
-        })
-      } catch {
-        // If backend is unreachable, continue directly with Supabase client
-      }
+      fetch(`${getApiBaseUrl()}/api/auth/register`, {
+        method: "POST",
+
+        headers: { "Content-Type": "application/json" },
+
+        body: JSON.stringify({
+          full_name: formData.fullName.trim(),
+
+          phone: formData.phone.trim(),
+
+          password: password.trim(),
+
+          age: Number(formData.age),
+
+          gender: formData.gender,
+        }),
+      }).catch(() => {})
 
       // Step 2: Sign in with Supabase Auth to obtain a session
 
       try {
-        let authResult = await supabase.auth.signInWithPassword({
-          email: virtualEmail,
+        const authResult = await supabase.auth.signInWithPassword({
+          email: regResult.email || virtualEmail,
 
           password: password.trim(),
         })
 
         if (authResult.error) {
-          // Client-side fallback signup
-
-          const clientSignup = await supabase.auth.signUp({
-            email: virtualEmail,
-
-            password: password.trim(),
-
-            options: {
-              data: {
-                full_name: formData.fullName.trim(),
-
-                username: formData.fullName.trim(),
-
-                phone: formData.phone.trim(),
-
-                clean_phone: phoneKey,
-
-                age: formData.age,
-
-                gender: formData.gender,
-              },
-            },
-          })
-
-          if (
-            clientSignup.error &&
-            !clientSignup.error.message.includes("already registered")
-          ) {
-            throw new Error(clientSignup.error.message)
-          }
-
-          authResult = await supabase.auth.signInWithPassword({
-            email: virtualEmail,
-
-            password: password.trim(),
-          })
+          throw new Error(authResult.error.message)
         }
 
         // Step 3: Persist patient profile in Supabase DB
@@ -427,7 +421,7 @@ export default function AloisAuthContainer({
 
           fullName: formData.fullName.trim(),
 
-          email: virtualEmail,
+          email: regResult.email || virtualEmail,
 
           phone: formData.phone.trim(),
         }
@@ -519,30 +513,46 @@ export default function AloisAuthContainer({
           // If not in local storage, query backend lookup
 
           if (!emailToUse) {
+            // Direct Cloud Supabase lookup + backend fallback
+
             try {
-              const lookupRes = await fetch(
-                `${getApiBaseUrl()}/api/auth/lookup`,
+              const lookup = await lookupVerifiedSupabaseUser(raw)
 
-                {
-                  method: "POST",
+              if (lookup.found && lookup.email) {
+                emailToUse = lookup.email
 
-                  headers: { "Content-Type": "application/json" },
-
-                  body: JSON.stringify({ identifier: raw }),
-                },
-              )
-
-              if (lookupRes.ok) {
-                const data = await lookupRes.json()
-
-                if (data.found && data.email) {
-                  emailToUse = data.email
-
-                  if (data.full_name) resolvedName = data.full_name
-                }
+                if (lookup.fullName) resolvedName = lookup.fullName
               }
             } catch {
-              // Backend offline
+              // fallback
+            }
+
+            if (!emailToUse) {
+              try {
+                const lookupRes = await fetch(
+                  `${getApiBaseUrl()}/api/auth/lookup`,
+
+                  {
+                    method: "POST",
+
+                    headers: { "Content-Type": "application/json" },
+
+                    body: JSON.stringify({ identifier: raw }),
+                  },
+                )
+
+                if (lookupRes.ok) {
+                  const data = await lookupRes.json()
+
+                  if (data.found && data.email) {
+                    emailToUse = data.email
+
+                    if (data.full_name) resolvedName = data.full_name
+                  }
+                }
+              } catch {
+                // Backend offline
+              }
             }
           }
 
