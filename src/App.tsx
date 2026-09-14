@@ -24,6 +24,7 @@ import {
   Phone,
   ArrowLeft,
   ArrowRight,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   Download,
@@ -103,9 +104,22 @@ import {
   AudioRecordingResult,
   getLastRecordedAudioBlob,
   uploadAudioToBackend,
-  analyzeAudioWithBackend,
+  getExtensionForBlob,
   ScreeningApiResponse,
 } from "./services/audioRecorder"
+
+import {
+  runScreeningJob,
+  submitScreeningJob,
+  followScreeningJob,
+  type AnalysisStep,
+  type JobTransport,
+  type TaskJobResponse,
+} from "./services/screeningJob"
+
+import type { BatteryTaskRecord } from "./types"
+
+import BatteryCard from "./components/BatteryCard"
 
 import {
   getApiBaseUrl,
@@ -388,6 +402,17 @@ const TX: Record<string, Record<string, string>> = {
 
     describeSceneHint: "Take your time and describe as much as you notice.",
 
+    batteryPhonationHint:
+      'Take a deep breath, then hold one steady "aaah" for as long as you comfortably can. Stop when you run out of breath.',
+
+    batteryFluencyHint:
+      "Say the names of as many different animals as you can: pets, farm animals, wild animals, birds, fish, insects. The recording stops by itself after 60 seconds.",
+
+    batteryRecallHint:
+      "Say every word you remember from the list you heard earlier, in any order. Guessing is fine.",
+
+    autoStopsAt: "stops at",
+
     pictureDescSub: "Tell us what you see in the picture.",
 
     listenCarefully: "Listen carefully",
@@ -600,6 +625,17 @@ const TX: Record<string, Record<string, string>> = {
     beginVoiceCheck: "Voice Check शुरू करें",
 
     listenToQuestion: "सवाल सुनें",
+
+    batteryPhonationHint:
+      'गहरी साँस लें, फिर जितनी देर आराम से हो सके एक ही स्वर में "आ..." बोलते रहें। साँस खत्म होने पर रुक जाएँ।',
+
+    batteryFluencyHint:
+      "जितने अलग-अलग जानवरों के नाम बोल सकते हैं, बोलिए: पालतू, खेत के, जंगली, पक्षी, मछली, कीड़े। 60 सेकंड बाद रिकॉर्डिंग अपने आप रुक जाएगी।",
+
+    batteryRecallHint:
+      "पहले सुनी गई सूची के जितने शब्द याद हों, किसी भी क्रम में बोलिए। अंदाज़ा लगाना भी ठीक है।",
+
+    autoStopsAt: "यहाँ रुकेगा",
 
     playAgain: "फिर से सुनें",
 
@@ -2280,112 +2316,195 @@ function t(lang: string, key: string): string {
     ...(RECORDING_INDIC_TX[lang] ?? {}),
   }
 
-  return (locale[key] ?? key).normalize("NFC")
+  // English before the raw key: an untranslated string is readable, a
+  // bare identifier like "tapMicrophone" is not.
+  return (locale[key] ?? TX.en?.[key] ?? key).normalize("NFC")
 }
 
-const TASK_PROMPTS: Record<string, Record<RecordingContext, string>> = {
-  en: {
-    freeSpeech: "Tell us about your day.",
+const TASK_PROMPTS: Record<string, Partial<Record<RecordingContext, string>>> =
+  {
+    en: {
+      phonation:
+        'Take a deep breath and say "aaah" in one steady voice for as long as you comfortably can.',
 
-    pictureDesc:
-      "Describe everything you see happening in this picture (who is there, what they are doing, and what is happening around them).",
+      fluency:
+        "Name as many different animals as you can. Keep going until the time runs out.",
 
-    memoryRecall: "Cow, River, Book, House, Flower",
+      recall:
+        "Earlier you heard five words. Say all the words you can remember.",
 
-    conversation: "Tell us about something you enjoy doing.",
+      freeSpeech: "Tell us about your day.",
+
+      pictureDesc:
+        "Describe everything you see happening in this picture (who is there, what they are doing, and what is happening around them).",
+
+      memoryRecall: "Cow, River, Book, House, Flower",
+
+      conversation: "Tell us about something you enjoy doing.",
+    },
+
+    hi: {
+      phonation:
+        'गहरी साँस लें और जितनी देर आराम से हो सके, एक ही स्वर में "आ..." बोलते रहें।',
+
+      fluency:
+        "जितने भी अलग-अलग जानवरों के नाम आप बोल सकते हैं, बोलिए। समय खत्म होने तक बोलते रहिए।",
+
+      recall: "थोड़ी देर पहले आपने पाँच शब्द सुने थे। जितने शब्द याद हों, बोलिए।",
+
+      freeSpeech: "हमें अपने दिन के बारे में बताइए।",
+
+      pictureDesc:
+        "इस तस्वीर में जो कुछ हो रहा है, वह सब बताइए — वहाँ कौन-कौन है, वे क्या कर रहे हैं, और उनके आसपास क्या हो रहा है।",
+
+      memoryRecall: "गाय, नदी, किताब, घर, फूल",
+
+      conversation: "हमें बताइए कि आपको क्या करना पसंद है।",
+    },
+
+    bn: {
+      freeSpeech: "আপনার আজকের দিনটি কেমন কেটেছে, সে সম্পর্কে বলুন।",
+
+      pictureDesc:
+        "এই ছবিতে যা কিছু ঘটছে সব বলুন — সেখানে কে কে আছে, তাঁরা কী করছেন, এবং তাঁদের চারপাশে কী ঘটছে।",
+
+      memoryRecall: "গরু, নদী, বই, বাড়ি, ফুল",
+
+      conversation: "আপনি যে কাজটি করতে ভালোবাসেন, সে সম্পর্কে বলুন।",
+    },
+
+    mr: {
+      freeSpeech: "तुमचा आजचा दिवस कसा गेला, याबद्दल आम्हाला सांगा.",
+
+      pictureDesc:
+        "या चित्रात जे काही घडत आहे ते सर्व सांगा — तिथे कोण कोण आहे, ते काय करत आहेत, आणि त्यांच्या आजूबाजूला काय घडत आहे.",
+
+      memoryRecall: "गाय, नदी, पुस्तक, घर, फूल",
+
+      conversation: "तुम्हाला आवडणाऱ्या एखाद्या गोष्टीबद्दल आम्हाला सांगा.",
+    },
+
+    ta: {
+      freeSpeech: "இன்று உங்கள் நாள் எப்படி சென்றது என்பதைப் பற்றி சொல்லுங்கள்.",
+
+      pictureDesc:
+        "இந்தப் படத்தில் நடப்பது அனைத்தையும் விவரியுங்கள் — அங்கு யார் யார் இருக்கிறார்கள், அவர்கள் என்ன செய்கிறார்கள், அவர்களைச் சுற்றி என்ன நடக்கிறது.",
+
+      memoryRecall: "பசு, ஆறு, புத்தகம், வீடு, பூ",
+
+      conversation: "உங்களுக்கு பிடித்த ஒரு செயலைப் பற்றி சொல்லுங்கள்.",
+    },
+
+    te: {
+      freeSpeech: "ఈ రోజు మీ రోజు ఎలా గడిచిందో మాకు చెప్పండి.",
+
+      pictureDesc:
+        "ఈ చిత్రంలో జరుగుతున్నదంతా చెప్పండి — అక్కడ ఎవరెవరు ఉన్నారు, వారు ఏమి చేస్తున్నారు, వారి చుట్టూ ఏమి జరుగుతోంది.",
+
+      memoryRecall: "ఆవు, నది, పుస్తకం, ఇల్లు, పువ్వు",
+
+      conversation: "మీకు ఇష్టమైన ఒక పని గురించి మాకు చెప్పండి.",
+    },
+
+    gu: {
+      freeSpeech: "તમારો આજનો દિવસ કેવો રહ્યો તે અમને જણાવો.",
+
+      pictureDesc:
+        "આ ચિત્રમાં જે કંઈ થઈ રહ્યું છે તે બધું જણાવો — ત્યાં કોણ કોણ છે, તેઓ શું કરી રહ્યા છે, અને તેમની આસપાસ શું થઈ રહ્યું છે.",
+
+      memoryRecall: "ગાય, નદી, પુસ્તક, ઘર, ફૂલ",
+
+      conversation: "તમને ગમતી કોઈ એક પ્રવૃત્તિ વિશે અમને જણાવો.",
+    },
+
+    kn: {
+      freeSpeech: "ನಿಮ್ಮ ಇಂದಿನ ದಿನ ಹೇಗಿತ್ತು ಎಂಬುದನ್ನು ನಮಗೆ ತಿಳಿಸಿ.",
+
+      pictureDesc:
+        "ಈ ಚಿತ್ರದಲ್ಲಿ ನಡೆಯುತ್ತಿರುವ ಎಲ್ಲವನ್ನೂ ವಿವರಿಸಿ — ಅಲ್ಲಿ ಯಾರು ಯಾರು ಇದ್ದಾರೆ, ಅವರು ಏನು ಮಾಡುತ್ತಿದ್ದಾರೆ, ಮತ್ತು ಅವರ ಸುತ್ತಲೂ ಏನು ನಡೆಯುತ್ತಿದೆ.",
+
+      memoryRecall: "ಹಸು, ನದಿ, ಪುಸ್ತಕ, ಮನೆ, ಹೂವು",
+
+      conversation: "ನಿಮಗೆ ಇಷ್ಟವಾದ ಒಂದು ಕೆಲಸದ ಬಗ್ಗೆ ನಮಗೆ ತಿಳಿಸಿ.",
+    },
+
+    ml: {
+      freeSpeech: "നിങ്ങളുടെ ഇന്നത്തെ ദിവസം എങ്ങനെയായിരുന്നു എന്ന് ഞങ്ങളോട് പറയൂ.",
+
+      pictureDesc:
+        "ഈ ചിത്രത്തിൽ നടക്കുന്നതെല്ലാം വിവരിക്കൂ — അവിടെ ആരൊക്കെയുണ്ട്, അവർ എന്തു ചെയ്യുന്നു, അവർക്കു ചുറ്റും എന്തു സംഭവിക്കുന്നു.",
+
+      memoryRecall: "പശു, നദി, പുസ്തകം, വീട്, പൂവ്",
+
+      conversation: "നിങ്ങൾക്ക് ഇഷ്ടമുള്ള ഒരു കാര്യത്തെക്കുറിച്ച് ഞങ്ങളോട് പറയൂ.",
+    },
+  }
+
+/**
+ * Per-task recording rules. The picture task feeds the model and keeps the
+ * 30-second floor; the standardized tasks have their own lengths, and the
+ * timed ones stop themselves so the clock, not the person, ends them.
+ */
+interface TaskRecordingRule {
+  minSeconds: number
+  maxSeconds: number | null
+  autoStop: boolean
+}
+
+const TASK_RULES: Partial<Record<RecordingContext, TaskRecordingRule>> = {
+  pictureDesc: {
+    minSeconds: MIN_RECORDING_SECONDS,
+    maxSeconds: null,
+    autoStop: false,
   },
+  phonation: { minSeconds: 2, maxSeconds: 25, autoStop: true },
+  fluency: { minSeconds: 45, maxSeconds: 60, autoStop: true },
+  recall: { minSeconds: 2, maxSeconds: 30, autoStop: true },
+}
 
-  hi: {
-    freeSpeech: "हमें अपने दिन के बारे में बताइए।",
+function taskRule(ctx: RecordingContext): TaskRecordingRule {
+  return (
+    TASK_RULES[ctx] ?? {
+      minSeconds: MIN_RECORDING_SECONDS,
+      maxSeconds: null,
+      autoStop: false,
+    }
+  )
+}
 
-    pictureDesc:
-      "इस तस्वीर में जो कुछ हो रहा है, वह सब बताइए — वहाँ कौन-कौन है, वे क्या कर रहे हैं, और उनके आसपास क्या हो रहा है।",
+/** Step numbers for the header: vowel, picture, five words, animals, recall. */
+const BATTERY_STEP: Partial<Record<RecordingContext, number>> = {
+  phonation: 1,
+  pictureDesc: 2,
+  fluency: 4,
+  recall: 5,
+}
 
-    memoryRecall: "गाय, नदी, किताब, घर, फूल",
+const BATTERY_TOTAL = 5
 
-    conversation: "हमें बताइए कि आपको क्या करना पसंद है।",
-  },
+function batteryHint(lang: string, ctx: RecordingContext): string | null {
+  switch (ctx) {
+    case "phonation":
+      return t(lang, "batteryPhonationHint")
+    case "fluency":
+      return t(lang, "batteryFluencyHint")
+    case "recall":
+      return t(lang, "batteryRecallHint")
+    default:
+      return null
+  }
+}
 
-  bn: {
-    freeSpeech: "আপনার আজকের দিনটি কেমন কেটেছে, সে সম্পর্কে বলুন।",
-
-    pictureDesc:
-      "এই ছবিতে যা কিছু ঘটছে সব বলুন — সেখানে কে কে আছে, তাঁরা কী করছেন, এবং তাঁদের চারপাশে কী ঘটছে।",
-
-    memoryRecall: "গরু, নদী, বই, বাড়ি, ফুল",
-
-    conversation: "আপনি যে কাজটি করতে ভালোবাসেন, সে সম্পর্কে বলুন।",
-  },
-
-  mr: {
-    freeSpeech: "तुमचा आजचा दिवस कसा गेला, याबद्दल आम्हाला सांगा.",
-
-    pictureDesc:
-      "या चित्रात जे काही घडत आहे ते सर्व सांगा — तिथे कोण कोण आहे, ते काय करत आहेत, आणि त्यांच्या आजूबाजूला काय घडत आहे.",
-
-    memoryRecall: "गाय, नदी, पुस्तक, घर, फूल",
-
-    conversation: "तुम्हाला आवडणाऱ्या एखाद्या गोष्टीबद्दल आम्हाला सांगा.",
-  },
-
-  ta: {
-    freeSpeech: "இன்று உங்கள் நாள் எப்படி சென்றது என்பதைப் பற்றி சொல்லுங்கள்.",
-
-    pictureDesc:
-      "இந்தப் படத்தில் நடப்பது அனைத்தையும் விவரியுங்கள் — அங்கு யார் யார் இருக்கிறார்கள், அவர்கள் என்ன செய்கிறார்கள், அவர்களைச் சுற்றி என்ன நடக்கிறது.",
-
-    memoryRecall: "பசு, ஆறு, புத்தகம், வீடு, பூ",
-
-    conversation: "உங்களுக்கு பிடித்த ஒரு செயலைப் பற்றி சொல்லுங்கள்.",
-  },
-
-  te: {
-    freeSpeech: "ఈ రోజు మీ రోజు ఎలా గడిచిందో మాకు చెప్పండి.",
-
-    pictureDesc:
-      "ఈ చిత్రంలో జరుగుతున్నదంతా చెప్పండి — అక్కడ ఎవరెవరు ఉన్నారు, వారు ఏమి చేస్తున్నారు, వారి చుట్టూ ఏమి జరుగుతోంది.",
-
-    memoryRecall: "ఆవు, నది, పుస్తకం, ఇల్లు, పువ్వు",
-
-    conversation: "మీకు ఇష్టమైన ఒక పని గురించి మాకు చెప్పండి.",
-  },
-
-  gu: {
-    freeSpeech: "તમારો આજનો દિવસ કેવો રહ્યો તે અમને જણાવો.",
-
-    pictureDesc:
-      "આ ચિત્રમાં જે કંઈ થઈ રહ્યું છે તે બધું જણાવો — ત્યાં કોણ કોણ છે, તેઓ શું કરી રહ્યા છે, અને તેમની આસપાસ શું થઈ રહ્યું છે.",
-
-    memoryRecall: "ગાય, નદી, પુસ્તક, ઘર, ફૂલ",
-
-    conversation: "તમને ગમતી કોઈ એક પ્રવૃત્તિ વિશે અમને જણાવો.",
-  },
-
-  kn: {
-    freeSpeech: "ನಿಮ್ಮ ಇಂದಿನ ದಿನ ಹೇಗಿತ್ತು ಎಂಬುದನ್ನು ನಮಗೆ ತಿಳಿಸಿ.",
-
-    pictureDesc:
-      "ಈ ಚಿತ್ರದಲ್ಲಿ ನಡೆಯುತ್ತಿರುವ ಎಲ್ಲವನ್ನೂ ವಿವರಿಸಿ — ಅಲ್ಲಿ ಯಾರು ಯಾರು ಇದ್ದಾರೆ, ಅವರು ಏನು ಮಾಡುತ್ತಿದ್ದಾರೆ, ಮತ್ತು ಅವರ ಸುತ್ತಲೂ ಏನು ನಡೆಯುತ್ತಿದೆ.",
-
-    memoryRecall: "ಹಸು, ನದಿ, ಪುಸ್ತಕ, ಮನೆ, ಹೂವು",
-
-    conversation: "ನಿಮಗೆ ಇಷ್ಟವಾದ ಒಂದು ಕೆಲಸದ ಬಗ್ಗೆ ನಮಗೆ ತಿಳಿಸಿ.",
-  },
-
-  ml: {
-    freeSpeech: "നിങ്ങളുടെ ഇന്നത്തെ ദിവസം എങ്ങനെയായിരുന്നു എന്ന് ഞങ്ങളോട് പറയൂ.",
-
-    pictureDesc:
-      "ഈ ചിത്രത്തിൽ നടക്കുന്നതെല്ലാം വിവരിക്കൂ — അവിടെ ആരൊക്കെയുണ്ട്, അവർ എന്തു ചെയ്യുന്നു, അവർക്കു ചുറ്റും എന്തു സംഭവിക്കുന്നു.",
-
-    memoryRecall: "പശു, നദി, പുസ്തകം, വീട്, പൂവ്",
-
-    conversation: "നിങ്ങൾക്ക് ഇഷ്ടമുള്ള ഒരു കാര്യത്തെക്കുറിച്ച് ഞങ്ങളോട് പറയൂ.",
-  },
+function fmtClock(seconds: number): string {
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
 }
 
 function getTaskPrompt(lang: string, ctx: RecordingContext): string {
-  return ((TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ?? TASK_PROMPTS.en[ctx])
+  return (
+    (TASK_PROMPTS[lang] ?? TASK_PROMPTS.en)[ctx] ??
+    TASK_PROMPTS.en[ctx] ??
+    ""
+  )
 
     .normalize("NFC")
 }
@@ -3142,10 +3261,10 @@ function ScreeningQualityCard({
       ? "text-emerald-700"
       : tone === "elevated"
         ? "text-amber-700"
-        : "text-[#02738a]"
+        : "text-[#0F62FE]"
 
   return (
-    <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-2.5 text-left">
+    <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs space-y-2.5 text-left">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
           <Hint text={REPORT_SECTION_HINTS.protocol}>Screening Protocol</Hint>
@@ -3153,8 +3272,8 @@ function ScreeningQualityCard({
         <span
           className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
             canonical
-              ? "bg-[#e4f4f7] text-[#015364] border-[#cbe6ed]"
-              : "bg-slate-100 text-slate-600 border-slate-200"
+              ? "bg-blue-50 text-[#0F62FE] border-blue-200"
+              : "bg-slate-100 text-slate-600 border-[#E0E0E0]"
           }`}
         >
           {canonical ? "Canonical Mode" : "Proxy Mode"}
@@ -3252,7 +3371,7 @@ function ScreeningQualityCard({
                       ? "bg-gradient-to-r from-amber-500 to-rose-600"
                       : isModerate
                         ? "bg-gradient-to-r from-emerald-400 to-amber-400"
-                        : "bg-gradient-to-r from-emerald-400 to-[#02738a]"
+                        : "bg-gradient-to-r from-emerald-400 to-[#0F62FE]"
                   }`}
                   style={{ width: `${Math.min(100, Math.max(3, rawProb))}%` }}
                 />
@@ -3348,9 +3467,9 @@ function PictureTaskCard({
   compact?: boolean
 }) {
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full space-y-2.5">
       <div className="flex items-center justify-center gap-1.5">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-[#015364] bg-[#e4f4f7] px-2.5 py-1 rounded-full border border-[#cbe6ed]">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0F62FE] bg-blue-50 px-3 py-1 rounded-full border border-blue-100/60">
           {t(lang, "clinicalProtocolTag")}
         </span>
       </div>
@@ -3358,16 +3477,16 @@ function PictureTaskCard({
       <div
         className={`w-full ${
           compact ? "h-32" : "h-48"
-        } rounded-3xl bg-white border border-[#d7eaef] overflow-hidden shadow-inner`}
+        } rounded-2xl bg-white border border-[#E0E0E0] overflow-hidden shadow-xs`}
       >
         <CookieTheftScene />
       </div>
 
       {!compact && (
-        <div className="p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs">
+        <div className="p-4 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs">
           <p
-            className="text-sm font-medium text-[#0c1e27] leading-relaxed text-center"
-            style={{ fontFamily: F.body }}
+            className="text-[14px] font-medium text-[#161616] leading-relaxed text-center"
+            style={{ fontFamily: F.display }}
           >
             {getTaskPrompt(lang, "pictureDesc")}
           </p>
@@ -3502,25 +3621,22 @@ function Btn({
   icon?: React.ReactNode
 }) {
   const styles: Record<string, string> = {
-    primary:
-      "bg-gradient-to-r from-[#02738a] via-[#027d95] to-[#01586a] hover:from-[#02849f] hover:to-[#01687d] text-white shadow-lg shadow-[#02738a]/25",
+    primary: "bg-[#0F62FE] hover:bg-[#0353e9] text-white shadow-xs",
 
-    secondary:
-      "bg-[#e4f4f7] text-[#01586a] border border-[#c2e7ef] hover:bg-[#d5eff5]",
+    secondary: "bg-[#F4F4F4] text-[#161616] hover:bg-[#EAEAEA]",
 
     ghost:
-      "bg-white/80 text-[#02738a] border-2 border-[#02738a] hover:bg-[#e4f4f7]",
+      "bg-white border border-[#E0E0E0] text-[#161616] hover:border-[#0F62FE] shadow-2xs",
 
-    danger:
-      "bg-rose-50 text-rose-700 border-2 border-rose-200 hover:bg-rose-100",
+    danger: "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100",
   }
 
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none ${styles[variant]} ${
-        size === "lg" ? "py-4 px-6 text-base sm:text-lg" : "py-2.5 px-4 text-sm"
+      className={`w-full rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none ${styles[variant]} ${
+        size === "lg" ? "py-3.5 px-6 text-[15px]" : "py-2.5 px-4 text-[13px]"
       }`}
       style={{ fontFamily: F.display }}
     >
@@ -3574,11 +3690,11 @@ function AudioBtn({
   return (
     <button
       onClick={handleSpeak}
-      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-gradient-to-r from-[#f0f9fb] to-[#e4f4f7] border border-[#cbe6ec] hover:border-[#02738a] hover:bg-[#dcf1f6] text-[#01586a] transition-all active:scale-95 shadow-xs"
-      style={{ fontFamily: F.body }}
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold bg-[#F4F4F4] hover:bg-[#EAEAEA] text-[#161616] transition-all active:scale-95 shadow-2xs"
+      style={{ fontFamily: F.display }}
     >
       <Volume2
-        className={`w-4 h-4 text-[#02738a] ${speaking ? "animate-pulse" : ""}`}
+        className={`w-4 h-4 text-[#0F62FE] ${speaking ? "animate-pulse" : ""}`}
       />
       <span>{speaking ? "Speaking…" : lbl}</span>
     </button>
@@ -3589,9 +3705,9 @@ function BackBtn({ onBack }: { onBack: () => void }) {
   return (
     <button
       onClick={onBack}
-      className="w-10 h-10 rounded-2xl bg-white border border-[#d7eaef] flex items-center justify-center text-[#30434f] hover:text-[#0c1e27] hover:bg-slate-50 hover:border-[#02738a] transition-all active:scale-90 shadow-xs"
+      className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] active:scale-95 transition-all"
     >
-      <ArrowLeft className="w-5 h-5" />
+      <ChevronLeft className="w-5 h-5" />
     </button>
   )
 }
@@ -3673,15 +3789,14 @@ interface CheckProgressProps {
 
 function CheckProgress({ step, total }: CheckProgressProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       {Array.from({ length: total }).map((_, i) => (
         <div
           key={i}
-          className="h-2 rounded-full transition-all duration-300"
+          className="h-1.5 rounded-full transition-all duration-300"
           style={{
-            width: i === step ? 28 : 8,
-
-            background: i <= step ? C.primary : C.border,
+            width: i === step ? 24 : 8,
+            backgroundColor: i <= step ? "#0F62FE" : "#E0E0E0",
           }}
         />
       ))}
@@ -3707,17 +3822,17 @@ function CheckHeader({
   onExit: () => void
 }) {
   return (
-    <div className="flex items-center justify-between px-5 py-2.5 border-b border-[#d7eaef] bg-white/95 backdrop-blur flex-shrink-0">
+    <div className="flex items-center justify-between px-5 py-3 border-b border-[#E0E0E0] bg-white flex-shrink-0">
       <button
         onClick={onBack}
-        className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200"
+        className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] active:scale-95 transition-all shadow-2xs"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ChevronLeft className="w-5 h-5" />
       </button>
       <CheckProgress step={step} total={total} />
       <button
         onClick={onExit}
-        className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200"
+        className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] active:scale-95 transition-all shadow-2xs"
       >
         <X className="w-4 h-4" />
       </button>
@@ -3789,7 +3904,7 @@ function DynamicWaveformBars({
         return (
           <div
             key={i}
-            className="w-1.5 rounded-full bg-[#02738a] transition-all duration-75"
+            className="w-1.5 rounded-full bg-[#0F62FE] transition-all duration-75"
             style={{
               height: barHeight,
 
@@ -3984,8 +4099,25 @@ function SwarSanketApp({
     null,
   )
 
-  const [analysisStep, setAnalysisStep] =
-    useState<"idle" | "uploading" | "analyzing" | "complete">("idle")
+  const [analysisStep, setAnalysisStep] = useState<AnalysisStep>("idle")
+
+  const [jobQueuePosition, setJobQueuePosition] = useState<number | null>(null)
+
+  const [jobTransport, setJobTransport] = useState<JobTransport | null>(null)
+
+  // Standardized task jobs are submitted as each recording is reviewed and
+  // collected once the model result is in. The picture clip is kept apart
+  // because the later tasks overwrite the "last recording".
+  const pictureBlobRef = useRef<Blob | null>(null)
+
+  const pictureDurationRef = useRef<number | null>(null)
+
+  const batteryJobsRef =
+    useRef<Partial<Record<BatteryTaskRecord["task"], Promise<BatteryTaskRecord>>>>(
+      {},
+    )
+
+  const [batteryResults, setBatteryResults] = useState<BatteryTaskRecord[]>([])
 
   // Backend API URL & Health state (Android & Web dynamic configuration)
 
@@ -4257,7 +4389,12 @@ function SwarSanketApp({
         return
       }
 
-      if (res.quality === "poor" || res.quality === "low") {
+      // The duration-based quality grade only means something for the
+      // picture task; a three-second recall answer is a complete answer.
+      if (
+        recordingContext === "pictureDesc" &&
+        (res.quality === "poor" || res.quality === "low")
+      ) {
         navigate("voiceQuality")
       } else {
         navigate(nextScreen)
@@ -4267,9 +4404,137 @@ function SwarSanketApp({
     }
   }
 
+  // Timed tasks end themselves: 60 s for animal fluency, capped vowel and
+  // recall clips. handleFinishRecording flips isRecording first, so this
+  // cannot fire twice for one clip.
+  useEffect(() => {
+    const rule = taskRule(recordingContext)
+
+    if (
+      isRecording &&
+      rule.autoStop &&
+      rule.maxSeconds !== null &&
+      recordingSecs >= rule.maxSeconds
+    ) {
+      handleFinishRecording()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingSecs, isRecording, recordingContext])
+
+  const startBattery = () => {
+    pictureBlobRef.current = null
+
+    pictureDurationRef.current = null
+
+    batteryJobsRef.current = {}
+
+    setBatteryResults([])
+
+    setRecordingContext("phonation")
+
+    navigate("instruction")
+  }
+
+  // Submits a standardized task the moment its recording is reviewed. The
+  // job queues behind whatever the worker is doing and is collected later,
+  // so the person never waits for it.
+  const queueBatteryTask = (ctx: RecordingContext, blob: Blob | null) => {
+    const task =
+      ctx === "phonation" || ctx === "fluency" || ctx === "recall" ? ctx : null
+
+    if (!task || !blob || blob.size < 500) return
+
+    const params: Record<string, unknown> = { language: lang }
+
+    if (task === "recall") {
+      params.target_words = getTaskPrompt(lang, "memoryRecall")
+        .split(",")
+        .map((w) => w.trim())
+        .filter(Boolean)
+    }
+
+    const failed = (message: string): BatteryTaskRecord => ({
+      task,
+      status: "failed",
+      scored: false,
+      score: null,
+      flag: null,
+      threshold: "",
+      reference: "",
+      note: "",
+      error: message,
+    })
+
+    const job = submitScreeningJob(
+      blob,
+      `${task}${getExtensionForBlob(blob)}`,
+      {
+        task,
+        params,
+      },
+    )
+      .then((handle) => followScreeningJob<TaskJobResponse>(handle))
+      .then(
+        (res): BatteryTaskRecord => ({
+          ...res.battery,
+          task,
+          status: "completed",
+          transcript: res.transcript,
+        }),
+      )
+      .catch((err: unknown) =>
+        failed(err instanceof Error ? err.message : "Could not be scored."),
+      )
+
+    batteryJobsRef.current[task] = job
+
+    console.log("[SwarSanket] Standardized task queued:", task)
+  }
+
+  const collectBatteryResults = async (): Promise<BatteryTaskRecord[]> => {
+    const order: BatteryTaskRecord["task"][] = [
+      "phonation",
+      "fluency",
+      "recall",
+    ]
+
+    const jobs = order
+      .map((t) => batteryJobsRef.current[t])
+      .filter((j): j is Promise<BatteryTaskRecord> => Boolean(j))
+
+    if (jobs.length === 0) return []
+
+    const timeout = new Promise<null>((r) => setTimeout(() => r(null), 180000))
+
+    const settled = await Promise.race([Promise.all(jobs), timeout])
+
+    if (settled === null) {
+      return order
+        .filter((t) => batteryJobsRef.current[t])
+        .map(
+          (t): BatteryTaskRecord => ({
+            task: t,
+            status: "failed",
+            scored: false,
+            score: null,
+            flag: null,
+            threshold: "",
+            reference: "",
+            note: "",
+            error: "Timed out waiting for the score.",
+          }),
+        )
+    }
+
+    return settled
+  }
+
   const handleRunRealScreening = useCallback(async () => {
     const audioBlob =
-      audioBlobRef.current || currentAudioBlob || getLastRecordedAudioBlob()
+      pictureBlobRef.current ||
+      audioBlobRef.current ||
+      currentAudioBlob ||
+      getLastRecordedAudioBlob()
 
     if (!audioBlob || audioBlob.size < 1000) {
       console.warn(
@@ -4292,7 +4557,9 @@ function SwarSanketApp({
     // Same floor the backend enforces. Refusing here costs nothing; refusing
     // after upload costs the person a multi-minute wait for the same answer.
     const recordedSeconds =
-      getLastAudioRecordingResult()?.durationSeconds ?? recordingSecs
+      pictureDurationRef.current ??
+      getLastAudioRecordingResult()?.durationSeconds ??
+      recordingSecs
 
     if (recordedSeconds > 0 && recordedSeconds < MIN_RECORDING_SECONDS) {
       setScreeningApiResult({
@@ -4340,12 +4607,17 @@ function SwarSanketApp({
     console.log("[SwarSanket] Sending audio for analysis to backend...")
 
     try {
-      setAnalysisStep("analyzing")
+      setJobQueuePosition(null)
 
-      let apiResult = await analyzeAudioWithBackend(
-        audioBlob,
+      setJobTransport(null)
 
-        "voice_check.webm",
+      // Upload once, then follow the job over Supabase Realtime (with HTTP
+      // polling as the fallback). No request stays open long enough for the
+      // hosting proxy to cut it off, so a 60-second clip can take the time
+      // it takes.
+      let apiResult = await runScreeningJob(audioBlob, "voice_check.webm", {
+        onProgress: (p) => {
+          setAnalysisStep(p.stage)
 
         240000,
 
@@ -4519,11 +4791,14 @@ function SwarSanketApp({
 
         audioQuality: vqState,
 
+        battery,
+
         tasks: [
           {
-            taskId: recordingContext,
+            // The model scored the picture clip whatever task came last.
+            taskId: "pictureDesc",
 
-            prompt: getTaskPrompt(lang, recordingContext),
+            prompt: getTaskPrompt(lang, "pictureDesc"),
 
             durationSeconds: Math.round(
               apiResult.audio?.duration_seconds || 15,
@@ -5265,26 +5540,29 @@ function SwarSanketApp({
 
       case "voiceIntro":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <div className="flex items-center justify-between px-6 pt-2 pb-2 shrink-0">
               <BackBtn onBack={() => navigate("home")} />
-              <span className="font-bold text-sm text-[#0c1e27]">
+              <span
+                className="font-bold text-sm text-[#161616]"
+                style={{ fontFamily: F.display }}
+              >
                 {t(lang, "voiceCheckCard")}
               </span>
-              <div className="w-10" />
+              <div className="w-9" />
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
               <div className="text-center space-y-2">
                 <h1
-                  className="text-3xl font-bold text-[#0c1e27]"
+                  className="text-3xl font-bold text-[#161616]"
                   style={{ fontFamily: F.display }}
                 >
                   {t(lang, "letsBegin")}
                 </h1>
                 <p
-                  className="text-sm text-[#5e7380] leading-relaxed"
+                  className="text-sm text-[#525252] leading-relaxed"
                   style={{ fontFamily: F.body }}
                 >
                   {t(lang, "voiceIntroSub")}
@@ -5294,22 +5572,20 @@ function SwarSanketApp({
               <div className="grid grid-cols-3 gap-3 w-full">
                 {[
                   { step: "01", key: "step1" },
-
                   { step: "02", key: "step2" },
-
                   { step: "03", key: "step3" },
                 ].map((s) => (
                   <div
                     key={s.step}
-                    className="p-4 rounded-2xl bg-white border border-[#d7eaef] text-center space-y-1 shadow-xs"
+                    className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E0E0E0] text-center space-y-1 shadow-xs transition-all hover:border-[#0F62FE]"
                   >
                     <div
-                      className="text-xl font-bold text-[#02738a]"
+                      className="text-xl font-bold text-[#0F62FE]"
                       style={{ fontFamily: F.display }}
                     >
                       {s.step}
                     </div>
-                    <div className="text-xs font-bold text-[#30434f]">
+                    <div className="text-xs font-semibold text-[#161616]">
                       {t(lang, s.key)}
                     </div>
                   </div>
@@ -5324,11 +5600,11 @@ function SwarSanketApp({
               <div className="w-full space-y-3 pt-4">
                 <Btn
                   label={t(lang, "beginVoiceCheck")}
-                  onClick={() => navigate("instruction")}
+                  onClick={startBattery}
                 />
                 <Btn
                   label={t(lang, "someoneHelping")}
-                  onClick={() => navigate("instruction")}
+                  onClick={startBattery}
                   variant="ghost"
                 />
               </div>
@@ -5339,11 +5615,11 @@ function SwarSanketApp({
 
       case "instruction":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <CheckHeader
-              step={0}
-              total={3}
+              step={BATTERY_STEP[recordingContext] ?? 0}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("voiceIntro")}
               onExit={() => navigate("home")}
             />
@@ -5353,18 +5629,18 @@ function SwarSanketApp({
                 <PictureTaskCard lang={lang} />
               ) : (
                 <>
-                  <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
-                    <Volume2 className="w-10 h-10" />
+                  <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center shadow-xs">
+                    <Volume2 className="w-8 h-8" />
                   </div>
 
                   <div className="text-center w-full space-y-3">
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#5e7380]">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#6F6F6F]">
                       {t(lang, "listenToQuestion")}
                     </p>
 
-                    <div className="p-6 rounded-3xl bg-white border border-[#d7eaef] shadow-md">
+                    <div className="p-6 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs">
                       <p
-                        className="text-xl font-medium text-[#0c1e27] leading-relaxed"
+                        className="text-xl font-medium text-[#161616] leading-relaxed"
                         style={{ fontFamily: F.body }}
                       >
                         {getTaskPrompt(lang, recordingContext)}
@@ -5374,8 +5650,9 @@ function SwarSanketApp({
                 </>
               )}
 
-              <p className="text-xs text-[#5e7380] text-center">
-                {t(lang, "describeSceneHint")}
+              <p className="text-xs text-[#6F6F6F] text-center">
+                {batteryHint(lang, recordingContext) ??
+                  t(lang, "describeSceneHint")}
               </p>
 
               <AudioBtn
@@ -5385,27 +5662,29 @@ function SwarSanketApp({
               />
             </div>
 
-            <div className="p-5 bg-white border-t border-[#d7eaef] shrink-0">
+            <div className="p-5 bg-white border-t border-[#E0E0E0] shrink-0">
               {showNoiseCheck ? (
                 <NoiseCheckCard
                   fontFamily={F.display}
                   onDone={(reading) => {
                     setNoiseReading(reading)
-
                     setShowNoiseCheck(false)
-
                     navigate("recording")
                   }}
                   onSkip={() => {
                     setShowNoiseCheck(false)
-
                     navigate("recording")
                   }}
                 />
               ) : (
                 <Btn
                   label={t(lang, "startSpeaking")}
-                  onClick={() => setShowNoiseCheck(true)}
+                  // One room check per session is enough.
+                  onClick={() =>
+                    noiseReading
+                      ? navigate("recording")
+                      : setShowNoiseCheck(true)
+                  }
                 />
               )}
             </div>
@@ -5415,11 +5694,11 @@ function SwarSanketApp({
 
       case "recording":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <CheckHeader
-              step={0}
-              total={3}
+              step={BATTERY_STEP[recordingContext] ?? 0}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("instruction")}
               onExit={() => navigate("home")}
             />
@@ -5430,13 +5709,23 @@ function SwarSanketApp({
               {recordingContext === "pictureDesc" && (
                 <PictureTaskCard lang={lang} compact />
               )}
+              {recordingContext !== "pictureDesc" && (
+                <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] text-center shadow-xs">
+                  <p
+                    className="text-sm font-medium text-[#161616] leading-relaxed"
+                    style={{ fontFamily: F.body }}
+                  >
+                    {getTaskPrompt(lang, recordingContext)}
+                  </p>
+                </div>
+              )}
 
               {/* Interactive Big Mic Button */}
               <div className="relative flex items-center justify-center">
                 {isRecording && (
                   <>
-                    <div className="absolute w-44 h-44 rounded-full bg-red-500/10 animate-ping" />
-                    <div className="absolute w-36 h-36 rounded-full bg-red-500/20" />
+                    <div className="absolute w-40 h-40 rounded-full bg-red-500/10 animate-ping" />
+                    <div className="absolute w-32 h-32 rounded-full bg-red-500/20" />
                   </>
                 )}
                 <button
@@ -5444,20 +5733,20 @@ function SwarSanketApp({
                     if (!isRecording) handleStartRecording()
                     else handlePauseRecording()
                   }}
-                  className={`relative w-28 h-28 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform active:scale-90 ${
+                  className={`relative w-24 h-24 rounded-full flex items-center justify-center text-white transition-all active:scale-95 ${
                     isRecording
-                      ? "bg-gradient-to-tr from-red-600 to-rose-500 shadow-red-600/40"
-                      : "bg-gradient-to-tr from-[#02738a] to-[#015364] shadow-[#02738a]/40"
+                      ? "bg-gradient-to-tr from-red-600 to-rose-500 shadow-xl shadow-red-500/40"
+                      : "bg-[#0F62FE] hover:bg-[#0353e9] shadow-lg shadow-[#0F62FE]/30"
                   }`}
                 >
                   {isRecording ? (
                     isPaused ? (
-                      <Play className="w-12 h-12" />
+                      <Play className="w-10 h-10" />
                     ) : (
-                      <Pause className="w-12 h-12" />
+                      <Pause className="w-10 h-10" />
                     )
                   ) : (
-                    <Mic className="w-12 h-12" />
+                    <Mic className="w-10 h-10" />
                   )}
                 </button>
               </div>
@@ -5467,18 +5756,19 @@ function SwarSanketApp({
                 {!isRecording ? (
                   <>
                     <p
-                      className="text-2xl font-bold text-[#0c1e27]"
+                      className="text-2xl font-bold text-[#161616]"
                       style={{ fontFamily: F.display }}
                     >
                       {t(lang, "tapToSpeak")}
                     </p>
-                    <p className="text-xs text-[#5e7380]">
-                      {t(lang, "tapMicrophone")}
+                    <p className="text-xs text-[#6F6F6F]">
+                      {batteryHint(lang, recordingContext) ??
+                        t(lang, "tapMicrophone")}
                     </p>
                   </>
                 ) : (
                   <>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-bold">
                       <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
                       <span>
                         {isPaused
@@ -5488,9 +5778,9 @@ function SwarSanketApp({
                     </div>
                     <p
                       className={`text-4xl font-bold tracking-wider transition-colors ${
-                        recordingSecs >= MIN_RECORDING_SECONDS
+                        recordingSecs >= taskRule(recordingContext).minSeconds
                           ? "text-emerald-700"
-                          : "text-[#0c1e27]"
+                          : "text-[#161616]"
                       }`}
                       style={{ fontFamily: F.display }}
                     >
@@ -5499,12 +5789,16 @@ function SwarSanketApp({
                     </p>
                     {/* Numeric floor: language-neutral, so no unverified
                         translations are needed for it to be understood. */}
-                    <p className="text-xs text-[#5e7380] tabular-nums">
-                      {recordingSecs >= MIN_RECORDING_SECONDS
-                        ? "\u2713 00:30"
-                        : `\u2192 00:${String(MIN_RECORDING_SECONDS).padStart(2, "0")}`}
+                    <p className="text-xs text-[#6F6F6F] tabular-nums">
+                      {recordingSecs >= taskRule(recordingContext).minSeconds
+                        ? `\u2713 ${fmtClock(taskRule(recordingContext).minSeconds)}`
+                        : `\u2192 ${fmtClock(taskRule(recordingContext).minSeconds)}`}
+                      {taskRule(recordingContext).autoStop &&
+                      taskRule(recordingContext).maxSeconds !== null
+                        ? ` \u00b7 ${t(lang, "autoStopsAt")} ${fmtClock(taskRule(recordingContext).maxSeconds ?? 0)}`
+                        : ""}
                     </p>
-                    <p className="text-xs text-[#5e7380]">
+                    <p className="text-xs text-[#6F6F6F]">
                       {t(lang, "speakNaturally")}
                     </p>
                   </>
@@ -5518,7 +5812,7 @@ function SwarSanketApp({
               />
             </div>
 
-            <div className="p-5 bg-white border-t border-[#d7eaef] shrink-0 space-y-3">
+            <div className="p-5 bg-white border-t border-[#E0E0E0] shrink-0 space-y-3">
               {isRecording ? (
                 <Btn
                   label={t(lang, "finishRecording")}
@@ -5537,43 +5831,42 @@ function SwarSanketApp({
 
       case "recordingReview":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner">
-                <CheckCircle2 className="w-10 h-10" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div className="text-center space-y-1">
                 <h1
-                  className="text-2xl font-bold text-[#0c1e27]"
+                  className="text-2xl font-bold text-[#161616]"
                   style={{ fontFamily: F.display }}
                 >
                   {t(lang, "recordingReady")}
                 </h1>
-                <p className="text-xs text-[#5e7380]">
+                <p className="text-xs text-[#6F6F6F]">
                   {t(lang, "listenBefore")}
                 </p>
               </div>
 
               {/* Audio player card */}
-              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-sm flex items-center gap-4">
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs flex items-center gap-4">
                 <button
                   onClick={() => {
                     if (currentAudioUrl) {
                       const audio = new Audio(currentAudioUrl)
-
                       audio.play()
                     }
                   }}
-                  className="w-12 h-12 rounded-2xl bg-[#02738a] hover:bg-[#02849f] text-white flex items-center justify-center shadow-md active:scale-95 flex-shrink-0"
+                  className="w-12 h-12 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white flex items-center justify-center shadow-xs active:scale-95 flex-shrink-0"
                 >
                   <Play className="w-5 h-5" />
                 </button>
                 <div className="flex-1">
                   <DynamicWaveformBars active={false} bars={16} />
                 </div>
-                <span className="text-xs font-bold text-[#5e7380]">
+                <span className="text-xs font-bold text-[#525252]">
                   {String(Math.floor(recordingSecs / 60)).padStart(2, "0")}:
                   {String(recordingSecs % 60).padStart(2, "0")}
                 </span>
@@ -5583,10 +5876,29 @@ function SwarSanketApp({
                 <Btn
                   label={t(lang, "continue")}
                   onClick={() => {
-                    if (recordingContext === "freeSpeech") {
+                    const reviewedBlob = audioBlobRef.current
+
+                    if (recordingContext === "pictureDesc") {
+                      // Keep the model's clip apart from the later tasks.
+                      pictureBlobRef.current = reviewedBlob
+
+                      pictureDurationRef.current =
+                        getLastAudioRecordingResult()?.durationSeconds ??
+                        recordingSecs
+                    } else {
+                      queueBatteryTask(recordingContext, reviewedBlob)
+                    }
+
+                    if (recordingContext === "phonation") {
                       navigate("pictureDesc")
                     } else if (recordingContext === "pictureDesc") {
                       navigate("memory")
+                    } else if (recordingContext === "fluency") {
+                      setRecordingContext("recall")
+
+                      navigate("instruction")
+                    } else if (recordingContext === "freeSpeech") {
+                      navigate("pictureDesc")
                     } else if (recordingContext === "memoryRecall") {
                       navigate("conversation")
                     } else {
@@ -5607,11 +5919,11 @@ function SwarSanketApp({
 
       case "pictureDesc":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <CheckHeader
-              step={1}
-              total={3}
+              step={BATTERY_STEP.pictureDesc ?? 2}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("recordingReview")}
               onExit={() => navigate("home")}
             />
@@ -5619,12 +5931,12 @@ function SwarSanketApp({
             <div className="flex-1 overflow-y-auto min-h-0 flex flex-col px-6 pt-3 pb-4 gap-3 animate-fade-in-up">
               <div className="text-center">
                 <h1
-                  className="text-2xl font-bold text-[#0c1e27]"
+                  className="text-2xl font-bold text-[#161616]"
                   style={{ fontFamily: F.display }}
                 >
                   {t(lang, "whatDoYouSee")}
                 </h1>
-                <p className="text-xs text-[#5e7380]">
+                <p className="text-xs text-[#6F6F6F]">
                   {t(lang, "pictureDescSub")}
                 </p>
               </div>
@@ -5655,38 +5967,38 @@ function SwarSanketApp({
 
       case "memory":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <CheckHeader
-              step={2}
-              total={3}
+              step={3}
+              total={BATTERY_TOTAL}
               onBack={() => navigate("pictureDesc")}
               onExit={() => navigate("home")}
             />
 
             <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
-                <Sparkles className="w-10 h-10" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center shadow-xs">
+                <Sparkles className="w-8 h-8" />
               </div>
 
               <div className="text-center space-y-2">
                 <h1
-                  className="text-2xl font-bold text-[#0c1e27]"
+                  className="text-2xl font-bold text-[#161616]"
                   style={{ fontFamily: F.display }}
                 >
                   {t(lang, "listenCarefully")}
                 </h1>
-                <p className="text-xs text-[#5e7380]">{t(lang, "memorySub")}</p>
+                <p className="text-xs text-[#6F6F6F]">{t(lang, "memorySub")}</p>
               </div>
 
-              <div className="w-full p-6 rounded-3xl bg-white border border-[#d7eaef] text-center shadow-md space-y-1">
+              <div className="w-full p-6 rounded-2xl bg-white border border-[#E0E0E0] text-center shadow-xs space-y-1">
                 <p
-                  className="text-2xl font-bold text-[#0c1e27]"
+                  className="text-2xl font-bold text-[#161616]"
                   style={{ fontFamily: F.body }}
                 >
                   {getTaskPrompt(lang, "memoryRecall")}
                 </p>
-                <p className="text-xs text-slate-400">Remember these 5 words</p>
+                <p className="text-xs text-[#6F6F6F]">Remember these 5 words</p>
               </div>
 
               <AudioBtn
@@ -5698,9 +6010,10 @@ function SwarSanketApp({
                 <Btn
                   label={t(lang, "iHeardWords")}
                   onClick={() => {
-                    setRecordingContext("memoryRecall")
+                    // Animal fluency doubles as the delay before recall.
+                    setRecordingContext("fluency")
 
-                    navigate("conversation")
+                    navigate("instruction")
                   }}
                 />
               </div>
@@ -5711,7 +6024,7 @@ function SwarSanketApp({
 
       case "conversation":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-gradient-to-b from-[#fbfdfd] via-[#f3f9fb] to-[#eaf5f8]">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <CheckHeader
               step={2}
@@ -5721,27 +6034,27 @@ function SwarSanketApp({
             />
 
             <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-3xl bg-[#e4f4f7] text-[#02738a] flex items-center justify-center shadow-inner">
-                <MessageSquare className="w-10 h-10" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center shadow-xs">
+                <MessageSquare className="w-8 h-8" />
               </div>
 
               <div className="text-center space-y-2">
                 <h1
-                  className="text-2xl font-bold text-[#0c1e27]"
+                  className="text-2xl font-bold text-[#161616]"
                   style={{ fontFamily: F.display }}
                 >
                   {t(lang, "oneMore")}
                 </h1>
                 <p
-                  className="text-lg text-[#0c1e27] font-medium leading-relaxed"
+                  className="text-lg text-[#161616] font-medium leading-relaxed"
                   style={{ fontFamily: F.body }}
                 >
                   {getTaskPrompt(lang, "conversation")}
                 </p>
               </div>
 
-              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] text-center">
-                <p className="text-xs italic text-[#5e7380]">
+              <div className="w-full p-4 rounded-2xl bg-[#F8FAFC] border border-[#E0E0E0] text-center">
+                <p className="text-xs italic text-[#525252]">
                   "{t(lang, "conversationSub")}"
                 </p>
               </div>
@@ -5768,26 +6081,27 @@ function SwarSanketApp({
 
       case "completion":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden items-center justify-center px-6 bg-gradient-to-tr from-[#fbfdfd] via-[#f0f8fa] to-[#e4f4f7] animate-fade-in">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden items-center justify-center px-6 bg-white animate-fade-in">
             <div className="relative mb-6">
-              <div className="absolute inset-0 rounded-3xl bg-[#02738a]/20 blur-xl animate-pulse" />
-              <img
-                src="/logo.jpeg"
-                alt="SwarSanket Logo"
-                className="w-24 h-24 rounded-3xl object-contain border border-[#bce3eb] shadow-xl relative z-10"
-              />
-              <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md z-20">
+              <div className="w-24 h-24 rounded-2xl bg-white border border-[#E0E0E0] shadow-md flex items-center justify-center p-3 relative z-10">
+                <img
+                  src="/logo.jpeg"
+                  alt="SwarSanket Logo"
+                  className="w-full h-full object-contain rounded-xl"
+                />
+              </div>
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#0F62FE] text-white flex items-center justify-center shadow-md z-20">
                 <Check className="w-5 h-5" />
               </div>
             </div>
             <h1
-              className="text-3xl font-bold text-[#0c1e27] text-center"
+              className="text-3xl font-bold text-[#161616] text-center"
               style={{ fontFamily: F.display }}
             >
               {t(lang, "youreDone")}
             </h1>
             <p
-              className="text-sm text-[#5e7380] text-center mt-2 max-w-xs"
+              className="text-sm text-[#525252] text-center mt-2 max-w-xs"
               style={{ fontFamily: F.body }}
             >
               {t(lang, "completionSub")}
@@ -5804,10 +6118,12 @@ function SwarSanketApp({
 
       case "processing":
         return (
-          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#f3f9fb] animate-fade-in">
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white animate-fade-in">
             <StatusBar />
             <VoiceProcessingVisualizer
               analysisStep={analysisStep}
+              queuePosition={jobQueuePosition}
+              transport={jobTransport}
               analysisError={analysisError}
               lang={lang}
               t={t}
@@ -5826,6 +6142,12 @@ function SwarSanketApp({
               }}
               onRecordAgain={() => {
                 setAnalysisError(null)
+
+                pictureBlobRef.current = null
+
+                pictureDurationRef.current = null
+
+                setRecordingContext("pictureDesc")
 
                 navigate("recording")
               }}
@@ -5849,23 +6171,23 @@ function SwarSanketApp({
               : 7.1
 
         return (
-          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+          <div className="h-full flex flex-col bg-[#F8FAFC] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-4 animate-fade-in">
               {/* Patient Status Hero */}
               <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-xs">
                   <CheckCircle2 className="w-9 h-9" />
                 </div>
 
                 <div className="space-y-1">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     {screeningApiResult?.screening.status ||
                       t(lang, "noConcern")}
                   </span>
                   <h1
-                    className="text-2xl font-bold text-slate-900 pt-0.5"
+                    className="text-2xl font-bold text-[#161616] pt-0.5"
                     style={{ fontFamily: F.display }}
                   >
                     {t(lang, "voiceCheckComplete")}
@@ -5874,13 +6196,13 @@ function SwarSanketApp({
               </div>
 
               {/* Patient-Friendly Summary Card */}
-              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-4">
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs space-y-4">
                 <div className="text-center space-y-2">
                   <div className="inline-block px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-900 font-bold text-xs">
                     Screening Likelihood: {probPercent.toFixed(1)}% (Low
                     Concern)
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#525252] leading-relaxed">
                     {screeningApiResult?.screening.interpretation ||
                       t(lang, "noConcernSub")}
                   </p>
@@ -5888,15 +6210,15 @@ function SwarSanketApp({
 
                 {/* Simple Patient-Friendly Visual Bar */}
                 <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                  <div className="flex justify-between text-[11px] font-semibold text-[#6F6F6F]">
                     <span>Speech Fluency Check</span>
                     <span className="text-emerald-700 font-bold">
                       Normal Patterns
                     </span>
                   </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/80">
+                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-[#E0E0E0]">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-[#02738a] transition-all duration-700"
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-[#0F62FE] transition-all duration-700"
                       style={{
                         width: `${Math.min(100, Math.max(10, probPercent))}%`,
                       }}
@@ -5905,9 +6227,16 @@ function SwarSanketApp({
                 </div>
               </div>
 
+              {batteryResults.length > 0 && (
+                <BatteryCard
+                  battery={batteryResults}
+                  compact
+                  fontFamily={F.display}
+                />
+              )}
               {/* Keeping Your Mind Healthy Card */}
-              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs text-left space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#6F6F6F]">
                   What This Means For You
                 </div>
 
@@ -5916,8 +6245,8 @@ function SwarSanketApp({
                     <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Check className="w-3.5 h-3.5" />
                     </div>
-                    <div className="text-xs text-slate-600 leading-relaxed">
-                      <strong className="text-slate-800 font-semibold block">
+                    <div className="text-xs text-[#525252] leading-relaxed">
+                      <strong className="text-[#161616] font-semibold block">
                         Healthy Speech Markers
                       </strong>
                       Good vocabulary variety, natural pauses, and
@@ -5926,11 +6255,11 @@ function SwarSanketApp({
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 text-[#02738a] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Calendar className="w-3.5 h-3.5" />
                     </div>
-                    <div className="text-xs text-slate-600 leading-relaxed">
-                      <strong className="text-slate-800 font-semibold block">
+                    <div className="text-xs text-[#525252] leading-relaxed">
+                      <strong className="text-[#161616] font-semibold block">
                         Routine Tracking
                       </strong>
                       Repeating this voice check every 3–6 months helps maintain
@@ -5939,11 +6268,11 @@ function SwarSanketApp({
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center flex-shrink-0 mt-0.5">
                       <FileText className="w-3.5 h-3.5" />
                     </div>
-                    <div className="text-xs text-slate-600 leading-relaxed">
-                      <strong className="text-slate-800 font-semibold block">
+                    <div className="text-xs text-[#525252] leading-relaxed">
+                      <strong className="text-[#161616] font-semibold block">
                         Full Clinical Report Ready
                       </strong>
                       You can view or share your detailed acoustic indicators,
@@ -5954,7 +6283,7 @@ function SwarSanketApp({
               </div>
 
               {/* Gentle Notice */}
-              <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
+              <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-[#E0E0E0] text-[11px] text-[#6F6F6F] text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
@@ -6001,23 +6330,23 @@ function SwarSanketApp({
               : 78.4
 
         return (
-          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+          <div className="h-full flex flex-col bg-[#F8FAFC] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-4 animate-fade-in">
               {/* Patient Status Hero */}
               <div className="flex flex-col items-center justify-center pt-2 gap-3 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-700 flex items-center justify-center shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shadow-xs">
                   <AlertCircle className="w-9 h-9" />
                 </div>
 
                 <div className="space-y-1">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     {screeningApiResult?.screening.status ||
                       t(lang, "furtherEval")}
                   </span>
                   <h1
-                    className="text-2xl font-bold text-slate-900 pt-0.5"
+                    className="text-2xl font-bold text-[#161616] pt-0.5"
                     style={{ fontFamily: F.display }}
                   >
                     Evaluation Recommended
@@ -6026,13 +6355,13 @@ function SwarSanketApp({
               </div>
 
               {/* Patient-Friendly Summary Card */}
-              <div className="w-full p-5 rounded-2xl bg-white border border-[#d7eaef] shadow-xs space-y-4">
+              <div className="w-full p-5 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs space-y-4">
                 <div className="text-center space-y-2">
                   <div className="inline-block px-3 py-1 rounded-xl bg-[#fef6ee] border border-amber-200/60 text-amber-900 font-bold text-xs">
                     Screening Likelihood: {probPercent.toFixed(1)}% (Review
                     Suggested)
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#525252] leading-relaxed">
                     {screeningApiResult?.screening.interpretation ||
                       t(lang, "furtherEvalSub")}
                   </p>
@@ -6040,13 +6369,13 @@ function SwarSanketApp({
 
                 {/* Simple Patient-Friendly Visual Bar */}
                 <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                  <div className="flex justify-between text-[11px] font-semibold text-[#6F6F6F]">
                     <span>Speech Rhythm Check</span>
                     <span className="text-amber-800 font-bold">
                       Review Suggested
                     </span>
                   </div>
-                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200/80">
+                  <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden border border-[#E0E0E0]">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-700"
                       style={{
@@ -6057,19 +6386,26 @@ function SwarSanketApp({
                 </div>
               </div>
 
+              {batteryResults.length > 0 && (
+                <BatteryCard
+                  battery={batteryResults}
+                  compact
+                  fontFamily={F.display}
+                />
+              )}
               {/* What Does This Mean for You? (Empathetic Patient Advice) */}
-              <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs text-left space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#6F6F6F]">
                   What This Means For You
                 </div>
 
                 <div className="space-y-2.5">
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-teal-50 border border-teal-100 text-[#02738a] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center flex-shrink-0 mt-0.5">
                       <ShieldCheck className="w-3.5 h-3.5" />
                     </div>
-                    <div className="text-xs text-slate-600 leading-relaxed">
-                      <strong className="text-slate-800 font-semibold block">
+                    <div className="text-xs text-[#525252] leading-relaxed">
+                      <strong className="text-[#161616] font-semibold block">
                         Preliminary screening, not a diagnosis
                       </strong>
                       This automated test observes speech indicators. It does
@@ -6081,8 +6417,8 @@ function SwarSanketApp({
                     <div className="w-6 h-6 rounded-lg bg-amber-50 border border-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Activity className="w-3.5 h-3.5" />
                     </div>
-                    <div className="text-xs text-slate-600 leading-relaxed">
-                      <strong className="text-slate-800 font-semibold block">
+                    <div className="text-xs text-[#525252] leading-relaxed">
+                      <strong className="text-[#161616] font-semibold block">
                         Everyday factors affect speech
                       </strong>
                       Tiredness, stress, lack of sleep, or mild illness can
@@ -6091,11 +6427,11 @@ function SwarSanketApp({
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Stethoscope className="w-3.5 h-3.5" />
                     </div>
-                    <div className="text-xs text-slate-600 leading-relaxed">
-                      <strong className="text-slate-800 font-semibold block">
+                    <div className="text-xs text-[#525252] leading-relaxed">
+                      <strong className="text-[#161616] font-semibold block">
                         Next Step: Share with a doctor
                       </strong>
                       We have prepared a comprehensive clinical report with
@@ -6106,7 +6442,7 @@ function SwarSanketApp({
               </div>
 
               {/* Gentle Notice */}
-              <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
+              <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-[#E0E0E0] text-[11px] text-[#6F6F6F] text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
@@ -6165,7 +6501,7 @@ function SwarSanketApp({
           : "0.112"
 
         return (
-          <div className="h-full flex flex-col bg-[#f3f9fb] min-h-0 overflow-hidden">
+          <div className="h-full flex flex-col bg-[#F8FAFC] min-h-0 overflow-hidden">
             <StatusBar />
             <div className="px-6 pt-3 pb-2 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -6180,12 +6516,12 @@ function SwarSanketApp({
                 />
                 <div>
                   <h1
-                    className="text-lg font-bold text-slate-900 leading-tight"
+                    className="text-lg font-bold text-[#161616] leading-tight"
                     style={{ fontFamily: F.display }}
                   >
                     Detailed Clinical Report
                   </h1>
-                  <p className="text-[11px] text-slate-500 font-medium">
+                  <p className="text-[11px] text-[#6F6F6F] font-medium">
                     {selectedPatient || userName} ({userAge}y) ·{" "}
                     {activeScreening
                       ? new Date(activeScreening.createdAt).toLocaleDateString()
@@ -6198,7 +6534,7 @@ function SwarSanketApp({
                 {activeScreening && (
                   <button
                     onClick={() => setSessionToDelete(activeScreening)}
-                    className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-all shadow-xs"
+                    className="w-9 h-9 rounded-xl bg-white border border-[#E0E0E0] flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-all shadow-xs"
                     title="Delete report"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -6209,7 +6545,7 @@ function SwarSanketApp({
                     if (activeScreening)
                       generateAndDownloadReport(activeScreening)
                   }}
-                  className="w-9 h-9 rounded-xl bg-white border border-[#d7eaef] flex items-center justify-center text-[#02738a] hover:bg-[#e4f4f7] active:scale-95 transition-all shadow-xs"
+                  className="w-9 h-9 rounded-xl bg-white border border-[#E0E0E0] flex items-center justify-center text-[#0F62FE] hover:bg-blue-50 active:scale-95 transition-all shadow-xs"
                   title="Download PDF"
                 >
                   <Download className="w-4 h-4" />
@@ -6218,29 +6554,42 @@ function SwarSanketApp({
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-2 space-y-4">
+              {(activeScreening
+                ? (activeScreening.battery ?? [])
+                : batteryResults
+              ).length > 0 && (
+                <BatteryCard
+                  battery={
+                    activeScreening
+                      ? (activeScreening.battery ?? [])
+                      : batteryResults
+                  }
+                  fontFamily={F.display}
+                />
+              )}
               {/* Doctor Consultation Card - highlighted when opened via "Talk to a Healthcare Professional" */}
               {detailedReportFocus === "doctor" && (
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#e4f4f7] to-[#d8f0f5] border-2 border-[#02738a]/30 shadow-xs space-y-3 animate-fade-in">
+                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 shadow-xs space-y-3 animate-fade-in">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[#02738a] text-white flex items-center justify-center shadow-xs">
+                    <div className="w-9 h-9 rounded-xl bg-[#0F62FE] text-white flex items-center justify-center shadow-xs">
                       <Stethoscope className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-[#013a46]">
+                      <div className="text-xs font-bold text-[#161616]">
                         Consult with a Healthcare Professional
                       </div>
-                      <div className="text-[11px] text-[#02738a] font-medium">
+                      <div className="text-[11px] text-[#0F62FE] font-medium">
                         Share this clinical analysis with our specialist network
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-white border border-[#cbe6ed] flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="p-3.5 rounded-xl bg-white border border-[#E0E0E0] flex items-center justify-between gap-3 shadow-2xs">
                     <div>
-                      <div className="text-xs font-bold text-slate-900">
+                      <div className="text-xs font-bold text-[#161616]">
                         Dr. Priya Sharma
                       </div>
-                      <div className="text-[11px] text-[#02738a] font-medium">
+                      <div className="text-[11px] text-[#0F62FE] font-medium">
                         Neurologist · Cognitive & Memory Health
                       </div>
                       <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1">
@@ -6250,7 +6599,7 @@ function SwarSanketApp({
                     </div>
                     <button
                       onClick={() => navigate("teleconsult")}
-                      className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#02738a] to-[#015364] text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-xs flex-shrink-0"
+                      className="px-3.5 py-2.5 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-xs flex-shrink-0"
                     >
                       <Video className="w-3.5 h-3.5" />
                       Consult Now
@@ -6258,12 +6607,12 @@ function SwarSanketApp({
                   </div>
 
                   <div className="flex justify-between items-center text-[11px] px-1 pt-0.5">
-                    <span className="text-slate-500">
+                    <span className="text-[#6F6F6F]">
                       Need another specialist?
                     </span>
                     <button
                       onClick={() => navigate("referral")}
-                      className="font-bold text-[#02738a] hover:underline inline-flex items-center gap-0.5"
+                      className="font-bold text-[#0F62FE] hover:underline inline-flex items-center gap-0.5"
                     >
                       Browse all doctors <ChevronRight className="w-3 h-3" />
                     </button>
@@ -6278,8 +6627,8 @@ function SwarSanketApp({
               />
 
               {/* Acoustic Biomarkers Breakdown */}
-              <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs text-left">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <div className="p-5 rounded-2xl bg-white border border-[#E0E0E0] space-y-3 shadow-xs text-left">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#6F6F6F]">
                   Speech & Language Acoustic Indicators
                 </div>
                 {[
@@ -6328,12 +6677,12 @@ function SwarSanketApp({
                     className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0"
                   >
                     <div>
-                      <div className="text-xs font-bold text-slate-800">
+                      <div className="text-xs font-bold text-[#161616]">
                         <Hint text={b.hint}>{b.label}</Hint>
                       </div>
-                      <div className="text-[11px] text-slate-400">{b.sub}</div>
+                      <div className="text-[11px] text-[#6F6F6F]">{b.sub}</div>
                     </div>
-                    <div className="text-xs font-bold text-[#02738a]">
+                    <div className="text-xs font-bold text-[#0F62FE]">
                       {b.val}
                     </div>
                   </div>
@@ -6342,20 +6691,20 @@ function SwarSanketApp({
 
               {/* Real Whisper Voice Transcript */}
               {screeningApiResult?.transcript && (
-                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-2 shadow-xs text-left">
-                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+                <div className="p-5 rounded-2xl bg-white border border-[#E0E0E0] space-y-2 shadow-xs text-left">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#6F6F6F]">
                     <span>
                       <Hint text={REPORT_SECTION_HINTS.transcript}>
                         Voice Transcript (Whisper ASR)
                       </Hint>
                     </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
+                    <span className="text-[10px] text-[#6F6F6F] font-medium">
                       {screeningApiResult.word_count} words ·{" "}
                       {screeningApiResult.detected_language?.toUpperCase() ||
                         "EN"}
                     </span>
                   </div>
-                  <p className="text-xs italic text-slate-700 leading-relaxed bg-[#f8fbfd] p-3 rounded-xl border border-slate-100">
+                  <p className="text-xs italic text-[#161616] leading-relaxed bg-[#F8FAFC] p-3 rounded-xl border border-[#E0E0E0]">
                     "{screeningApiResult.transcript}"
                   </p>
                 </div>
@@ -6363,19 +6712,19 @@ function SwarSanketApp({
 
               {/* Quantum Biomarker Sensitivity (PennyLane 8-Qubit VQC) */}
               {screeningApiResult?.explanation && (
-                <div className="p-5 rounded-2xl bg-white border border-[#d7eaef] space-y-3 shadow-xs text-left">
+                <div className="p-5 rounded-2xl bg-white border border-[#E0E0E0] space-y-3 shadow-xs text-left">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#6F6F6F]">
                       <Hint text={REPORT_SECTION_HINTS.sensitivity}>
                         Quantum Biomarker Sensitivity
                       </Hint>
                     </span>
-                    <span className="text-[10px] font-bold text-[#015364] bg-[#e4f4f7] px-2 py-0.5 rounded-full border border-[#cbe6ed]">
+                    <span className="text-[10px] font-bold text-[#0F62FE] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
                       PennyLane 8-Qubit VQC
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-600 leading-relaxed">
+                  <p className="text-xs text-[#525252] leading-relaxed">
                     Quantum variational gradient sensitivity factors influencing
                     this screening signal:
                   </p>
@@ -6469,7 +6818,7 @@ function SwarSanketApp({
               )}
 
               {/* Disclaimer */}
-              <div className="p-3 rounded-2xl bg-slate-100/80 text-[11px] text-slate-500 text-center leading-relaxed">
+              <div className="p-3 rounded-2xl bg-[#F8FAFC] border border-[#E0E0E0] text-[11px] text-[#6F6F6F] text-center leading-relaxed">
                 Screening result only — not a medical diagnosis.
               </div>
 
@@ -6510,7 +6859,7 @@ function SwarSanketApp({
             {/* Delete Confirmation Modal */}
             {sessionToDelete && (
               <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
-                <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-[#d7eaef] space-y-4 animate-scale-up text-left">
+                <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-[#E0E0E0] space-y-4 animate-scale-up text-left">
                   <div className="w-12 h-1 rounded-full bg-slate-300 mx-auto -mt-2 mb-2 sm:hidden" />
 
                   <div className="flex items-center gap-3">
@@ -6519,23 +6868,23 @@ function SwarSanketApp({
                     </div>
                     <div>
                       <h3
-                        className="text-lg font-bold text-slate-900 leading-tight"
+                        className="text-lg font-bold text-[#161616] leading-tight"
                         style={{ fontFamily: F.display }}
                       >
                         Delete Report?
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-[#6F6F6F] mt-0.5">
                         This report will be permanently removed.
                       </p>
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                  <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#E0E0E0] flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-xs text-slate-900">
+                      <div className="font-bold text-xs text-[#161616]">
                         {sessionToDelete.patientName}
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
+                      <div className="text-[11px] text-[#6F6F6F] mt-0.5">
                         {new Date(sessionToDelete.createdAt).toLocaleDateString(
                           "en-IN",
 
@@ -9289,18 +9638,18 @@ function SwarSanketApp({
 
       case "offlineSaved":
         return (
-          <div className="h-full flex flex-col items-center justify-center px-6 bg-[#f3f9fb] min-h-0 overflow-hidden animate-fade-in space-y-6">
-            <div className="w-20 h-20 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
-              <WifiOff className="w-10 h-10" />
+          <div className="h-full flex flex-col items-center justify-center px-6 bg-white min-h-0 overflow-hidden animate-fade-in space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shadow-xs">
+              <WifiOff className="w-8 h-8" />
             </div>
             <div className="text-center space-y-1">
               <h1
-                className="text-2xl font-bold text-slate-900"
+                className="text-2xl font-bold text-[#161616]"
                 style={{ fontFamily: F.display }}
               >
                 Saved Safely Offline
               </h1>
-              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
+              <p className="text-xs text-[#525252] max-w-xs leading-relaxed">
                 Your audio recording is stored securely in IndexedDB on this
                 device. It will automatically sync when connection is restored.
               </p>
@@ -9314,18 +9663,18 @@ function SwarSanketApp({
 
       case "voiceQuality":
         return (
-          <div className="h-full flex flex-col items-center justify-center px-6 bg-[#f3f9fb] min-h-0 overflow-hidden animate-fade-in space-y-6">
-            <div className="w-20 h-20 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center shadow-xs">
-              <AlertTriangle className="w-10 h-10" />
+          <div className="h-full flex flex-col items-center justify-center px-6 bg-white min-h-0 overflow-hidden animate-fade-in space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shadow-xs">
+              <AlertTriangle className="w-8 h-8" />
             </div>
             <div className="text-center space-y-1">
               <h1
-                className="text-2xl font-bold text-slate-900"
+                className="text-2xl font-bold text-[#161616]"
                 style={{ fontFamily: F.display }}
               >
                 {t(lang, "vqPoorTitle")}
               </h1>
-              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
+              <p className="text-xs text-[#525252] max-w-xs leading-relaxed">
                 {t(lang, "vqPoorSub")}
               </p>
             </div>

@@ -20,7 +20,7 @@ import io
 import os
 import re
 from pathlib import Path
-from typing import Union, BinaryIO, Dict, Any, List, Optional
+from typing import Union, BinaryIO, Dict, Any, List, Optional, Callable
 import numpy as np
 import pandas as pd
 import spacy
@@ -344,16 +344,79 @@ def _calibrate_to_training_support(
     return calibrated, clamped
 
 
+def transcribe_for_task(
+    audio_source: Union[str, Path, BinaryIO, bytes],
+) -> Dict[str, Any]:
+    """
+    Word-timestamped transcription plus basic audio metrics, for the
+    standardized tasks that need words but not the 22-feature vector.
+    """
+    audio_metrics = decode_and_inspect_audio(audio_source)
+    whisper = get_whisper_model()
+    if isinstance(audio_source, Path):
+        whisper_input: Union[str, BinaryIO, np.ndarray] = str(audio_source)
+    elif isinstance(audio_source, bytes):
+        whisper_input = io.BytesIO(audio_source)
+    else:
+        whisper_input = audio_source
+
+    segments, info = whisper.transcribe(
+        whisper_input,
+        beam_size=5,
+        word_timestamps=True,
+        vad_filter=True,
+    )
+    words_list: List[Dict[str, Any]] = []
+    transcript_parts: List[str] = []
+    for seg in segments:
+        transcript_parts.append(seg.text.strip())
+        if seg.words:
+            for w in seg.words:
+                words_list.append({
+                    "word": w.word.strip(),
+                    "start": round(w.start, 2),
+                    "end": round(w.end, 2),
+                })
+    return {
+        "transcript": " ".join(transcript_parts).strip(),
+        "words": words_list,
+        "word_count": len(words_list),
+        "detected_language": getattr(info, "language", None),
+        "language_probability": round(float(getattr(info, "language_probability", 0.0) or 0.0), 3),
+        "audio": {
+            "duration_seconds": audio_metrics.get("duration_seconds", 0.0),
+            "sample_rate": audio_metrics.get("sample_rate", 16000),
+            "rms_energy": audio_metrics.get("rms_energy", 0.0),
+            "peak_amplitude": audio_metrics.get("peak_amplitude", 0.0),
+            "silence_percentage": audio_metrics.get("silence_percentage", 100.0),
+        },
+    }
+
+
 def run_screening_pipeline(
     audio_source: Union[str, Path, BinaryIO, bytes],
     require_minimum_sample: bool = True,
+    on_stage: Optional[Callable[[str], None]] = None,
 ) -> Dict[str, Any]:
     """
     Executes the end-to-end validated SwarSanket screening pipeline using
     the 22-Feature Quantum-Classical Hybrid model (PyTorch + PennyLane 8-Qubit VQC).
+
+    ``on_stage`` is called with "transcribing", "extracting" and "scoring" as each
+    phase begins, so a job runner can publish real progress instead of a guess.
+    A failing callback never aborts the screening.
     """
+    def _stage(name: str) -> None:
+        if on_stage is None:
+            return
+        try:
+            on_stage(name)
+        except Exception:
+            pass
+
     try:
         # 1. Decode and inspect audio metrics
+        _stage("transcribing")
         audio_metrics = decode_and_inspect_audio(audio_source)
         duration_sec = audio_metrics.get("duration_seconds", 0.0)
 
@@ -469,6 +532,7 @@ def run_screening_pipeline(
         word_rate = _safe_div(word_count, speech_timeline_duration, 0.0)
 
         # 3. Extract spaCy linguistic POS ratios & keywords
+        _stage("extracting")
         nlp_features = extract_linguistic_pos_features(full_transcript, word_count)
 
         # 4. Extract Acoustic & Pause Metrics
@@ -572,6 +636,7 @@ def run_screening_pipeline(
         feature_array = np.array([feature_vector], dtype=np.float64)
 
         # 6. Execute Quantum-Hybrid Inference with Monte Carlo Dropout (30 passes)
+        _stage("scoring")
         inference_res = run_monte_carlo_inference(feature_array, n_passes=30)
         prob = inference_res["mean_probability"]
         prob_percent = round(prob * 100.0, 2)

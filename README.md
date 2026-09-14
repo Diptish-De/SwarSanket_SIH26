@@ -375,11 +375,46 @@ The signed release APK will be generated at:
 - **Description**: Returns backend availability, active model type, and pipeline components.
 - **Response**: `200 OK`
 
-### 2. Audio Screening Analysis
+### 2. Asynchronous Screening Job (what the app uses)
+- **Endpoint**: `POST /api/screenings` → `202 Accepted`
+- **Content-Type**: `multipart/form-data`, field `audio` (`.wav`, `.m4a`, `.webm`, `.mp3`)
+- **Returns immediately** with a `recording_id`. The recording is stored in Supabase Storage and a row is inserted into the `recordings` table; a single background worker then runs the pipeline and writes each stage into that row.
+- **Progress**: subscribe over Supabase Realtime to `UPDATE` events on `public.recordings` filtered by `recording_id=eq.<id>`, or poll `GET /api/screenings/{recording_id}`. Stages: `queued → uploading → transcribing → extracting → scoring → completed | failed`.
+- **Why**: no HTTP request stays open longer than the upload, so a hosting proxy's request timeout (Render free tier: ~100 s) can no longer cut a screening short. One worker at a time keeps the 512 MB container inside its memory budget; the queue position is reported honestly.
+
+```bash
+curl -X POST http://localhost:8001/api/screenings \
+  -F "audio=@backend/test_audio/case6_second_speaker_zira_15s.wav"
+# {"success":true,"recording_id":"a1b2c3d4e5f6","status":"queued","queue_position":0,
+#  "poll_url":"/api/screenings/a1b2c3d4e5f6","realtime":{"supabase_url":"…","anon_key":"…","table":"recordings",…}}
+
+curl http://localhost:8001/api/screenings/a1b2c3d4e5f6
+# {"success":true,"recording_id":"…","status":"scoring","queue_position":0,"result":null,"error":null}
+# … once completed, "result" carries the same object the synchronous endpoint returns.
+```
+
+**Standardized task battery.** The same endpoint scores four short tasks that sit beside the model (`backend/task_scoring.py`); pass `task` and, where needed, a JSON `params` form field:
+
+| `task` | Recording | Score | Flag (below typical) | Reference |
+|---|---|---|---|---|
+| `fluency` | name animals for 60 s | distinct animals | fewer than 12 | Tombaugh et al. 1999; Canning et al. 2004 |
+| `recall` | say the five words heard earlier (`params.target_words`) | words recalled of 5 | 2 or fewer | MoCA delayed recall, Nasreddine et al. 2005 |
+| `phonation` | hold "aaah" | maximum phonation time (s), jitter/shimmer/HNR | under 10 s, or two perturbation measures out of MDVP range | Maslan et al. 2011; Praat/MDVP thresholds |
+| `daily` | "tell me about your day", 40 s | internal (episodic) details, external details, specificity | **never flagged** — no published cut-off exists for an automated detail count | Autobiographical Interview, Levine et al. 2002 |
+
+Each result carries `scored`, `score`, `flag`, `threshold`, `reference`, `note` and `details`.
+
+`daily` is deliberately different from the other three. It powers the **daily check-in** (`src/components/alois/AloisDailyCheckIn.tsx`), not the one-off screening, and it returns `flag: null` with `reference_type: "within_person"`. A detail count has no population cut-off, so the app reads it only against the same speaker's own earlier check-ins: the median of their first five scored days, with a band 1.5 median-absolute-deviations wide. A single low day never means anything — sleep, mood and how much actually happened that day all move it. Detail scoring is English-only; other languages are transcribed and returned unscored.
+
+Animal lexicons for `fluency` exist for `en` (reference) and `hi`/`bn` (provisional); other languages are transcribed but left unscored, and the response says so. The app reports `fluency`, `recall` and `phonation` as "N of M in the typical range" beside the model's output and never blends them into the probability.
+
+The `realtime` block is present only when the backend has `SUPABASE_ANON_KEY` set; without it the web client polls. The realtime publication is enabled by the schema (`ALTER PUBLICATION supabase_realtime ADD TABLE public.recordings`).
+
+### 3. Synchronous Audio Screening Analysis (tests and short clips)
 - **Endpoint**: `POST /api/analyze-audio`
 - **Content-Type**: `multipart/form-data`
 - **Field**: `audio` (Upload binary: `.wav`, `.m4a`, `.webm`, `.mp3`)
-- **Timeout**: Up to 60 seconds (allows full Whisper transcription and 30-pass MC Dropout inference)
+- **Timeout**: the whole pipeline runs inside one request. Fine locally; on a free hosting tier a 60-second clip will exceed the proxy's request cap, which is why the app uses the job endpoint above.
 
 #### Example Request:
 ```bash

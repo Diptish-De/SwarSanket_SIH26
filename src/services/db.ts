@@ -4,6 +4,8 @@ import { ScreeningSession, OfflineSyncItem } from "../types"
 
 import type { HouseholdMember } from "./household"
 
+import type { DailyCheckIn } from "./dailyCheckIn"
+
 interface SwarSanketDB extends DBSchema {
   screenings: {
     key: string
@@ -66,6 +68,14 @@ interface SwarSanketDB extends DBSchema {
 
     value: HouseholdMember
   }
+
+  daily_checkins: {
+    key: string
+
+    value: DailyCheckIn
+
+    indexes: { "by-member": string }
+  }
 }
 
 const DB_NAME = "SwarSanket_DB"
@@ -76,7 +86,15 @@ const DB_NAME = "SwarSanket_DB"
 
 // recalling a credential.
 
-const DB_VERSION = 2
+// v3 adds `daily_checkins`: one row per calendar day holding the orientation
+
+// answers, the scored daily recall and the informant observation. Keyed by the
+
+// local date, so a second attempt on the same day overwrites rather than
+
+// inflating the streak.
+
+const DB_VERSION = 3
 
 let dbPromise: Promise<IDBPDatabase<SwarSanketDB>> | null = null
 
@@ -122,6 +140,18 @@ export function getDB(): Promise<IDBPDatabase<SwarSanketDB>> {
 
         if (!db.objectStoreNames.contains("household")) {
           db.createObjectStore("household", { keyPath: "id" })
+        }
+
+        // Added in v3, guarded like the rest so an existing database gains the
+
+        // store without losing any stored screenings.
+
+        if (!db.objectStoreNames.contains("daily_checkins")) {
+          const checkInStore = db.createObjectStore("daily_checkins", {
+            keyPath: "id",
+          })
+
+          checkInStore.createIndex("by-member", "memberId")
         }
       },
     })

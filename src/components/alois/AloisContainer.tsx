@@ -18,6 +18,8 @@ import AloisMedicationTracker from "./AloisMedicationTracker"
 
 import AloisDailyCare from "./AloisDailyCare"
 
+import AloisDailyCheckIn from "./AloisDailyCheckIn"
+
 import AloisDoctorBookingModal from "./AloisDoctorBookingModal"
 
 import AloisCognitiveBoosterModal from "./AloisCognitiveBoosterModal"
@@ -181,6 +183,15 @@ export default function AloisContainer({
           <AloisMedicationTracker
             onBack={() => setActiveTab("home")}
             onOpenSettings={() => setActiveTab("profile")}
+            fontFamily={fontFamily}
+          />
+        )}
+
+        {activeTab === "dailyCheckIn" && (
+          <AloisDailyCheckIn
+            patientName={patientName}
+            assistedMode={isAssisted}
+            onBack={() => setActiveTab("home")}
             fontFamily={fontFamily}
           />
         )}
