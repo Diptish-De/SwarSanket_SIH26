@@ -52,8 +52,6 @@ interface AloisDailyCheckInProps {
 
   memberId?: string | null
 
-  language?: string
-
   /** True when a family member, not the patient, is holding the device. */
   assistedMode?: boolean
 
@@ -78,8 +76,6 @@ export default function AloisDailyCheckIn({
   patientName,
 
   memberId = null,
-
-  language = "en",
 
   assistedMode = false,
 
@@ -116,9 +112,17 @@ export default function AloisDailyCheckIn({
 
   const [alreadyDone, setAlreadyDone] = useState(false)
 
-  const recorderRef = useRef(new VoiceRecorder())
+  const recorderRef = useRef<VoiceRecorder | null>(null)
+
+  const recorder = () => {
+    if (!recorderRef.current) recorderRef.current = new VoiceRecorder()
+
+    return recorderRef.current
+  }
 
   const mountedRef = useRef(true)
+
+  const stoppingRef = useRef(false)
 
   const informantItem = informantItemForDate(todayKey)
 
@@ -127,6 +131,10 @@ export default function AloisDailyCheckIn({
 
     return () => {
       mountedRef.current = false
+
+      // Leaving mid-recording must not leave the microphone open. stop() also
+      // tears down the audio graph and the media stream.
+      recorderRef.current?.stop().catch(() => undefined)
     }
   }, [])
 
@@ -206,18 +214,26 @@ export default function AloisDailyCheckIn({
   }
 
   const finishRecording = useCallback(async () => {
+    // The auto-stop effect and the button can both fire within the same tick;
+    // a second stop() on an inactive recorder throws.
+    if (stoppingRef.current) return
+
+    stoppingRef.current = true
+
     setIsRecording(false)
 
     let result: AudioRecordingResult
 
     try {
-      result = await recorderRef.current.stop()
+      result = await recorder().stop()
     } catch (err) {
       setRecordError(
         err instanceof Error
           ? err.message
           : "The recording could not be saved.",
       )
+
+      stoppingRef.current = false
 
       return
     }
@@ -253,10 +269,11 @@ export default function AloisDailyCheckIn({
     setStep(assistedMode ? "informant" : "done")
 
     try {
+      // No language is sent: the backend uses the language Whisper detected.
+      // Forcing the app's UI language would score, say, Hindi speech against
+      // English lexicons instead of returning it unscored.
       const handle = await submitScreeningJob(result.blob, "daily.webm", {
         task: "daily",
-
-        params: { language },
       })
 
       const res = await followScreeningJob<TaskJobResponse>(handle)
@@ -312,7 +329,7 @@ export default function AloisDailyCheckIn({
     } finally {
       if (mountedRef.current) setScoring(false)
     }
-  }, [assistedMode, language, memberId, orientationAnswers, persist, todayKey])
+  }, [assistedMode, memberId, orientationAnswers, persist, todayKey])
 
   // Auto-stop at the cap.
   useEffect(() => {
@@ -326,8 +343,10 @@ export default function AloisDailyCheckIn({
 
     setElapsed(0)
 
+    stoppingRef.current = false
+
     try {
-      await recorderRef.current.start((level) => setMicLevel(level))
+      await recorder().start((level) => setMicLevel(level))
 
       setIsRecording(true)
     } catch (err) {
