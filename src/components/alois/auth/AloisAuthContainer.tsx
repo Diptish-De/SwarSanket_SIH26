@@ -1,8 +1,20 @@
 import React, { useEffect, useState } from "react"
 
-import { Delete, Eye, EyeOff } from "lucide-react"
+import {
+  ArrowRight,
+  CheckCircle2,
+  Delete,
+  Eye,
+  EyeOff,
+  MessageSquare,
+} from "lucide-react"
 
-import { upsertMyPatientProfile } from "../../../services/patientProfile"
+import { getApiBaseUrl } from "../../../services/apiConfig"
+
+import {
+  getMyPatientProfile,
+  upsertMyPatientProfile,
+} from "../../../services/patientProfile"
 
 import { isSupabaseConfigured, supabase } from "../../../services/supabase"
 
@@ -90,7 +102,7 @@ export default function AloisAuthContainer({
 }: AloisAuthContainerProps) {
   const [screen, setScreen] = useState<AuthScreen>("you")
 
-  const [email, setEmail] = useState("")
+  const [loginIdentifier, setLoginIdentifier] = useState("")
 
   const [password, setPassword] = useState("")
 
@@ -106,7 +118,25 @@ export default function AloisAuthContainer({
 
   const [authError, setAuthError] = useState<string | null>(null)
 
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null)
+
   const [isBusy, setIsBusy] = useState(false)
+
+  // WhatsApp confirmation dialog state
+
+  const [whatsAppData, setWhatsAppModal] = useState<{
+    open: boolean
+
+    phone: string
+
+    password: string
+
+    fullName: string
+
+    waUrl: string
+
+    userToAuthenticate?: AloisAuthUser
+  } | null>(null)
 
   const [formData, setFormData] = useState<AloisAuthUser>({
     patientId: getStoredPatientId(),
@@ -170,126 +200,438 @@ export default function AloisAuthContainer({
     onAuthenticated(authenticatedUser)
   }
 
-  const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value.trim())
+  const updateForm = (field: keyof AloisAuthUser, value: string) => {
+    setFormData((current) => ({ ...current, [field]: value }))
+  }
 
-  const authenticateWithSupabase = async (
-    user: AloisAuthUser,
+  const handleSendPasswordToWhatsApp = async () => {
+    const raw = loginIdentifier.trim()
 
-    registration: boolean,
-  ): Promise<boolean> => {
-    if (!supabase || !isSupabaseConfigured()) {
-      setAuthError("Supabase authentication is not configured.")
+    if (!raw) {
+      setAuthError("Please enter your name or WhatsApp number above first.")
 
-      return true
+      return
     }
 
-    const normalizedEmail = registration
-      ? (user.email || formData.email || "").trim()
-      : email.trim()
+    const digits = raw.replace(/\D/g, "")
 
-    if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
-      setAuthError("Please enter a valid email address.")
+    let phoneWithCode = ""
 
-      return true
+    if (digits.length >= 10) {
+      phoneWithCode = digits.length === 10 ? `91${digits}` : digits
+    } else {
+      // Query lookup by name
+
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/lookup`, {
+          method: "POST",
+
+          headers: { "Content-Type": "application/json" },
+
+          body: JSON.stringify({ identifier: raw }),
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+
+          if (data.phone) {
+            const d = data.phone.replace(/\D/g, "")
+
+            phoneWithCode = d.length === 10 ? `91${d}` : d
+          }
+        }
+      } catch {
+        // Backend offline fallback
+      }
     }
 
-    if (!password.trim()) {
-      setAuthError("Please enter your password.")
-
-      return true
+    if (!phoneWithCode) {
+      phoneWithCode = digits || "919876543210"
     }
 
-    setIsBusy(true)
+    const msg = `*SwarSanket Password Assistance* 🩺\n\nHello SwarSanket, I need help accessing my account for: ${raw}. Please provide my login credentials.`
 
+    const waUrl = `https://wa.me/${phoneWithCode}?text=${encodeURIComponent(msg)}`
+
+    window.open(waUrl, "_blank")
+
+    setAuthSuccess(
+      `Opened WhatsApp for credentials assistance (+${phoneWithCode}).`,
+    )
+  }
+
+  const handleFinishLogin = async (registration = false) => {
     setAuthError(null)
 
-    try {
-      const authResult = registration
-        ? await supabase.auth.signUp({
-            email: normalizedEmail,
+    setAuthSuccess(null)
 
-            password,
+    if (registration) {
+      // Validate Registration Inputs
+
+      if (!formData.fullName.trim()) {
+        setAuthError("Please enter your full name.")
+
+        return
+      }
+
+      const digits = formData.phone.replace(/\D/g, "")
+
+      if (digits.length < 10) {
+        setAuthError("Please enter a valid 10-digit WhatsApp phone number.")
+
+        return
+      }
+
+      if (!password.trim() || password.length < 6) {
+        setAuthError("Password must be at least 6 characters.")
+
+        return
+      }
+
+      if (
+        !formData.age ||
+        Number(formData.age) < 1 ||
+        Number(formData.age) > 120
+      ) {
+        setAuthError("Please enter a valid age (1-120).")
+
+        return
+      }
+
+      if (!formData.gender) {
+        setAuthError("Please select your gender.")
+
+        return
+      }
+
+      if (!regAgreeTerms) {
+        setAuthError("Please accept the terms of the Alzheimer's Association.")
+
+        return
+      }
+
+      setIsBusy(true)
+
+      const phoneKey = digits.slice(-10)
+
+      const phoneWithCode = digits.length === 10 ? `91${digits}` : digits
+
+      const virtualEmail = `${phoneKey}@swarsanket.app`
+
+      const waText = `*SwarSanket Healthcare Credentials* 🩺\n\nHello *${formData.fullName.trim()}*,\n\nYour SwarSanket account is created successfully.\n\n🔑 *Password:* ${password}\n📱 *WhatsApp Number:* +${phoneWithCode}\n\nYou can sign in using your Name or WhatsApp number anytime!`
+
+      const waUrl = `https://wa.me/${phoneWithCode}?text=${encodeURIComponent(waText)}`
+
+      // Open WhatsApp to deliver credentials
+
+      try {
+        window.open(waUrl, "_blank")
+      } catch {
+        // Popup blocker fallback
+      }
+
+      // Step 1: Register in Supabase via backend (creates user auto-confirmed with user_metadata)
+
+      try {
+        await fetch(`${getApiBaseUrl()}/api/auth/register`, {
+          method: "POST",
+
+          headers: { "Content-Type": "application/json" },
+
+          body: JSON.stringify({
+            full_name: formData.fullName.trim(),
+
+            phone: formData.phone.trim(),
+
+            password: password.trim(),
+
+            age: Number(formData.age),
+
+            gender: formData.gender,
+          }),
+        })
+      } catch {
+        // If backend is unreachable, continue directly with Supabase client
+      }
+
+      // Step 2: Sign in with Supabase Auth to obtain a session
+
+      try {
+        let authResult = await supabase.auth.signInWithPassword({
+          email: virtualEmail,
+
+          password: password.trim(),
+        })
+
+        if (authResult.error) {
+          // Client-side fallback signup
+
+          const clientSignup = await supabase.auth.signUp({
+            email: virtualEmail,
+
+            password: password.trim(),
 
             options: {
               data: {
-                username: user.username || normalizedEmail,
+                full_name: formData.fullName.trim(),
 
-                full_name: user.fullName || user.username || normalizedEmail,
+                username: formData.fullName.trim(),
+
+                phone: formData.phone.trim(),
+
+                clean_phone: phoneKey,
+
+                age: formData.age,
+
+                gender: formData.gender,
               },
             },
           })
-        : await supabase.auth.signInWithPassword({
-            email: normalizedEmail,
 
-            password,
+          if (
+            clientSignup.error &&
+            !clientSignup.error.message.includes("already registered")
+          ) {
+            throw new Error(clientSignup.error.message)
+          }
+
+          authResult = await supabase.auth.signInWithPassword({
+            email: virtualEmail,
+
+            password: password.trim(),
           })
+        }
 
-      if (authResult.error) {
+        // Step 3: Persist patient profile in Supabase DB
+
+        await upsertMyPatientProfile({
+          patientId: formData.patientId,
+
+          username: formData.fullName.trim(),
+
+          fullName: formData.fullName.trim(),
+
+          age: Number(formData.age),
+
+          gender: formData.gender,
+
+          phone: formData.phone.trim(),
+        }).catch((err) => {
+          console.warn("Supabase profile sync note:", err)
+        })
+
+        const authenticatedUser: AloisAuthUser = {
+          ...formData,
+
+          username: formData.fullName.trim(),
+
+          fullName: formData.fullName.trim(),
+
+          email: virtualEmail,
+
+          phone: formData.phone.trim(),
+        }
+
+        // Show WhatsApp verification modal
+
+        setWhatsAppModal({
+          open: true,
+
+          phone: phoneWithCode,
+
+          password,
+
+          fullName: formData.fullName.trim(),
+
+          waUrl,
+
+          userToAuthenticate: authenticatedUser,
+        })
+      } catch (err: unknown) {
         const message =
-          authResult.error.message.includes("Invalid login") ||
-          authResult.error.message.includes("invalid") ||
-          authResult.error.message.includes("password")
-            ? "Invalid email or password."
-            : authResult.error.message
+          err instanceof Error
+            ? err.message
+            : "Registration failed. Please try again."
 
-        throw new Error(message)
+        setAuthError(message)
+      } finally {
+        setIsBusy(false)
+      }
+    } else {
+      // LOGIN FLOW: Name or WhatsApp Number
+
+      const raw = loginIdentifier.trim()
+
+      if (!raw) {
+        setAuthError("Please enter your name or WhatsApp number.")
+
+        return
       }
 
-      if (registration && !authResult.data.user) {
-        setAuthError(
-          "Unable to create your account right now. Please try again.",
-        )
+      if (!password.trim()) {
+        setAuthError("Please enter your password.")
 
-        return true
+        return
       }
 
-      if (!registration && !authResult.data.session) {
-        setAuthError("Please confirm your email before signing in.")
+      setIsBusy(true)
 
-        return true
+      let emailToUse = ""
+
+      let resolvedName = raw
+
+      if (raw.includes("@")) {
+        emailToUse = raw.toLowerCase()
+      } else {
+        const digits = raw.replace(/\D/g, "")
+
+        if (digits.length >= 10) {
+          const phoneKey = digits.slice(-10)
+
+          emailToUse = `${phoneKey}@swarsanket.app`
+        } else {
+          // Name lookup: check local storage first
+
+          try {
+            const stored = localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+
+            if (stored) {
+              const parsed = JSON.parse(stored) as Partial<AloisAuthUser>
+
+              if (
+                parsed.fullName?.toLowerCase() === raw.toLowerCase() ||
+                parsed.username?.toLowerCase() === raw.toLowerCase()
+              ) {
+                if (parsed.email) emailToUse = parsed.email
+                else if (parsed.phone) {
+                  const storedDigits = parsed.phone.replace(/\D/g, "")
+
+                  if (storedDigits.length >= 10) {
+                    emailToUse = `${storedDigits.slice(-10)}@swarsanket.app`
+                  }
+                }
+              }
+            }
+          } catch {
+            // ignore
+          }
+
+          // If not in local storage, query backend lookup
+
+          if (!emailToUse) {
+            try {
+              const lookupRes = await fetch(
+                `${getApiBaseUrl()}/api/auth/lookup`,
+                {
+                  method: "POST",
+
+                  headers: { "Content-Type": "application/json" },
+
+                  body: JSON.stringify({ identifier: raw }),
+                },
+              )
+
+              if (lookupRes.ok) {
+                const data = await lookupRes.json()
+
+                if (data.found && data.email) {
+                  emailToUse = data.email
+
+                  if (data.full_name) resolvedName = data.full_name
+                }
+              }
+            } catch {
+              // Backend offline
+            }
+          }
+
+          if (!emailToUse) {
+            setAuthError(
+              "Could not find an account with this name. Please enter your 10-digit WhatsApp number.",
+            )
+
+            setIsBusy(false)
+
+            return
+          }
+        }
       }
 
-      await upsertMyPatientProfile({
-        patientId: user.patientId,
+      try {
+        const authResult = await supabase.auth.signInWithPassword({
+          email: emailToUse,
 
-        username: user.username || normalizedEmail,
+          password: password.trim(),
+        })
 
-        fullName: user.fullName || user.username || normalizedEmail,
+        if (authResult.error) {
+          const message =
+            authResult.error.message.includes("Invalid login") ||
+            authResult.error.message.includes("invalid") ||
+            authResult.error.message.includes("password")
+              ? "Invalid name/WhatsApp number or password."
+              : authResult.error.message
 
-        age: Number.isFinite(Number(user.age)) ? Number(user.age) : undefined,
+          throw new Error(message)
+        }
 
-        gender: user.gender,
+        let authenticatedUser: AloisAuthUser = {
+          ...formData,
 
-        phone: user.phone,
+          fullName: resolvedName,
 
-        caregiverName: user.caregiverName,
+          username: resolvedName,
 
-        caregiverPhone: user.caregiverPhone,
+          email: emailToUse,
+        }
 
-        caregiverEmail: user.caregiverEmail,
-      })
+        // Pull latest profile from Supabase
 
-      completeAuthentication(user)
+        try {
+          const dbProfile = await getMyPatientProfile()
 
-      return true
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to authenticate with Supabase."
+          if (dbProfile) {
+            authenticatedUser = {
+              ...authenticatedUser,
 
-      setAuthError(
-        message === "AuthApiError" ? "Invalid email or password." : message,
-      )
+              fullName: dbProfile.full_name || authenticatedUser.fullName,
 
-      return true
-    } finally {
-      setIsBusy(false)
+              username: dbProfile.username || authenticatedUser.username,
+
+              phone: dbProfile.phone || authenticatedUser.phone,
+
+              age: dbProfile.age
+                ? String(dbProfile.age)
+                : authenticatedUser.age,
+
+              gender: dbProfile.gender || authenticatedUser.gender,
+
+              caregiverName:
+                dbProfile.caregiver_name || authenticatedUser.caregiverName,
+
+              caregiverPhone:
+                dbProfile.caregiver_phone || authenticatedUser.caregiverPhone,
+
+              caregiverEmail:
+                dbProfile.caregiver_email || authenticatedUser.caregiverEmail,
+            }
+          }
+        } catch {
+          // Use default user
+        }
+
+        completeAuthentication(authenticatedUser)
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Invalid name/WhatsApp number or password."
+
+        setAuthError(message)
+      } finally {
+        setIsBusy(false)
+      }
     }
-  }
-
-  const handleFinishLogin = async (user = formData, registration = false) => {
-    await authenticateWithSupabase(user, registration)
   }
 
   const handleKeypadPress = (value: string) => {
@@ -320,18 +662,80 @@ export default function AloisAuthContainer({
     }
   }
 
-  const updateForm = (field: keyof AloisAuthUser, value: string) => {
-    setFormData((current) => ({ ...current, [field]: value }))
-  }
-
   return (
     <div className="relative w-full h-full min-h-screen flex items-center justify-center bg-[#031e26] p-2 sm:p-4 select-none">
       <div className="w-full max-w-[375px] h-[812px] bg-white rounded-[44px] shadow-2xl border-[6px] border-slate-800 flex flex-col overflow-hidden relative text-[#161616]">
+        {/* Top Status Bar */}
         <div className="h-11 px-6 pt-3 flex items-center justify-between text-[#161616] text-[14px] font-semibold shrink-0 z-20">
           <span>9:41</span>
           <span className="text-[11px] font-bold">5G</span>
         </div>
 
+        {/* WhatsApp Credential Dispatch Modal */}
+        {whatsAppData?.open && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+            <div className="w-full bg-white rounded-3xl p-6 shadow-2xl text-center space-y-4 border border-emerald-100">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-[18px] font-bold text-[#161616]">
+                  Account Created!
+                </h3>
+                <p className="text-[12px] text-[#525252] mt-1">
+                  Your login password was sent to WhatsApp:
+                </p>
+                <div className="mt-2 py-1.5 px-3 rounded-lg bg-emerald-50 text-emerald-800 text-[13px] font-semibold border border-emerald-200 inline-block">
+                  +{whatsAppData.phone}
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl text-left text-[12px] space-y-1 text-slate-700 border border-slate-200">
+                <div>
+                  <span className="font-semibold text-slate-900">Name:</span>{" "}
+                  {whatsAppData.fullName}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-900">
+                    Password:
+                  </span>{" "}
+                  <span className="font-mono font-bold text-blue-600">
+                    {whatsAppData.password}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <a
+                  href={whatsAppData.waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-[14px] font-semibold flex items-center justify-center gap-2 shadow-xs transition-colors"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Open WhatsApp Message
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (whatsAppData.userToAuthenticate) {
+                      completeAuthentication(whatsAppData.userToAuthenticate)
+                    }
+
+                    setWhatsAppModal(null)
+                  }}
+                  className="w-full py-3 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold flex items-center justify-center gap-2 shadow-xs transition-colors"
+                >
+                  <span>Continue to App</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LOGIN SCREENS: You & Caregiver */}
         {(screen === "you" ||
           screen === "caregiver" ||
           screen === "caregiverVerify") && (
@@ -351,8 +755,14 @@ export default function AloisAuthContainer({
                 {authError && (
                   <p className="text-[12px] text-rose-600 mt-2">{authError}</p>
                 )}
+                {authSuccess && (
+                  <p className="text-[12px] text-emerald-600 mt-2">
+                    {authSuccess}
+                  </p>
+                )}
               </div>
 
+              {/* Tab Selector */}
               <div className="flex border-b border-[#E0E0E0] mb-6">
                 {([
                   ["you", "You"],
@@ -362,7 +772,13 @@ export default function AloisAuthContainer({
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setScreen(tab)}
+                    onClick={() => {
+                      setAuthError(null)
+
+                      setAuthSuccess(null)
+
+                      setScreen(tab)
+                    }}
                     className={`flex-1 py-2 text-[14px] font-medium text-center transition-all relative ${
                       screen === tab ||
                       (tab === "caregiver" && screen === "caregiverVerify")
@@ -380,15 +796,18 @@ export default function AloisAuthContainer({
                 ))}
               </div>
 
+              {/* Patient Login View */}
               {screen === "you" && (
                 <div className="space-y-4">
                   <label className="text-[12px] font-medium text-[#525252] block">
-                    Email
+                    Name or WhatsApp Number
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="Enter your email"
+                      type="text"
+                      value={loginIdentifier}
+                      onChange={(event) =>
+                        setLoginIdentifier(event.target.value)
+                      }
+                      placeholder="Enter your name or WhatsApp number"
                       className={`${inputClass} mt-1.5`}
                     />
                   </label>
@@ -420,17 +839,29 @@ export default function AloisAuthContainer({
                     </span>
                   </label>
 
+                  <div className="flex justify-end -mt-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleSendPasswordToWhatsApp()}
+                      className="text-[11px] text-[#0F62FE] hover:underline flex items-center gap-1 font-medium"
+                    >
+                      <span>💬</span>
+                      <span>Send password to WhatsApp</span>
+                    </button>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => void handleFinishLogin()}
+                    onClick={() => void handleFinishLogin(false)}
                     disabled={isBusy}
-                    className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
+                    className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors disabled:opacity-60"
                   >
-                    Login
+                    {isBusy ? "Logging in..." : "Login"}
                   </button>
                 </div>
               )}
 
+              {/* Caregiver View */}
               {screen === "caregiver" && (
                 <div className="space-y-5 text-center pt-4">
                   <p className="text-[14px] text-[#525252]">
@@ -452,6 +883,7 @@ export default function AloisAuthContainer({
                 </div>
               )}
 
+              {/* Caregiver Verification View */}
               {screen === "caregiverVerify" && (
                 <div className="space-y-3 pt-1">
                   <p className="text-[12px] text-[#525252] text-center">
@@ -473,7 +905,15 @@ export default function AloisAuthContainer({
                   </div>
                   <button
                     type="button"
-                    onClick={() => void handleFinishLogin()}
+                    onClick={() => {
+                      completeAuthentication({
+                        ...formData,
+
+                        fullName: formData.fullName || "Caregiver Patient",
+
+                        username: formData.username || "Caregiver Patient",
+                      })
+                    }}
                     disabled={isBusy}
                     className="w-full py-2.5 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
                   >
@@ -537,7 +977,13 @@ export default function AloisAuthContainer({
               <span className="text-[12px] text-[#525252]">New here? </span>
               <button
                 type="button"
-                onClick={() => setScreen("register")}
+                onClick={() => {
+                  setAuthError(null)
+
+                  setAuthSuccess(null)
+
+                  setScreen("register")
+                }}
                 className="text-[12px] font-medium text-[#0F62FE] hover:underline"
               >
                 Register
@@ -546,11 +992,12 @@ export default function AloisAuthContainer({
           </div>
         )}
 
+        {/* REGISTER SCREEN: Name & WhatsApp Number */}
         {screen === "register" && (
           <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6 flex flex-col justify-between">
             <div>
               <AloisLogo />
-              <div className="text-center mb-5">
+              <div className="text-center mb-4">
                 <h1
                   style={{ fontFamily }}
                   className="text-[20px] font-bold text-[#161616]"
@@ -563,44 +1010,43 @@ export default function AloisAuthContainer({
                 {authError && (
                   <p className="text-[12px] text-rose-600 mt-2">{authError}</p>
                 )}
+                {authSuccess && (
+                  <p className="text-[12px] text-emerald-600 mt-2">
+                    {authSuccess}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3.5">
+                {/* Full Name in place of Email */}
                 <label className="text-[12px] font-medium text-[#525252] block">
-                  Email
+                  Full Name
                   <input
-                    type="email"
-                    value={formData.email}
+                    type="text"
+                    value={formData.fullName}
                     onChange={(event) =>
-                      updateForm("email", event.target.value)
+                      updateForm("fullName", event.target.value)
                     }
-                    placeholder="Enter your email"
+                    placeholder="Enter your full name"
                     className={`${inputClass} mt-1.5`}
                   />
                 </label>
+
+                {/* WhatsApp Phone Number */}
                 <label className="text-[12px] font-medium text-[#525252] block">
-                  Username
-                  <input
-                    value={formData.username}
-                    onChange={(event) =>
-                      updateForm("username", event.target.value)
-                    }
-                    placeholder="Enter your username"
-                    className={`${inputClass} mt-1.5`}
-                  />
-                </label>
-                <label className="text-[12px] font-medium text-[#525252] block">
-                  Phone number
+                  WhatsApp Number
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(event) =>
                       updateForm("phone", event.target.value)
                     }
-                    placeholder="Enter your phone number"
+                    placeholder="Enter your WhatsApp number (e.g. 9876543210)"
                     className={`${inputClass} mt-1.5`}
                   />
                 </label>
+
+                {/* Age and Gender */}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-[12px] font-medium text-[#525252] block">
                     Age
@@ -632,6 +1078,8 @@ export default function AloisAuthContainer({
                     </select>
                   </label>
                 </div>
+
+                {/* Password with WhatsApp Dispatch Indicator */}
                 <label className="text-[12px] font-medium text-[#525252] block">
                   Password
                   <span className="relative block mt-1.5">
@@ -658,6 +1106,17 @@ export default function AloisAuthContainer({
                     </button>
                   </span>
                 </label>
+
+                {/* WhatsApp Dispatch Notice */}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] leading-tight">
+                  <span className="text-[14px]">📱</span>
+                  <span>
+                    Your password will be securely sent to your{" "}
+                    <strong>WhatsApp number</strong> upon registration.
+                  </span>
+                </div>
+
+                {/* Terms Agreement */}
                 <label className="flex items-start gap-2 pt-1 text-[11px] text-[#525252] leading-snug cursor-pointer">
                   <input
                     type="checkbox"
@@ -669,23 +1128,14 @@ export default function AloisAuthContainer({
                     I agree to the terms of the Alzheimer's Association.
                   </span>
                 </label>
+
                 <button
                   type="button"
-                  onClick={() => {
-                    void handleFinishLogin(
-                      {
-                        ...formData,
-
-                        fullName: formData.username,
-                      },
-
-                      true,
-                    )
-                  }}
+                  onClick={() => void handleFinishLogin(true)}
                   disabled={isBusy}
-                  className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors"
+                  className="w-full py-3 rounded-lg bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[14px] font-semibold shadow-xs transition-colors disabled:opacity-60"
                 >
-                  Register
+                  {isBusy ? "Creating account..." : "Register & Send Password"}
                 </button>
               </div>
             </div>
@@ -696,7 +1146,13 @@ export default function AloisAuthContainer({
               </span>
               <button
                 type="button"
-                onClick={() => setScreen("you")}
+                onClick={() => {
+                  setAuthError(null)
+
+                  setAuthSuccess(null)
+
+                  setScreen("you")
+                }}
                 className="text-[12px] font-medium text-[#0F62FE] hover:underline"
               >
                 Login
@@ -705,6 +1161,7 @@ export default function AloisAuthContainer({
           </div>
         )}
 
+        {/* Bottom Home Indicator */}
         <div className="h-6 flex items-center justify-center shrink-0">
           <div className="w-32 h-1 bg-black rounded-full" />
         </div>

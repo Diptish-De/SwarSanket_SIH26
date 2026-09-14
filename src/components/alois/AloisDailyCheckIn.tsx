@@ -136,7 +136,9 @@ export default function AloisDailyCheckIn({
       mountedRef.current = false
 
       // Leaving mid-recording must not leave the microphone open. stop() also
+
       // tears down the audio graph and the media stream.
+
       recorderRef.current?.stop().catch(() => undefined)
     }
   }, [])
@@ -225,7 +227,9 @@ export default function AloisDailyCheckIn({
 
   const finishRecording = useCallback(async () => {
     // The auto-stop effect and the button can both fire within the same tick;
+
     // a second stop() on an inactive recorder throws.
+
     if (stoppingRef.current) return
 
     stoppingRef.current = true
@@ -282,8 +286,11 @@ export default function AloisDailyCheckIn({
 
     try {
       // No language is sent: the backend uses the language Whisper detected.
+
       // Forcing the app's UI language would score, say, Hindi speech against
+
       // English lexicons instead of returning it unscored.
+
       const handle = await submitScreeningJob(result.blob, "daily.webm", {
         task: "daily",
       })

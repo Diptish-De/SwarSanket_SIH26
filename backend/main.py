@@ -41,6 +41,20 @@ class PatientProfilePayload(BaseModel):
     caregiver_phone: Optional[str] = None
     caregiver_email: Optional[str] = None
 
+
+class RegisterPayload(BaseModel):
+    full_name: str
+    phone: str
+    password: str
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    caregiver_name: Optional[str] = None
+    caregiver_phone: Optional[str] = None
+
+
+class LookupPayload(BaseModel):
+    identifier: str
+
 # Configure CORS: support ALLOWED_ORIGINS env var for production frontend domains (comma-separated),
 # while preserving standard local development origins.
 raw_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "")
@@ -149,6 +163,131 @@ def update_my_patient_profile(
         raise HTTPException(status_code=503, detail="Patient profile service is unavailable.")
 
     return profile
+
+
+@app.post("/api/auth/register")
+def register_patient_user(payload: RegisterPayload):
+    """Registers a patient user directly in Supabase Auth with auto-confirmed status and metadata."""
+    digits = "".join(ch for ch in payload.phone if ch.isdigit())
+    if not digits:
+        raise HTTPException(status_code=400, detail="A valid phone number is required.")
+
+    phone_key = digits[-10:] if len(digits) >= 10 else digits
+    virtual_email = f"{phone_key}@swarsanket.app"
+
+    if not supabase_service.is_configured():
+        raise HTTPException(status_code=503, detail="Supabase service is unavailable.")
+
+    try:
+        user_res = supabase_service.client.auth.admin.create_user({
+            "email": virtual_email,
+            "password": payload.password,
+            "email_confirm": True,
+            "user_metadata": {
+                "full_name": payload.full_name,
+                "phone": payload.phone,
+                "clean_phone": phone_key,
+                "age": payload.age,
+                "gender": payload.gender,
+                "caregiver_name": payload.caregiver_name,
+                "caregiver_phone": payload.caregiver_phone,
+            },
+        })
+        created_user = getattr(user_res, "user", None) or user_res
+        user_id = str(getattr(created_user, "id", "") or created_user.get("id"))
+
+        # Also mirror profile data in Supabase
+        supabase_service.get_or_create_authenticated_profile(
+            user_id,
+            {
+                "full_name": payload.full_name,
+                "phone": payload.phone,
+                "age": payload.age,
+                "gender": payload.gender,
+                "caregiver_name": payload.caregiver_name,
+                "caregiver_phone": payload.caregiver_phone,
+            },
+        )
+
+        return {
+            "status": "success",
+            "email": virtual_email,
+            "user_id": user_id,
+            "message": "User registered in Supabase.",
+        }
+    except Exception as e:
+        err_str = str(e)
+        if "already registered" in err_str.lower() or "already exists" in err_str.lower():
+            # Update password and metadata for existing user so they can sign in
+            try:
+                users_list = supabase_service.client.auth.admin.list_users()
+                target = next((u for u in users_list if getattr(u, "email", "") == virtual_email), None)
+                if target:
+                    supabase_service.client.auth.admin.update_user_by_id(
+                        target.id,
+                        {
+                            "password": payload.password,
+                            "user_metadata": {
+                                "full_name": payload.full_name,
+                                "phone": payload.phone,
+                                "clean_phone": phone_key,
+                                "age": payload.age,
+                                "gender": payload.gender,
+                            },
+                        },
+                    )
+                    return {
+                        "status": "updated",
+                        "email": virtual_email,
+                        "user_id": target.id,
+                        "message": "Credentials updated in Supabase.",
+                    }
+            except Exception as upd_err:
+                logger.warning(f"Could not update user: {upd_err}")
+            raise HTTPException(status_code=409, detail="This WhatsApp number is already registered. Please sign in.")
+        logger.error(f"Supabase user creation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Registration failed: {err_str}")
+
+
+@app.post("/api/auth/lookup")
+def lookup_patient_user(payload: LookupPayload):
+    """Resolves an identifier (name or WhatsApp phone number) to a login email."""
+    raw = payload.identifier.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Identifier is required.")
+
+    if "@" in raw:
+        return {"found": True, "email": raw.lower()}
+
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if len(digits) >= 10:
+        phone_key = digits[-10:]
+        return {"found": True, "email": f"{phone_key}@swarsanket.app", "phone": digits}
+
+    # Search by full_name in Supabase users
+    if supabase_service.is_configured():
+        try:
+            users_res = supabase_service.client.auth.admin.list_users()
+            for u in users_res:
+                meta = getattr(u, "user_metadata", {}) or {}
+                fn = str(meta.get("full_name", "")).strip().lower()
+                ph = str(meta.get("phone", "")).strip().lower()
+                clean_p = str(meta.get("clean_phone", "")).strip().lower()
+                target_raw = raw.lower()
+                if target_raw == fn or target_raw == ph or target_raw == clean_p or (len(target_raw) >= 3 and target_raw in fn):
+                    return {
+                        "found": True,
+                        "email": getattr(u, "email", None),
+                        "full_name": meta.get("full_name"),
+                        "phone": meta.get("phone"),
+                    }
+        except Exception as e:
+            logger.warning(f"Lookup failed: {e}")
+
+    if digits:
+        return {"found": True, "email": f"{digits}@swarsanket.app"}
+
+    return {"found": False, "detail": "User not found."}
 
 
 @app.get("/api/supabase/my-screenings")

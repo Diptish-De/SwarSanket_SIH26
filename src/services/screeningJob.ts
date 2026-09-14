@@ -406,7 +406,9 @@ export async function submitScreeningJob(
       }
 
       // A 404 on the route itself means an older server, not a bad request.
+
       // The endpoint's own 404 names a recording id, so the two are distinct.
+
       if (
         response.status === 404 &&
         !detail.toLowerCase().includes("recording")
@@ -778,10 +780,15 @@ export async function runScreeningJob(
     handle = await submitScreeningJob(blob, filename, options)
   } catch (err) {
     // Deploy skew: this browser has the new client, the server does not have
+
     // the job endpoint yet. The old synchronous endpoint returns the identical
+
     // payload, so a screening still works. It holds one long request open,
+
     // which is the thing the job pipeline exists to avoid, so this is a
+
     // fallback and not a second supported path.
+
     if (err instanceof JobEndpointMissingError && task === "picture") {
       console.warn(
         "[SwarSanket] Screening server has no job endpoint; using the synchronous one.",
