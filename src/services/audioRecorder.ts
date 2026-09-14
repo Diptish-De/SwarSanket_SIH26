@@ -2,12 +2,15 @@
 
 import { VoiceQualityGrade } from "../types"
 
+import { getSupabaseAccessToken } from "./supabase"
+
 /**
  * Minimum recording length the backend will score. Kept in step with
  * MIN_SPEECH_SECONDS_FOR_SCORING in backend/screening_engine.py so a clip
  * that is going to be refused is refused here, instantly, instead of after a
  * multi-minute upload and transcription.
  */
+
 export const MIN_RECORDING_SECONDS = 30
 
 export interface AudioRecordingResult {
@@ -656,11 +659,17 @@ export async function uploadAudioToBackend(
 
   formData.append("audio", blob, targetFilename)
 
+  const accessToken = await getSupabaseAccessToken()
+
   try {
     const response = await fetch(targetEndpoint, {
       method: "POST",
 
       body: formData,
+
+      headers: accessToken
+        ? { Authorization: `Bearer ${accessToken}` }
+        : undefined,
     })
 
     if (!response.ok) {
@@ -687,6 +696,26 @@ export async function analyzeAudioWithBackend(
   filename?: string,
 
   timeoutMs = 240000,
+
+  patient?: {
+    patientId: string
+
+    username?: string
+
+    fullName?: string
+
+    age?: number
+
+    gender?: string
+
+    phone?: string
+
+    caregiverName?: string
+
+    caregiverPhone?: string
+
+    caregiverEmail?: string
+  },
 ): Promise<ScreeningApiResponse> {
   const baseUrl = getApiBaseUrl()
 
@@ -714,7 +743,37 @@ export async function analyzeAudioWithBackend(
 
   formData.append("audio", blob, targetFilename)
 
+  if (patient?.patientId) {
+    formData.append("patient_id", patient.patientId)
+
+    if (patient.username) formData.append("patient_username", patient.username)
+
+    if (patient.fullName) formData.append("patient_name", patient.fullName)
+
+    if (patient.age !== undefined) {
+      formData.append("patient_age", String(patient.age))
+    }
+
+    if (patient.gender) formData.append("patient_gender", patient.gender)
+
+    if (patient.phone) formData.append("patient_phone", patient.phone)
+
+    if (patient.caregiverName) {
+      formData.append("caregiver_name", patient.caregiverName)
+    }
+
+    if (patient.caregiverPhone) {
+      formData.append("caregiver_phone", patient.caregiverPhone)
+    }
+
+    if (patient.caregiverEmail) {
+      formData.append("caregiver_email", patient.caregiverEmail)
+    }
+  }
+
   const controller = new AbortController()
+
+  const accessToken = await getSupabaseAccessToken()
 
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -723,6 +782,10 @@ export async function analyzeAudioWithBackend(
       method: "POST",
 
       body: formData,
+
+      headers: accessToken
+        ? { Authorization: `Bearer ${accessToken}` }
+        : undefined,
 
       signal: controller.signal,
     })
@@ -773,8 +836,11 @@ export async function analyzeAudioWithBackend(
       message.includes("NetworkError")
     ) {
       // A 502 from the hosting proxy carries no CORS headers, so the browser
+
       // reports it as a network failure. Do not tell the person their
+
       // connection is broken when it is the server that did not answer.
+
       message = `The screening server did not respond. It may be restarting or overloaded - please wait a minute and try again. On a phone, also check your connection or the server address in Settings.`
     }
 

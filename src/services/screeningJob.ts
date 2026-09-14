@@ -1,21 +1,39 @@
 // ─── Asynchronous screening job client ───────────────────────────────────────
+
 //
+
 // A screening is a job, not a request. The phone uploads the clip once
+
 // (POST /api/screenings, a few seconds), gets a recording_id back, and then
+
 // follows the job's row in the Supabase `recordings` table. Two transports run
+
 // side by side and the first to deliver a terminal state wins:
+
 //
+
 //   1. Supabase Realtime: a websocket subscription to UPDATEs on that one row,
+
 //      pushed the moment the worker writes a new stage. This is the live path.
+
 //   2. HTTP polling of GET /api/screenings/{id} every few seconds, so a blocked
+
 //      websocket, a missing anon key or a flaky Realtime connection degrade to
+
 //      "slightly less live" instead of "stuck".
+
 //
+
 // Neither path ever holds a long HTTP request open, which is what let the
+
 // hosting proxy's 100 second cap kill screenings in the previous design.
+
 //
+
 // The same job endpoint scores the standardized tasks (animal fluency, delayed
+
 // recall, sustained vowel) when a `task` is passed; those jobs are submitted as
+
 // soon as each recording is reviewed and collected at the end of the session.
 
 import {
@@ -207,11 +225,17 @@ export interface ScreeningJobHandle {
 
 const STAGE_ORDER: ScreeningJobStage[] = [
   "queued",
+
   "uploading",
+
   "transcribing",
+
   "extracting",
+
   "scoring",
+
   "completed",
+
   "failed",
 ]
 
@@ -224,9 +248,13 @@ export const SERVER_UNREACHABLE_MESSAGE =
 function toAnalysisStep(stage: string): AnalysisStep | null {
   switch (stage) {
     case "queued":
+
     case "uploading":
+
     case "transcribing":
+
     case "extracting":
+
     case "scoring":
       return stage
 
@@ -423,7 +451,9 @@ export function followScreeningJob<T = ScreeningApiResponse>(
 ): Promise<T> {
   const {
     onProgress,
+
     overallTimeoutMs = 600000,
+
     pollIntervalMs = 4000,
   } = options
 
@@ -440,6 +470,7 @@ export function followScreeningJob<T = ScreeningApiResponse>(
 
     const deadline = setTimeout(
       () => finish(new Error(SERVER_SLOW_MESSAGE)),
+
       overallTimeoutMs,
     )
 
@@ -469,6 +500,7 @@ export function followScreeningJob<T = ScreeningApiResponse>(
     }
 
     // Stages may arrive from two transports slightly out of step; never let a
+
     // late poll response move the display backwards.
 
     const report = (
@@ -489,9 +521,13 @@ export function followScreeningJob<T = ScreeningApiResponse>(
       if (step) {
         onProgress?.({
           stage: step,
+
           queuePosition,
+
           transport,
+
           recordingId,
+
           task,
         })
       }
@@ -501,9 +537,13 @@ export function followScreeningJob<T = ScreeningApiResponse>(
       if (preferred === "realtime" && realtimeCfg) {
         try {
           const { data } = await getSupabaseClient(realtimeCfg)
+
             .from(realtimeCfg.table)
+
             .select("prediction_result")
+
             .eq(realtimeCfg.id_column, recordingId)
+
             .maybeSingle<RecordingRow<T>>()
 
           if (data?.prediction_result) return data.prediction_result
@@ -550,6 +590,7 @@ export function followScreeningJob<T = ScreeningApiResponse>(
       if (status !== "completed") return false
 
       // Realtime trims oversized rows; fetch the result explicitly then.
+
       const full = result ?? (await fetchResult(transport))
 
       if (full) {
@@ -574,7 +615,9 @@ export function followScreeningJob<T = ScreeningApiResponse>(
         const client = getSupabaseClient(realtimeCfg)
 
         channel = client
+
           .channel(`screening-${recordingId}`)
+
           .on(
             "postgres_changes",
 
@@ -606,15 +649,18 @@ export function followScreeningJob<T = ScreeningApiResponse>(
               )
             },
           )
+
           .subscribe((status, err) => {
             if (status === "SUBSCRIBED") {
               console.log(
                 "[SwarSanket] Realtime subscribed to recording",
+
                 recordingId,
               )
             } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
               console.warn(
                 "[SwarSanket] Realtime unavailable, polling instead:",
+
                 err?.message ?? status,
               )
             }
@@ -622,6 +668,7 @@ export function followScreeningJob<T = ScreeningApiResponse>(
       } catch (err) {
         console.warn(
           "[SwarSanket] Realtime setup failed, polling instead:",
+
           err,
         )
 
@@ -649,6 +696,7 @@ export function followScreeningJob<T = ScreeningApiResponse>(
           }
         } else if (res.status === 404) {
           // The worker restarted and forgot the job before Supabase had the row.
+
           finish(new Error(SERVER_SLOW_MESSAGE))
 
           return
