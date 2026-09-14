@@ -10,6 +10,7 @@ import { getSupabaseAccessToken } from "./supabase"
  * that is going to be refused is refused here, instantly, instead of after a
  * multi-minute upload and transcription.
  */
+
 export const MIN_RECORDING_SECONDS = 30
 
 export interface AudioRecordingResult {
@@ -835,8 +836,11 @@ export async function analyzeAudioWithBackend(
       message.includes("NetworkError")
     ) {
       // A 502 from the hosting proxy carries no CORS headers, so the browser
+
       // reports it as a network failure. Do not tell the person their
+
       // connection is broken when it is the server that did not answer.
+
       message = `The screening server did not respond. It may be restarting or overloaded - please wait a minute and try again. On a phone, also check your connection or the server address in Settings.`
     }
 

@@ -150,6 +150,7 @@ export interface ScreeningSession {
   id: string
 
   /** Stable cloud patient profile, absent on older local/demo records. */
+
   patientId?: string
 
   patientName: string

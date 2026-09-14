@@ -59,6 +59,7 @@ function createPatientId(): string {
 function getStoredPatientId(): string {
   try {
     const stored = localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+
     const user = stored ? JSON.parse(stored) as Partial<AloisAuthUser> : null
 
     return user?.patientId || createPatientId()
@@ -173,10 +174,12 @@ export default function AloisAuthContainer({
 
   const authenticateWithSupabase = async (
     user: AloisAuthUser,
+
     registration: boolean,
   ): Promise<boolean> => {
     if (!supabase || !isSupabaseConfigured()) {
       setAuthError("Supabase authentication is not configured.")
+
       return true
     }
 
@@ -186,31 +189,38 @@ export default function AloisAuthContainer({
 
     if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
       setAuthError("Please enter a valid email address.")
+
       return true
     }
 
     if (!password.trim()) {
       setAuthError("Please enter your password.")
+
       return true
     }
 
     setIsBusy(true)
+
     setAuthError(null)
 
     try {
       const authResult = registration
         ? await supabase.auth.signUp({
             email: normalizedEmail,
+
             password,
+
             options: {
               data: {
                 username: user.username || normalizedEmail,
+
                 full_name: user.fullName || user.username || normalizedEmail,
               },
             },
           })
         : await supabase.auth.signInWithPassword({
             email: normalizedEmail,
+
             password,
           })
 
@@ -226,28 +236,41 @@ export default function AloisAuthContainer({
       }
 
       if (registration && !authResult.data.user) {
-        setAuthError("Unable to create your account right now. Please try again.")
+        setAuthError(
+          "Unable to create your account right now. Please try again.",
+        )
+
         return true
       }
 
       if (!registration && !authResult.data.session) {
         setAuthError("Please confirm your email before signing in.")
+
         return true
       }
 
       await upsertMyPatientProfile({
         patientId: user.patientId,
+
         username: user.username || normalizedEmail,
+
         fullName: user.fullName || user.username || normalizedEmail,
+
         age: Number.isFinite(Number(user.age)) ? Number(user.age) : undefined,
+
         gender: user.gender,
+
         phone: user.phone,
+
         caregiverName: user.caregiverName,
+
         caregiverPhone: user.caregiverPhone,
+
         caregiverEmail: user.caregiverEmail,
       })
 
       completeAuthentication(user)
+
       return true
     } catch (error) {
       const message =
@@ -255,7 +278,10 @@ export default function AloisAuthContainer({
           ? error.message
           : "Unable to authenticate with Supabase."
 
-      setAuthError(message === "AuthApiError" ? "Invalid email or password." : message)
+      setAuthError(
+        message === "AuthApiError" ? "Invalid email or password." : message,
+      )
+
       return true
     } finally {
       setIsBusy(false)
@@ -462,16 +488,27 @@ export default function AloisAuthContainer({
                   <div className="grid grid-cols-3 gap-1 pt-2">
                     {[
                       "1",
+
                       "2",
+
                       "3",
+
                       "4",
+
                       "5",
+
                       "6",
+
                       "7",
+
                       "8",
+
                       "9",
+
                       "",
+
                       "0",
+
                       "backspace",
                     ].map((key, index) =>
                       key ? (
@@ -534,7 +571,9 @@ export default function AloisAuthContainer({
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(event) => updateForm("email", event.target.value)}
+                    onChange={(event) =>
+                      updateForm("email", event.target.value)
+                    }
                     placeholder="Enter your email"
                     className={`${inputClass} mt-1.5`}
                   />
@@ -636,8 +675,10 @@ export default function AloisAuthContainer({
                     void handleFinishLogin(
                       {
                         ...formData,
+
                         fullName: formData.username,
                       },
+
                       true,
                     )
                   }}

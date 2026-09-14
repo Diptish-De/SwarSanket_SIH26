@@ -2317,7 +2317,9 @@ function t(lang: string, key: string): string {
   }
 
   // English before the raw key: an untranslated string is readable, a
+
   // bare identifier like "tapMicrophone" is not.
+
   return (locale[key] ?? TX.en?.[key] ?? key).normalize("NFC")
 }
 
@@ -2445,20 +2447,28 @@ const TASK_PROMPTS: Record<string, Partial<Record<RecordingContext, string>>> =
  * 30-second floor; the standardized tasks have their own lengths, and the
  * timed ones stop themselves so the clock, not the person, ends them.
  */
+
 interface TaskRecordingRule {
   minSeconds: number
+
   maxSeconds: number | null
+
   autoStop: boolean
 }
 
 const TASK_RULES: Partial<Record<RecordingContext, TaskRecordingRule>> = {
   pictureDesc: {
     minSeconds: MIN_RECORDING_SECONDS,
+
     maxSeconds: null,
+
     autoStop: false,
   },
+
   phonation: { minSeconds: 2, maxSeconds: 25, autoStop: true },
+
   fluency: { minSeconds: 45, maxSeconds: 60, autoStop: true },
+
   recall: { minSeconds: 2, maxSeconds: 30, autoStop: true },
 }
 
@@ -2466,17 +2476,23 @@ function taskRule(ctx: RecordingContext): TaskRecordingRule {
   return (
     TASK_RULES[ctx] ?? {
       minSeconds: MIN_RECORDING_SECONDS,
+
       maxSeconds: null,
+
       autoStop: false,
     }
   )
 }
 
 /** Step numbers for the header: vowel, picture, five words, animals, recall. */
+
 const BATTERY_STEP: Partial<Record<RecordingContext, number>> = {
   phonation: 1,
+
   pictureDesc: 2,
+
   fluency: 4,
+
   recall: 5,
 }
 
@@ -2486,10 +2502,13 @@ function batteryHint(lang: string, ctx: RecordingContext): string | null {
   switch (ctx) {
     case "phonation":
       return t(lang, "batteryPhonationHint")
+
     case "fluency":
       return t(lang, "batteryFluencyHint")
+
     case "recall":
       return t(lang, "batteryRecallHint")
+
     default:
       return null
   }
@@ -3796,6 +3815,7 @@ function CheckProgress({ step, total }: CheckProgressProps) {
           className="h-1.5 rounded-full transition-all duration-300"
           style={{
             width: i === step ? 24 : 8,
+
             backgroundColor: i <= step ? "#0F62FE" : "#E0E0E0",
           }}
         />
@@ -4106,8 +4126,11 @@ function SwarSanketApp({
   const [jobTransport, setJobTransport] = useState<JobTransport | null>(null)
 
   // Standardized task jobs are submitted as each recording is reviewed and
+
   // collected once the model result is in. The picture clip is kept apart
+
   // because the later tasks overwrite the "last recording".
+
   const pictureBlobRef = useRef<Blob | null>(null)
 
   const pictureDurationRef = useRef<number | null>(null)
@@ -4390,7 +4413,9 @@ function SwarSanketApp({
       }
 
       // The duration-based quality grade only means something for the
+
       // picture task; a three-second recall answer is a complete answer.
+
       if (
         recordingContext === "pictureDesc" &&
         (res.quality === "poor" || res.quality === "low")
@@ -4405,8 +4430,11 @@ function SwarSanketApp({
   }
 
   // Timed tasks end themselves: 60 s for animal fluency, capped vowel and
+
   // recall clips. handleFinishRecording flips isRecording first, so this
+
   // cannot fire twice for one clip.
+
   useEffect(() => {
     const rule = taskRule(recordingContext)
 
@@ -4418,6 +4446,7 @@ function SwarSanketApp({
     ) {
       handleFinishRecording()
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingSecs, isRecording, recordingContext])
 
@@ -4436,8 +4465,11 @@ function SwarSanketApp({
   }
 
   // Submits a standardized task the moment its recording is reviewed. The
+
   // job queues behind whatever the worker is doing and is collected later,
+
   // so the person never waits for it.
+
   const queueBatteryTask = (ctx: RecordingContext, blob: Blob | null) => {
     const task =
       ctx === "phonation" || ctx === "fluency" || ctx === "recall" ? ctx : null
@@ -4448,40 +4480,60 @@ function SwarSanketApp({
 
     if (task === "recall") {
       params.target_words = getTaskPrompt(lang, "memoryRecall")
+
         .split(",")
+
         .map((w) => w.trim())
+
         .filter(Boolean)
     }
 
     const failed = (message: string): BatteryTaskRecord => ({
       task,
+
       status: "failed",
+
       scored: false,
+
       score: null,
+
       flag: null,
+
       threshold: "",
+
       reference: "",
+
       note: "",
+
       error: message,
     })
 
     const job = submitScreeningJob(
       blob,
+
       `${task}${getExtensionForBlob(blob)}`,
+
       {
         task,
+
         params,
       },
     )
+
       .then((handle) => followScreeningJob<TaskJobResponse>(handle))
+
       .then(
         (res): BatteryTaskRecord => ({
           ...res.battery,
+
           task,
+
           status: "completed",
+
           transcript: res.transcript,
         }),
       )
+
       .catch((err: unknown) =>
         failed(err instanceof Error ? err.message : "Could not be scored."),
       )
@@ -4494,12 +4546,16 @@ function SwarSanketApp({
   const collectBatteryResults = async (): Promise<BatteryTaskRecord[]> => {
     const order: BatteryTaskRecord["task"][] = [
       "phonation",
+
       "fluency",
+
       "recall",
     ]
 
     const jobs = order
+
       .map((t) => batteryJobsRef.current[t])
+
       .filter((j): j is Promise<BatteryTaskRecord> => Boolean(j))
 
     if (jobs.length === 0) return []
@@ -4510,17 +4566,27 @@ function SwarSanketApp({
 
     if (settled === null) {
       return order
+
         .filter((t) => batteryJobsRef.current[t])
+
         .map(
           (t): BatteryTaskRecord => ({
             task: t,
+
             status: "failed",
+
             scored: false,
+
             score: null,
+
             flag: null,
+
             threshold: "",
+
             reference: "",
+
             note: "",
+
             error: "Timed out waiting for the score.",
           }),
         )
@@ -4555,7 +4621,9 @@ function SwarSanketApp({
     }
 
     // Same floor the backend enforces. Refusing here costs nothing; refusing
+
     // after upload costs the person a multi-minute wait for the same answer.
+
     const recordedSeconds =
       pictureDurationRef.current ??
       getLastAudioRecordingResult()?.durationSeconds ??
@@ -4564,13 +4632,20 @@ function SwarSanketApp({
     if (recordedSeconds > 0 && recordedSeconds < MIN_RECORDING_SECONDS) {
       setScreeningApiResult({
         success: false,
+
         sample_sufficient: false,
+
         sample_requirements: {
           // Word count is only known after transcription; null keeps the
+
           // screen from printing a fabricated zero.
+
           words_recorded: null,
+
           words_required: 40,
+
           seconds_recorded: Math.round(recordedSeconds),
+
           seconds_required: MIN_RECORDING_SECONDS,
         },
       } as unknown as ScreeningApiResponse)
@@ -4612,16 +4687,23 @@ function SwarSanketApp({
       setJobTransport(null)
 
       // Upload once, then follow the job over Supabase Realtime (with HTTP
+
       // polling as the fallback). No request stays open long enough for the
+
       // hosting proxy to cut it off, so a 60-second clip can take the time
+
       // it takes.
+
       let apiResult = await runScreeningJob(audioBlob, "voice_check.webm", {
         onProgress: (p) => {
           setAnalysisStep(p.stage)
 
-        240000,
+          setJobQueuePosition(p.queuePosition)
 
-        patientId
+          setJobTransport(p.transport)
+        },
+
+        params: patientId
           ? {
               patientId,
 
@@ -4644,7 +4726,17 @@ function SwarSanketApp({
               caregiverEmail: patientProfile.caregiverEmail,
             }
           : undefined,
-      )
+      })
+
+      // The standardized tasks were queued on the same worker before this
+
+      // job, so they are normally already scored; collecting them is quick.
+
+      setAnalysisStep("battery")
+
+      const battery = await collectBatteryResults()
+
+      setBatteryResults(battery)
 
       console.log("[SwarSanket] Analysis complete")
 
@@ -4796,6 +4888,7 @@ function SwarSanketApp({
         tasks: [
           {
             // The model scored the picture clip whatever task came last.
+
             taskId: "pictureDesc",
 
             prompt: getTaskPrompt(lang, "pictureDesc"),
@@ -5572,7 +5665,9 @@ function SwarSanketApp({
               <div className="grid grid-cols-3 gap-3 w-full">
                 {[
                   { step: "01", key: "step1" },
+
                   { step: "02", key: "step2" },
+
                   { step: "03", key: "step3" },
                 ].map((s) => (
                   <div
@@ -5668,11 +5763,14 @@ function SwarSanketApp({
                   fontFamily={F.display}
                   onDone={(reading) => {
                     setNoiseReading(reading)
+
                     setShowNoiseCheck(false)
+
                     navigate("recording")
                   }}
                   onSkip={() => {
                     setShowNoiseCheck(false)
+
                     navigate("recording")
                   }}
                 />
@@ -5680,6 +5778,7 @@ function SwarSanketApp({
                 <Btn
                   label={t(lang, "startSpeaking")}
                   // One room check per session is enough.
+
                   onClick={() =>
                     noiseReading
                       ? navigate("recording")
@@ -5856,6 +5955,7 @@ function SwarSanketApp({
                   onClick={() => {
                     if (currentAudioUrl) {
                       const audio = new Audio(currentAudioUrl)
+
                       audio.play()
                     }
                   }}
@@ -5880,6 +5980,7 @@ function SwarSanketApp({
 
                     if (recordingContext === "pictureDesc") {
                       // Keep the model's clip apart from the later tasks.
+
                       pictureBlobRef.current = reviewedBlob
 
                       pictureDurationRef.current =
@@ -6011,6 +6112,7 @@ function SwarSanketApp({
                   label={t(lang, "iHeardWords")}
                   onClick={() => {
                     // Animal fluency doubles as the delay before recall.
+
                     setRecordingContext("fluency")
 
                     navigate("instruction")
@@ -9924,6 +10026,7 @@ export default function App() {
 
         return {
           ...profile,
+
           patientId: profile.patientId || createFallbackPatientId(),
         }
       } catch {
@@ -9947,7 +10050,9 @@ export default function App() {
     const hydrateAuthenticatedProfile = async (session: {
       user: {
         id: string
+
         email?: string
+
         user_metadata?: Record<string, unknown>
       }
     }) => {
@@ -9957,6 +10062,7 @@ export default function App() {
         if (!profile) {
           profile = await upsertMyPatientProfile({
             username: String(session.user.user_metadata?.username || ""),
+
             fullName: String(
               session.user.user_metadata?.full_name ||
                 session.user.email ||
@@ -9969,19 +10075,30 @@ export default function App() {
 
         const nextProfile: Partial<AloisAuthUser> = {
           patientId: profile.id,
+
           username: profile.username || "",
+
           fullName: profile.full_name,
+
           age: profile.age === null ? "" : String(profile.age),
+
           gender: profile.gender || "",
+
           phone: profile.phone || "",
+
           caregiverName: profile.caregiver_name || "",
+
           caregiverPhone: profile.caregiver_phone || "",
+
           caregiverEmail: profile.caregiver_email || "",
         }
 
         setAuthenticatedProfile(nextProfile)
+
         setAuthenticatedName(profile.full_name || "Participant")
+
         setPatientId(profile.id)
+
         setIsAuthenticated(true)
       } catch {
         if (alive) setIsAuthenticated(false)
@@ -9991,6 +10108,7 @@ export default function App() {
     void supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         setIsAuthenticated(false)
+
         return
       }
 
@@ -10002,6 +10120,7 @@ export default function App() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
         setIsAuthenticated(false)
+
         return
       }
 
@@ -10010,6 +10129,7 @@ export default function App() {
 
     return () => {
       alive = false
+
       subscription.unsubscribe()
     }
   }, [])
