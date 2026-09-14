@@ -173,6 +173,7 @@ def register_patient_user(payload: RegisterPayload):
         raise HTTPException(status_code=400, detail="A valid phone number is required.")
 
     phone_key = digits[-10:] if len(digits) >= 10 else digits
+    phone_with_code = f"91{phone_key}" if len(digits) == 10 else digits
     virtual_email = f"{phone_key}@swarsanket.app"
 
     if not supabase_service.is_configured():
@@ -180,11 +181,14 @@ def register_patient_user(payload: RegisterPayload):
 
     try:
         user_res = supabase_service.client.auth.admin.create_user({
+            "phone": phone_with_code,
+            "phone_confirm": True,
             "email": virtual_email,
-            "password": payload.password,
             "email_confirm": True,
+            "password": payload.password,
             "user_metadata": {
                 "full_name": payload.full_name,
+                "username": payload.full_name,
                 "phone": payload.phone,
                 "clean_phone": phone_key,
                 "age": payload.age,
@@ -221,11 +225,13 @@ def register_patient_user(payload: RegisterPayload):
             # Update password and metadata for existing user so they can sign in
             try:
                 users_list = supabase_service.client.auth.admin.list_users()
-                target = next((u for u in users_list if getattr(u, "email", "") == virtual_email), None)
+                target = next((u for u in users_list if getattr(u, "email", "") == virtual_email or getattr(u, "phone", "") == phone_with_code), None)
                 if target:
                     supabase_service.client.auth.admin.update_user_by_id(
                         target.id,
                         {
+                            "phone": phone_with_code,
+                            "phone_confirm": True,
                             "password": payload.password,
                             "user_metadata": {
                                 "full_name": payload.full_name,
