@@ -1,15 +1,26 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 
 import {
   Bell,
   Settings,
   Sparkles,
-  CheckSquare,
   ChevronRight,
   Mic,
   Activity,
   Check,
+  CalendarClock,
+  MessageSquareQuote,
+  Users,
+  Flame,
 } from "lucide-react"
+
+import {
+  computeTrend,
+  listCheckIns,
+  localDateKey,
+  type DailyCheckIn,
+  type DailyTrend,
+} from "../../services/dailyCheckIn"
 
 import { ScreeningSession } from "../../types"
 
@@ -36,7 +47,7 @@ interface AloisHomeDashboardProps {
 /**
  * Alois Home Screen — Simple, focused UI.
  * Main: Cognitive Booster (Voice Screening).
- * Secondary: Daily Care.
+ * Secondary: the daily check-in.
  * All extraneous sections (upcoming appointment, medications, appointments, events, news) removed.
  */
 
@@ -53,6 +64,34 @@ export default function AloisHomeDashboard({
 
   fontFamily = "'Outfit', sans-serif",
 }: AloisHomeDashboardProps) {
+  const [trend, setTrend] = useState<DailyTrend | null>(null)
+
+  const [today, setToday] = useState<DailyCheckIn | null>(null)
+
+  // Loaded here rather than passed down: the card is the only consumer, and it
+  // has to re-read after a check-in without the whole shell re-rendering.
+  useEffect(() => {
+    let cancelled = false
+
+    const todayKey = localDateKey()
+
+    listCheckIns()
+      .then((all) => {
+        if (cancelled) return
+
+        setTrend(computeTrend(all, todayKey))
+
+        setToday(all.find((c) => c.id === todayKey) ?? null)
+      })
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const doneToday = today != null && today.recall.status !== "skipped"
+
   const isNormal = latestSession?.mlResult?.screeningRisk === "low"
 
   const confidencePct = latestSession?.mlResult
@@ -209,32 +248,46 @@ export default function AloisHomeDashboard({
           )}
         </section>
 
-        {/* ─── 3. SECONDARY: Daily Care Section ────────────────────────── */}
+        {/* ─── 3. SECONDARY: Daily Check-in ──────────────────────────── */}
+        {/*
+          This slot used to hold a household-chore list. Chores belong in a
+          caregiving app; this one is for early detection, and the earliest
+          thing to change in Alzheimer's disease is memory for recent personal
+          events. So the daily slot asks about the person's actual day, and
+          reads it against their own earlier answers rather than a cut-off.
+        */}
         <section className="space-y-3 pt-2">
           <div className="flex items-center justify-between px-1">
             <h2
               style={{ fontFamily }}
               className="text-[14px] font-semibold text-[#525252] uppercase tracking-wider text-[11px]"
             >
-              Secondary Care
+              Every day
             </h2>
-            <button
-              type="button"
-              onClick={() => onSelectTab("dailyCare")}
-              className="text-[12px] font-medium text-[#0F62FE] hover:underline"
-            >
-              View all
-            </button>
+
+            {trend && trend.streak > 0 && (
+              <span className="text-[12px] font-semibold text-[#525252] flex items-center gap-1">
+                <Flame className="w-3.5 h-3.5 text-orange-500" />
+                {trend.streak} day{trend.streak === 1 ? "" : "s"} in a row
+              </span>
+            )}
           </div>
 
-          {/* Daily Care Card (Figma node styled) */}
           <div
-            onClick={() => onSelectTab("dailyCare")}
+            onClick={() => onSelectTab("dailyCheckIn")}
             className="w-full rounded-2xl bg-[#393939] text-white p-4 relative overflow-hidden shadow-[0_6px_16px_rgba(0,0,0,0.08)] cursor-pointer hover:bg-[#2e2e2e] active:scale-[0.99] transition-all group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-[52px] h-[52px] rounded-xl bg-[#42BE65] flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-                <CheckSquare className="w-6 h-6 text-white" />
+              <div
+                className={`w-[52px] h-[52px] rounded-xl flex items-center justify-center shadow-sm shrink-0 group-hover:scale-105 transition-transform ${
+                  doneToday ? "bg-[#42BE65]" : "bg-[#0F62FE]"
+                }`}
+              >
+                {doneToday ? (
+                  <Check className="w-6 h-6 text-white" />
+                ) : (
+                  <MessageSquareQuote className="w-6 h-6 text-white" />
+                )}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -242,57 +295,99 @@ export default function AloisHomeDashboard({
                   style={{ fontFamily }}
                   className="text-[16px] font-semibold text-white tracking-tight"
                 >
-                  Daily Care
+                  Daily check-in
                 </h3>
+
                 <p className="text-[12px] text-[#C6C6C6] mt-0.5">
-                  Daily plans, routines & household chores
+                  {doneToday
+                    ? "Done for today — thank you"
+                    : "About a minute. Tell us about your day."}
                 </p>
               </div>
 
-              <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center group-hover:bg-[#42BE65] transition-colors shrink-0">
+              <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center group-hover:bg-[#0F62FE] transition-colors shrink-0">
                 <ChevronRight className="w-4 h-4" />
               </div>
             </div>
           </div>
 
-          {/* Daily Care Quick Tasks Preview */}
-          <div className="space-y-2">
-            {[
-              { title: "Wash dishes after breakfast", done: true },
+          {/* What the check-in asks, or what it found once it is done. */}
+          {doneToday ? (
+            <div className="rounded-xl bg-white border border-[#E0E0E0] px-3.5 py-3 shadow-2xs space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[13px] font-medium text-[#161616]">
+                  {trend?.status === "building"
+                    ? `Building your baseline · ${trend.needed} more day${
+                        trend.needed === 1 ? "" : "s"
+                      }`
+                    : trend?.status === "typical"
+                      ? "Usual amount of detail for you"
+                      : trend?.status === "below"
+                        ? "Less detail than your usual"
+                        : "Recorded"}
+                </span>
 
-              { title: "Afternoon walking routine (15 mins)", done: false },
-
-              { title: "Evening hydration reminder", done: false },
-            ].map((task, idx) => (
-              <div
-                key={idx}
-                onClick={() => onSelectTab("dailyCare")}
-                className="w-full rounded-xl bg-white border border-[#E0E0E0] px-3.5 py-3 flex items-center justify-between shadow-2xs cursor-pointer hover:border-emerald-300 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-5 h-5 rounded-md flex items-center justify-center text-xs ${
-                      task.done
-                        ? "bg-[#42BE65] text-white"
-                        : "border border-slate-300 text-transparent"
-                    }`}
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
+                {trend && trend.status !== "building" && (
                   <span
-                    className={`text-[13px] font-medium ${
-                      task.done
-                        ? "text-slate-400 line-through"
-                        : "text-[#161616]"
+                    className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                      trend.status === "typical"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700"
                     }`}
                   >
-                    {task.title}
+                    {trend.recentMedian} vs {trend.baselineMedian}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[11px] text-[#8D8D8D] leading-snug">
+                Compared with your own earlier check-ins, never with other
+                people.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {[
+                {
+                  icon: CalendarClock,
+                  title: "Two quick questions",
+                  sub: "Day and month",
+                },
+
+                {
+                  icon: Mic,
+                  title: "Tell me about your day",
+                  sub: "About 40 seconds",
+                },
+
+                {
+                  icon: Users,
+                  title: "One question for family",
+                  sub: "Optional",
+                },
+              ].map((row) => (
+                <div
+                  key={row.title}
+                  onClick={() => onSelectTab("dailyCheckIn")}
+                  className="w-full rounded-xl bg-white border border-[#E0E0E0] px-3.5 py-3 flex items-center justify-between shadow-2xs cursor-pointer hover:border-[#0F62FE] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-lg bg-blue-50 text-[#0F62FE] flex items-center justify-center shrink-0">
+                      <row.icon className="w-3.5 h-3.5" />
+                    </span>
+
+                    <span className="text-[13px] font-medium text-[#161616]">
+                      {row.title}
+                    </span>
+                  </div>
+
+                  <span className="text-[11px] text-[#8D8D8D] shrink-0">
+                    {row.sub}
                   </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-[#8D8D8D]" />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

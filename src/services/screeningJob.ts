@@ -44,7 +44,7 @@ export type JobTransport = "http" | "realtime" | "poll"
 
 /** Backend task names (backend/task_scoring.py). */
 
-export type ScreeningTask = "picture" | "fluency" | "recall" | "phonation"
+export type ScreeningTask = "picture" | "fluency" | "recall" | "phonation" | "daily"
 
 export interface ScreeningJobProgress {
   stage: AnalysisStep
@@ -74,7 +74,17 @@ export interface BatteryTaskResult {
 
   score: number | null
 
+  /** Always null for the daily task: see reference_type. */
+
   flag: boolean | null
+
+  /**
+   * Absent on the standardized tasks, which have published cut-offs.
+   * "within_person" marks a measurement that is only meaningful against the
+   * same speaker's earlier recordings, so it must never be shown as a verdict.
+   */
+
+  reference_type?: "within_person"
 
   threshold: string
 

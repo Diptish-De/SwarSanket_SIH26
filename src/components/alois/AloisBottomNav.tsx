@@ -75,6 +75,7 @@ export default function AloisBottomNav({
           activeTab === tab.id ||
           (tab.id === "home" &&
             (activeTab === "dailyCare" ||
+              activeTab === "dailyCheckIn" ||
               activeTab === "medications" ||
               activeTab === "appointments" ||
               activeTab === "doctorInfo"))

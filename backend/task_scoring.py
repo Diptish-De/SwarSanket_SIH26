@@ -1,8 +1,8 @@
 """
 Standardized speech-task scoring
 ================================
-Three short tasks that sit beside the picture-description model and are scored
-against published reference values rather than by the classifier:
+Short tasks that sit beside the picture-description model and are scored against
+published reference values rather than by the classifier:
 
   fluency    Semantic verbal fluency, category "animals", 60 seconds.
              Score = number of distinct animals named. Tombaugh, Kozak & Rees
@@ -16,6 +16,11 @@ against published reference values rather than by the classifier:
              Montreal Cognitive Assessment delayed-recall format). In the MoCA
              validation sample (Nasreddine et al. 2005) healthy controls recalled
              a mean of 3.7 of 5, MCI 1.8, Alzheimer's 0.6. Two or fewer is flagged.
+
+  daily      Spoken account of the speaker's own day, scored for episodic detail
+             (see daily_recall.py). Unlike the three below it has no absolute
+             threshold and never carries a flag: it is read only against the
+             same speaker's earlier check-ins.
 
   phonation  Sustained vowel /a/. Maximum phonation time under 10 s is the usual
              clinical threshold for adults (Maslan et al. 2011 report healthy
@@ -50,7 +55,11 @@ from typing import Any, BinaryIO, Dict, Iterable, List, Optional, Set, Tuple, Un
 
 import numpy as np
 
-TASKS = ("picture", "fluency", "recall", "phonation")
+# Re-exported so every task scorer has one import site. Lives in its own
+# module because the method and its caveats need the room to be stated.
+from daily_recall import BASELINE_MIN_CHECKINS, score_daily_recall  # noqa: F401
+
+TASKS = ("picture", "fluency", "recall", "phonation", "daily")
 
 # ── thresholds ──────────────────────────────────────────────────────────────
 

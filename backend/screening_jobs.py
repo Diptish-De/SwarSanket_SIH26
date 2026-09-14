@@ -36,7 +36,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from supabase_service import supabase_service
-from task_scoring import TASKS, score_fluency, score_phonation, score_recall
+from task_scoring import (
+    TASKS,
+    score_daily_recall,
+    score_fluency,
+    score_phonation,
+    score_recall,
+)
 
 logger = logging.getLogger("swarsanket.jobs")
 
@@ -275,7 +281,12 @@ class ScreeningJobManager:
         tx = transcribe_for_task(str(saved_path))
         on_stage("scoring")
         language = (job["params"].get("language") or tx.get("detected_language") or "en")
-        if task == "fluency":
+        if task == "daily":
+            scored = score_daily_recall(
+                tx["transcript"], tx["words"], language,
+                float(tx["audio"].get("duration_seconds") or 0.0),
+            )
+        elif task == "fluency":
             scored = score_fluency(
                 tx["transcript"], tx["words"], language,
                 float(tx["audio"].get("duration_seconds") or 0.0),

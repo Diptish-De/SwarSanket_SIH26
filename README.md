@@ -393,15 +393,20 @@ curl http://localhost:8001/api/screenings/a1b2c3d4e5f6
 # … once completed, "result" carries the same object the synchronous endpoint returns.
 ```
 
-**Standardized task battery.** The same endpoint scores three short tasks that sit beside the model (`backend/task_scoring.py`); pass `task` and, where needed, a JSON `params` form field:
+**Standardized task battery.** The same endpoint scores four short tasks that sit beside the model (`backend/task_scoring.py`); pass `task` and, where needed, a JSON `params` form field:
 
 | `task` | Recording | Score | Flag (below typical) | Reference |
 |---|---|---|---|---|
 | `fluency` | name animals for 60 s | distinct animals | fewer than 12 | Tombaugh et al. 1999; Canning et al. 2004 |
 | `recall` | say the five words heard earlier (`params.target_words`) | words recalled of 5 | 2 or fewer | MoCA delayed recall, Nasreddine et al. 2005 |
 | `phonation` | hold "aaah" | maximum phonation time (s), jitter/shimmer/HNR | under 10 s, or two perturbation measures out of MDVP range | Maslan et al. 2011; Praat/MDVP thresholds |
+| `daily` | "tell me about your day", 40 s | internal (episodic) details, external details, specificity | **never flagged** — no published cut-off exists for an automated detail count | Autobiographical Interview, Levine et al. 2002 |
 
-Each result carries `scored`, `score`, `flag`, `threshold`, `reference`, `note` and `details`. Animal lexicons exist for `en` (reference) and `hi`/`bn` (provisional); other languages are transcribed but left unscored, and the response says so. The app reports the battery as "N of M in the typical range" beside the model's output and never blends it into the probability.
+Each result carries `scored`, `score`, `flag`, `threshold`, `reference`, `note` and `details`.
+
+`daily` is deliberately different from the other three. It powers the **daily check-in** (`src/components/alois/AloisDailyCheckIn.tsx`), not the one-off screening, and it returns `flag: null` with `reference_type: "within_person"`. A detail count has no population cut-off, so the app reads it only against the same speaker's own earlier check-ins: the median of their first five scored days, with a band 1.5 median-absolute-deviations wide. A single low day never means anything — sleep, mood and how much actually happened that day all move it. Detail scoring is English-only; other languages are transcribed and returned unscored.
+
+Animal lexicons for `fluency` exist for `en` (reference) and `hi`/`bn` (provisional); other languages are transcribed but left unscored, and the response says so. The app reports `fluency`, `recall` and `phonation` as "N of M in the typical range" beside the model's output and never blends them into the probability.
 
 The `realtime` block is present only when the backend has `SUPABASE_ANON_KEY` set; without it the web client polls. The realtime publication is enabled by the schema (`ALTER PUBLICATION supabase_realtime ADD TABLE public.recordings`).
 
