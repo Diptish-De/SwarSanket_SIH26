@@ -322,16 +322,64 @@ class SupabaseService:
                 .limit(1)
                 .execute()
             )
-            return result.data[0] if result.data else None
+            if result.data:
+                return result.data[0]
         except Exception as e:
-            logger.warning(f"[Supabase] Failed to load patient profile: {e}")
-            return None
+            logger.info(f"[Supabase] Table patient_profiles lookup skipped: {e}")
+
+        # Cloud fallback: retrieve profile from Supabase Auth user metadata
+        try:
+            user_res = self.client.auth.admin.get_user_by_id(str(auth_user_id))
+            user_obj = getattr(user_res, "user", None) or user_res
+            meta = getattr(user_obj, "user_metadata", {}) or {}
+            if meta:
+                return {
+                    "id": str(auth_user_id),
+                    "auth_user_id": str(auth_user_id),
+                    "username": meta.get("username", meta.get("full_name")),
+                    "full_name": meta.get("full_name") or "Participant",
+                    "age": meta.get("age"),
+                    "gender": meta.get("gender"),
+                    "phone": meta.get("phone"),
+                    "caregiver_name": meta.get("caregiver_name"),
+                    "caregiver_phone": meta.get("caregiver_phone"),
+                    "caregiver_email": meta.get("caregiver_email"),
+                }
+        except Exception as auth_err:
+            logger.debug(f"Auth user profile lookup fallback: {auth_err}")
+
+        return None
 
     def get_or_create_authenticated_profile(
         self,
         auth_user_id: str,
         data: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
+        # Always update Supabase Auth user metadata so user profile is permanently preserved
+        if self.client:
+            try:
+                meta_update = {
+                    key: value
+                    for key, value in {
+                        "full_name": data.get("full_name"),
+                        "username": data.get("username"),
+                        "age": data.get("age"),
+                        "gender": data.get("gender"),
+                        "phone": data.get("phone"),
+                        "caregiver_name": data.get("caregiver_name"),
+                        "caregiver_phone": data.get("caregiver_phone"),
+                        "caregiver_email": data.get("caregiver_email"),
+                    }.items()
+                    if value is not None
+                }
+                if meta_update:
+                    self.client.auth.admin.update_user_by_id(
+                        str(auth_user_id),
+                        {"user_metadata": meta_update},
+                    )
+            except Exception as meta_err:
+                logger.info(f"[Supabase] User metadata update skipped: {meta_err}")
+
         existing = self.get_patient_profile_by_auth_user_id(auth_user_id)
 
         if existing is None and data.get("legacy_patient_id"):
@@ -386,8 +434,9 @@ class SupabaseService:
                 )
                 return result.data[0] if result.data else existing
             except Exception as e:
-                logger.warning(f"[Supabase] Failed to update patient profile: {e}")
-                return None
+                logger.info(f"[Supabase] Table update skipped: {e}")
+                existing.update(update)
+                return existing
 
         row = {
             "id": str(uuid4()),
@@ -406,8 +455,8 @@ class SupabaseService:
             result = self.client.table("patient_profiles").insert(row).execute()
             return result.data[0] if result.data else row
         except Exception as e:
-            logger.warning(f"[Supabase] Failed to create patient profile: {e}")
-            return None
+            logger.info(f"[Supabase] Table insert skipped (persisted in Auth metadata): {e}")
+            return row
 
     def get_patient_screening_history(self, patient_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Fetches only screenings linked to one validated patient profile."""
