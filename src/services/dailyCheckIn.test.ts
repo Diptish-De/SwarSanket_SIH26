@@ -39,7 +39,7 @@ function check(cond: boolean, msg: string) {
 function day(
   date: string,
   internal: number | null,
-  opts: { orientation?: number; status?: DailyCheckIn["recall"]["status"] } = {},
+  opts: { orientation?: number status?: DailyCheckIn["recall"]["status"] } = {},
 ): DailyCheckIn {
   const status = opts.status ?? (internal === null ? "failed" : "completed")
 
@@ -58,7 +58,12 @@ function day(
 
     recall:
       status === "completed"
-        ? { status, internalDetails: internal ?? 0, externalDetails: 4, wordCount: 90 }
+        ? {
+            status,
+            internalDetails: internal ?? 0,
+            externalDetails: 4,
+            wordCount: 90,
+          }
         : { status },
   }
 }
@@ -116,7 +121,9 @@ function run() {
 
   t = computeTrend(oneBadDay, "2026-09-08")
 
-  console.log(`  after one bad day: recent=${t.recentMedian} status=${t.status}`)
+  console.log(
+    `  after one bad day: recent=${t.recentMedian} status=${t.status}`,
+  )
 
   check(
     t.status === "typical",
@@ -143,7 +150,10 @@ function run() {
     `  baseline=${t.baselineMedian} lower=${t.lowerBound} recent=${t.recentMedian}`,
   )
 
-  check(t.status === "below", "a sustained drop is reported as below the usual range")
+  check(
+    t.status === "below",
+    "a sustained drop is reported as below the usual range",
+  )
   check(
     t.baselineMedian !== null && t.recentMedian! < t.baselineMedian,
     "the two numbers shown to the user are baseline and recent",
@@ -165,7 +175,9 @@ function run() {
 
   t = computeTrend(identical, "2026-09-08")
 
-  console.log(`  lower=${t.lowerBound} recent=${t.recentMedian} status=${t.status}`)
+  console.log(
+    `  lower=${t.lowerBound} recent=${t.recentMedian} status=${t.status}`,
+  )
 
   check(
     t.status === "typical",
@@ -233,8 +245,14 @@ function run() {
   const qs = buildOrientationQuestions(new Date(2026, 8, 14)) // 14 Sep 2026, a Monday
 
   check(qs.length === 2, "two orientation questions are asked")
-  check(qs[0].expected === "Monday", `the weekday comes from the clock (${qs[0].expected})`)
-  check(qs[1].expected === "September", `the month comes from the clock (${qs[1].expected})`)
+  check(
+    qs[0].expected === "Monday",
+    `the weekday comes from the clock (${qs[0].expected})`,
+  )
+  check(
+    qs[1].expected === "September",
+    `the month comes from the clock (${qs[1].expected})`,
+  )
   check(
     qs.every((q) => q.options.length === 4 && q.options.includes(q.expected)),
     "each question offers four options including the right one",
@@ -260,7 +278,10 @@ function run() {
   )
 
   t = computeTrend(
-    [day("2026-09-07", 20, { orientation: 2 }), day("2026-09-08", 20, { orientation: 1 })],
+    [
+      day("2026-09-07", 20, { orientation: 2 }),
+      day("2026-09-08", 20, { orientation: 1 }),
+    ],
     "2026-09-08",
   )
 
@@ -273,8 +294,13 @@ function run() {
   console.log("\n[informant]")
 
   const week = [
-    "2026-09-14", "2026-09-15", "2026-09-16", "2026-09-17",
-    "2026-09-18", "2026-09-19", "2026-09-20",
+    "2026-09-14",
+    "2026-09-15",
+    "2026-09-16",
+    "2026-09-17",
+    "2026-09-18",
+    "2026-09-19",
+    "2026-09-20",
   ].map((d) => informantItemForDate(d).id)
 
   check(
@@ -306,7 +332,11 @@ function run() {
   )
 
   console.log(
-    `\n${failures.length === 0 ? `ALL ${passed} TREND CHECKS PASSED.` : `${failures.length} FAILED:\n  - ${failures.join("\n  - ")}`}`,
+    `\n${
+      failures.length === 0
+        ? `ALL ${passed} TREND CHECKS PASSED.`
+        : `${failures.length} FAILED:\n  - ${failures.join("\n  - ")}`
+    }`,
   )
 
   return failures.length
@@ -315,4 +345,6 @@ function run() {
 const failed = run()
 
 // Surfaced for the harness; browsers never load this file.
-;(globalThis as unknown as { __checkInTestFailures?: number }).__checkInTestFailures = failed
+;(globalThis as unknown as {
+  __checkInTestFailures?: number
+}).__checkInTestFailures = failed
