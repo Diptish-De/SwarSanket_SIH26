@@ -178,8 +178,11 @@ export async function lookupVerifiedSupabaseUser(
   identifier: string,
 ): Promise<{
   found: boolean
+
   email?: string
+
   fullName?: string
+
   phone?: string
 }> {
   const raw = identifier.trim()

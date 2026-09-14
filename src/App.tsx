@@ -150,6 +150,7 @@ import {
 
 import {
   ALOIS_USER_STORAGE_KEY,
+  ALOIS_AUTH_SESSION_KEY,
   AloisAuthUser,
 } from "./components/alois/auth/AloisAuthContainer"
 
@@ -10013,7 +10014,17 @@ function createFallbackPatientId(): string {
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      const activeSession =
+        localStorage.getItem(ALOIS_AUTH_SESSION_KEY) === "active" ||
+        localStorage.getItem("alois-auth-session") === "active"
+      const storedUser = localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+      return activeSession || !!storedUser
+    } catch {
+      return false
+    }
+  })
 
   const [authenticatedProfile, setAuthenticatedProfile] =
     useState<Partial<AloisAuthUser>>(() => {
@@ -10071,7 +10082,7 @@ export default function App() {
           })
         }
 
-        if (!alive) return
+        if (!alive || !profile) return
 
         const nextProfile: Partial<AloisAuthUser> = {
           patientId: profile.id,
@@ -10093,22 +10104,46 @@ export default function App() {
           caregiverEmail: profile.caregiver_email || "",
         }
 
-        setAuthenticatedProfile(nextProfile)
+        setAuthenticatedProfile((prev) => {
+          const merged = { ...prev, ...nextProfile }
+          try {
+            localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(merged))
+            localStorage.setItem(ALOIS_AUTH_SESSION_KEY, "active")
+          } catch {
+            // Ignore
+          }
+          return merged
+        })
 
-        setAuthenticatedName(profile.full_name || "Participant")
+        if (profile.full_name) {
+          setAuthenticatedName(profile.full_name)
+        }
 
-        setPatientId(profile.id)
+        if (profile.id) {
+          setPatientId(profile.id)
+        }
 
         setIsAuthenticated(true)
       } catch {
-        if (alive) setIsAuthenticated(false)
+        // DO NOT log out on network or API failure!
+        // The user remains authenticated until they explicitly click logout.
       }
     }
 
     void supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        setIsAuthenticated(false)
-
+        // Keep authenticated if local session exists
+        try {
+          const hasLocalSession =
+            localStorage.getItem(ALOIS_AUTH_SESSION_KEY) === "active" ||
+            localStorage.getItem("alois-auth-session") === "active" ||
+            !!localStorage.getItem(ALOIS_USER_STORAGE_KEY)
+          if (!hasLocalSession) {
+            setIsAuthenticated(false)
+          }
+        } catch {
+          // ignore
+        }
         return
       }
 
@@ -10118,13 +10153,23 @@ export default function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || !session) {
-        setIsAuthenticated(false)
-
+      if (event === "SIGNED_OUT") {
+        try {
+          const hasLocalSession =
+            localStorage.getItem(ALOIS_AUTH_SESSION_KEY) === "active" ||
+            localStorage.getItem("alois-auth-session") === "active"
+          if (!hasLocalSession) {
+            setIsAuthenticated(false)
+          }
+        } catch {
+          setIsAuthenticated(false)
+        }
         return
       }
 
-      void hydrateAuthenticatedProfile(session)
+      if (session) {
+        void hydrateAuthenticatedProfile(session)
+      }
     })
 
     return () => {
@@ -10195,14 +10240,20 @@ export default function App() {
   }
 
   const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut()
-    }
-
     try {
+      localStorage.removeItem(ALOIS_AUTH_SESSION_KEY)
       localStorage.removeItem("alois-auth-session")
+      localStorage.removeItem(ALOIS_USER_STORAGE_KEY)
     } catch {
       // Ignore
+    }
+
+    if (supabase) {
+      try {
+        await supabase.auth.signOut()
+      } catch {
+        // Ignore
+      }
     }
 
     clearSession()
@@ -10219,7 +10270,9 @@ export default function App() {
       <AloisAuthContainer
         onAuthenticated={(user) => {
           try {
+            localStorage.setItem(ALOIS_AUTH_SESSION_KEY, "active")
             localStorage.setItem("alois-auth-session", "active")
+            localStorage.setItem(ALOIS_USER_STORAGE_KEY, JSON.stringify(user))
           } catch {
             // Ignore localStorage errors
           }
