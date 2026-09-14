@@ -23,7 +23,7 @@ someone who has not seen the code, including an evaluator checking claims.
 | 7 | Performance evaluation | **Done** | `benchmark_baselines.py` reports ROC-AUC, PR-AUC, accuracy, sensitivity, specificity, F1 and MCC, under two split protocols, averaged over seeds. Results in `docs/benchmark_results.json`. | — |
 | 8 | Benchmark against purely classical baselines | **Done** | Logistic regression, RBF SVM, random forest and XGBoost, on the identical split, features and preprocessing as the quantum arm. See §2. | — |
 | 9 | Computational efficiency benchmark | **Done** | Fit time and inference time per sample recorded for every arm in the same run. End-to-end pipeline latency in §4. | — |
-| 10 | Generalization performance | **Done** | Measured honestly for the first time by fixing the split defect in §3, and broken down by disease severity in §2.3. | — |
+| 10 | Generalization performance | **Done** | Measured honestly for the first time by fixing the split defect in §3, and broken down by disease severity in §2.4. | — |
 | 11 | Scalable, near-term hardware compatible | Partial | Eight qubits and three entangling layers run on `default.qubit` and fit the width of current NISQ devices. Never executed on physical hardware. | Optional hardware run |
 | 12 | Comprehensive documentation | **Done** | This file, `README.md`, and `docs/MODEL_PROVENANCE_AUDIT.md`. | — |
 
@@ -41,10 +41,37 @@ Every arm sees the identical split, the identical 22 features and the identical
 preprocessing. The quantum arm imports its architecture from `model_loader`, so
 the thing being benchmarked is the thing that ships.
 
-Numbers are written to `docs/benchmark_results.json`. See §2.1 of that file for
-the current run.
+### 2.1 Result
 
-### 2.1 What the comparison is for
+Five seeds, mean ROC-AUC. Full output in `docs/benchmark_results.json`.
+
+| Model | AUC, leaky split | AUC, grouped split | Sensitivity | Specificity | Fit time |
+|---|---|---|---|---|---|
+| Logistic Regression | 0.880 | 0.871 | 0.806 | 0.801 | 0.01 s |
+| SVM (RBF) | 0.929 | 0.880 | 0.815 | 0.780 | 0.02 s |
+| Random Forest | 0.979 | 0.887 | 0.786 | 0.810 | 0.42 s |
+| XGBoost | 0.987 | 0.873 | 0.766 | 0.829 | 0.16 s |
+| **Quantum Hybrid (8-qubit VQC)** | **0.967** | **0.876** | **0.807** | **0.787** | **76.29 s** |
+
+Two things follow, and both are reported rather than worked around.
+
+**The leak was worth roughly a tenth of an AUC point.** Every arm fell when the
+recording key was respected. The tree models fell furthest, which is what one
+would expect from models able to memorise near-duplicate rows. The previously
+published figure of 0.943 was measured under the leaky protocol and belongs in
+the left-hand column, not the right.
+
+**On a clean split no model is meaningfully ahead.** The five arms land between
+0.871 and 0.887, inside one standard deviation of each other (0.027 to 0.064
+across seeds). The hybrid sits mid-pack at 0.876. At 22 tabular features this is
+the expected outcome: there is no high-dimensional structure here for a quantum
+kernel to exploit, and the classical baselines are strong.
+
+**The hybrid costs about 200 times more to train** than random forest and roughly
+7,000 times more than logistic regression, for equal accuracy. Inference stays
+sub-second, so the cost falls on training rather than on the user.
+
+### 2.2 What the comparison is for
 
 Objective 3 of the problem statement asks whether the hybrid model improves on
 classical baselines. That question only has a meaningful answer on a split that
@@ -52,20 +79,30 @@ does not leak, which is why §3 exists. Quoting a hybrid score measured on the
 leaking split against classical scores measured on a clean one would not be a
 comparison.
 
-### 2.2 Reporting rule adopted
+### 2.3 Reporting rule adopted
 
 If the classical baselines match or beat the hybrid at 22 tabular features, that
 is reported as the result. The problem statement asks for a benchmark, not for a
 particular outcome, and 22 features is a scale at which a quantum advantage is
 not expected on theoretical grounds.
 
-### 2.3 Severity breakdown
+### 2.4 Severity breakdown
 
 Separating advanced disease from healthy controls is not evidence of *early*
 detection. The corpus carries an `mmse` column, so discrimination is reported
 separately for positive cases with MMSE at or above 21, which is the closest
 available proxy for the early case this product claims to catch. Controls are
 kept intact; only the positive group is restricted.
+
+| Severity of the positive cases | AUC, grouped split |
+|---|---|
+| Mild, MMSE 21 or above | 0.810 |
+| Moderate or worse, MMSE below 21 | 0.866 |
+
+The signal survives on the mild cases, weaker but present. That is the first
+evidence in this project that speaks to *early* detection rather than to
+separating advanced disease from health. It rests on about 41 test rows, so the
+interval around it is wide.
 
 ---
 
