@@ -36,7 +36,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from supabase_service import supabase_service
-from screening_engine import run_screening_pipeline, transcribe_for_task
 from task_scoring import (
     TASKS,
     score_daily_recall,
@@ -257,6 +256,13 @@ class ScreeningJobManager:
         on_stage = lambda stage: self._set(job, stage)  # noqa: E731
 
         if task == "picture":
+            # Imported here, not at module scope. screening_engine pulls in
+            # torch, PennyLane, spaCy and faster-whisper; at module scope that
+            # is ~490 MB resident before the app has served a request, against
+            # a 512 MB container. Deferring it keeps boot small enough that the
+            # health probe answers and the deploy can go live.
+            from screening_engine import run_screening_pipeline
+
             result = run_screening_pipeline(str(saved_path), on_stage=on_stage)
             if not result.get("success"):
                 # The engine returns success=False only when there is no speech
@@ -275,6 +281,8 @@ class ScreeningJobManager:
 
         # fluency and recall both start from a transcript
         on_stage("transcribing")
+        from screening_engine import transcribe_for_task
+
         tx = transcribe_for_task(str(saved_path))
         on_stage("scoring")
         language = (job["params"].get("language") or tx.get("detected_language") or "en")
