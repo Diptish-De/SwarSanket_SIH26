@@ -222,7 +222,7 @@ export default function NoiseCheckCard({
           <div className="flex gap-2 pt-0.5">
             <button
               onClick={() => void run()}
-              className="flex-1 py-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-2xl bg-white border border-[#E0E0E0] hover:border-[#0F62FE] text-[#161616] font-semibold text-sm transition-colors flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
               {t.checkAgain}
@@ -230,7 +230,7 @@ export default function NoiseCheckCard({
 
             <button
               onClick={() => (reading ? onDone(reading) : onSkip())}
-              className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#02738a] to-[#01586a] text-white font-bold text-sm shadow-md transition-all active:scale-[0.98]"
+              className="flex-1 py-3 rounded-2xl bg-[#0F62FE] hover:bg-[#0353e9] text-white font-semibold text-sm shadow-xs transition-all active:scale-[0.98]"
               style={{ fontFamily }}
             >
               {reading.verdict === "quiet" ? t.begin : t.continueAnyway}

@@ -81,14 +81,14 @@ export default function BatteryCard({
   const pending = battery.some((r) => r.status === "pending")
 
   return (
-    <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] shadow-xs text-left space-y-3">
+    <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] shadow-xs text-left space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#6F6F6F]">
             Standardized tests
           </div>
           <div
-            className="text-base font-bold text-slate-900 leading-tight"
+            className="text-base font-bold text-[#161616] leading-tight"
             style={fontFamily ? { fontFamily } : undefined}
           >
             {scored > 0
@@ -104,7 +104,7 @@ export default function BatteryCard({
               ? "bg-emerald-50 border-emerald-200 text-emerald-700"
               : scored > 0
                 ? "bg-amber-50 border-amber-200 text-amber-700"
-                : "bg-slate-50 border-slate-200 text-slate-400"
+                : "bg-slate-50 border-[#E0E0E0] text-[#6F6F6F]"
           }`}
         >
           {scored > 0 && typical === scored ? (
@@ -125,7 +125,7 @@ export default function BatteryCard({
           return (
             <div
               key={r.task}
-              className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#f8fbfc] border border-[#e6f1f4]"
+              className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E0E0E0]"
             >
               <div className="mt-0.5 shrink-0">
                 {r.status === "pending" ? (

@@ -152,7 +152,7 @@ export default function VoiceProcessingVisualizer({
   ]
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto items-center justify-center px-7 bg-[#f3f9fb] animate-fade-in select-none">
+    <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto items-center justify-center px-7 bg-white animate-fade-in select-none">
       <div className="w-full max-w-sm flex flex-col items-center space-y-6">
         {analysisError ? (
           /* Error State */
@@ -169,7 +169,7 @@ export default function VoiceProcessingVisualizer({
             <div className="w-full space-y-2 pt-1">
               <button
                 onClick={onRetry}
-                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#02738a] to-[#015364] hover:from-[#02849f] hover:to-[#02738a] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 active:scale-98 transition-all"
+                className="w-full py-3.5 px-4 rounded-2xl bg-[#0F62FE] hover:bg-[#0353e9] text-white font-semibold text-sm shadow-xs flex items-center justify-center gap-2 active:scale-98 transition-all"
                 style={{ fontFamily: F.display }}
               >
                 <RefreshCw className="w-4 h-4" />
@@ -178,7 +178,7 @@ export default function VoiceProcessingVisualizer({
 
               <button
                 onClick={onSaveOffline}
-                className="w-full py-2.5 px-4 rounded-2xl bg-white border border-[#d7eaef] hover:bg-[#f0f9fb] text-[#30434f] font-semibold text-xs shadow-xs active:scale-98 transition-all"
+                className="w-full py-3 px-4 rounded-2xl bg-white border border-[#E0E0E0] hover:border-[#0F62FE] text-[#161616] font-semibold text-xs shadow-2xs active:scale-98 transition-all"
               >
                 Save Offline & Sync Later
               </button>
@@ -186,13 +186,13 @@ export default function VoiceProcessingVisualizer({
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={onRecordAgain}
-                  className="flex-1 py-2 text-xs font-semibold text-[#30434f] hover:text-[#0c1e27] border border-[#d7eaef] rounded-xl bg-white active:scale-98 transition-all"
+                  className="flex-1 py-2.5 text-xs font-semibold text-[#525252] hover:text-[#161616] border border-[#E0E0E0] rounded-xl bg-white active:scale-98 transition-all"
                 >
                   Record Again
                 </button>
                 <button
                   onClick={onServerSettings}
-                  className="flex-1 py-2 text-xs font-semibold text-[#02738a] hover:text-[#01586a] border border-[#bce3eb] rounded-xl bg-[#e4f4f7] active:scale-98 transition-all"
+                  className="flex-1 py-2.5 text-xs font-semibold text-[#0F62FE] hover:text-[#0353e9] border border-blue-200 rounded-xl bg-blue-50 active:scale-98 transition-all"
                 >
                   Server Settings
                 </button>
@@ -204,10 +204,10 @@ export default function VoiceProcessingVisualizer({
             {/* Animated Audio Waveform Hero */}
             <div className="relative flex items-center justify-center my-2">
               <div
-                className="absolute w-24 h-24 rounded-3xl bg-[#02738a]/10 animate-ping opacity-40 pointer-events-none"
+                className="absolute w-24 h-24 rounded-3xl bg-[#0F62FE]/10 animate-ping opacity-40 pointer-events-none"
                 style={{ animationDuration: "2.8s" }}
               />
-              <div className="w-24 h-24 rounded-3xl bg-[#e4f4f7] border border-[#d7eaef] text-[#02738a] flex items-center justify-center shadow-inner relative z-10">
+              <div className="w-24 h-24 rounded-3xl bg-blue-50/80 border border-blue-100 text-[#0F62FE] flex items-center justify-center shadow-xs relative z-10">
                 <div className="flex items-center gap-1.5 h-11">
                   {[
                     { h: "14px", delay: "0.15s" },
@@ -218,7 +218,7 @@ export default function VoiceProcessingVisualizer({
                   ].map((bar, i) => (
                     <div
                       key={i}
-                      className="w-1.5 rounded-full bg-[#02738a] animate-pulse"
+                      className="w-1.5 rounded-full bg-[#0F62FE] animate-pulse"
                       style={{
                         height: bar.h,
                         animationDelay: bar.delay,
@@ -233,32 +233,32 @@ export default function VoiceProcessingVisualizer({
             {/* Title & Subtitle */}
             <div className="text-center space-y-1">
               <h1
-                className="text-2xl font-bold text-[#0c1e27]"
+                className="text-2xl font-bold text-[#161616]"
                 style={{ fontFamily: F.display }}
               >
                 {t(lang, "analyzingVoice")}
               </h1>
-              <p className="text-xs text-[#5e7380]">{t(lang, "thisMayTake")}</p>
+              <p className="text-xs text-[#6F6F6F]">{t(lang, "thisMayTake")}</p>
             </div>
 
             {/* Stage-driven Progress Bar */}
             <div className="w-full space-y-2">
-              <div className="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">
+              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#02738a] to-[#015364] transition-all duration-300"
+                  className="h-full rounded-full bg-[#0F62FE] transition-all duration-300"
                   style={{ width: `${Math.min(100, Math.max(4, progress))}%` }}
                 />
               </div>
-              <div className="flex justify-between gap-3 text-[11px] text-[#5e7380] font-medium">
+              <div className="flex justify-between gap-3 text-[11px] text-[#525252] font-medium">
                 <span>{stageLabel(analysisStep, queuePosition)}</span>
-                <span className="font-semibold text-[#02738a] tabular-nums shrink-0">
+                <span className="font-semibold text-[#0F62FE] tabular-nums shrink-0">
                   {Math.round(progress)}%
                 </span>
               </div>
             </div>
 
             {/* Checklist Card */}
-            <div className="w-full p-4 rounded-2xl bg-white border border-[#d7eaef] space-y-3 text-xs text-[#30434f] shadow-xs">
+            <div className="w-full p-4 rounded-2xl bg-white border border-[#E0E0E0] space-y-3 text-xs text-[#161616] shadow-xs">
               {checklist.map((item) => {
                 const done = stageIdx > item.doneAfter
                 const active = !done && stageIdx >= item.activeAt
@@ -267,13 +267,13 @@ export default function VoiceProcessingVisualizer({
                     {done ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     ) : active ? (
-                      <div className="w-4 h-4 rounded-full border-2 border-[#02738a] border-t-transparent animate-spin shrink-0" />
+                      <div className="w-4 h-4 rounded-full border-2 border-[#0F62FE] border-t-transparent animate-spin shrink-0" />
                     ) : (
-                      <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
+                      <div className="w-4 h-4 rounded-full border border-slate-200 shrink-0" />
                     )}
                     <span
                       className={
-                        done ? "font-medium text-[#0c1e27]" : "text-[#5e7380]"
+                        done ? "font-medium text-[#161616]" : "text-[#8D8D8D]"
                       }
                     >
                       {item.label}
@@ -284,19 +284,21 @@ export default function VoiceProcessingVisualizer({
 
               {/* Transport badge: tells a judge the progress is pushed, not faked. */}
               {transport && transport !== "http" && (
-                <div className="flex items-center gap-1.5 pt-1 text-[10px] text-[#5e7380]">
-                  <Radio
-                    className={`w-3 h-3 ${
-                      transport === "realtime"
-                        ? "text-emerald-600"
-                        : "text-[#02738a]"
-                    }`}
-                  />
-                  <span>
-                    {transport === "realtime"
-                      ? "Live updates over Supabase Realtime"
-                      : "Checking progress every few seconds"}
-                  </span>
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[#0F62FE] border border-blue-100/60 text-[10px] font-semibold">
+                    <Radio
+                      className={`w-3 h-3 ${
+                        transport === "realtime"
+                          ? "text-[#0F62FE] animate-pulse"
+                          : "text-slate-500"
+                      }`}
+                    />
+                    <span>
+                      {transport === "realtime"
+                        ? "Live updates over Supabase Realtime"
+                        : "Checking progress every few seconds"}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
