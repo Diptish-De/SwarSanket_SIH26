@@ -3475,6 +3475,9 @@ function PictureTaskCard({
 
   compact?: boolean
 }) {
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [imgLoaded, setImgLoaded] = useState(true)
+
   return (
     <div className="w-full space-y-2.5">
       <div className="flex items-center justify-center gap-1.5">
@@ -3485,10 +3488,29 @@ function PictureTaskCard({
 
       <div
         className={`w-full ${
-          compact ? "h-32" : "h-48"
-        } rounded-2xl bg-white border border-[#E0E0E0] overflow-hidden shadow-xs`}
+          compact ? "aspect-[16/9] max-h-36" : "aspect-[3/2]"
+        } rounded-2xl bg-slate-50 border border-[#E0E0E0] overflow-hidden shadow-xs relative group ${
+          !compact ? "cursor-pointer" : ""
+        } transition-all hover:shadow-md`}
+        onClick={() => !compact && setIsZoomed(true)}
       >
-        <CookieTheftScene />
+        {imgLoaded ? (
+          <img
+            src="/cookie_theft_scene.jpg"
+            alt="Clinical kitchen scene: a boy on a tilting stool taking cookies from a cupboard for a girl, while a mother at the sink lets water overflow."
+            className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
+            onError={() => setImgLoaded(false)}
+          />
+        ) : (
+          <CookieTheftScene />
+        )}
+
+        {!compact && (
+          <div className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[10px] font-medium flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+            <Maximize2 className="w-3 h-3" />
+            <span>Tap to enlarge</span>
+          </div>
+        )}
       </div>
 
       {!compact && (
@@ -3499,6 +3521,41 @@ function PictureTaskCard({
           >
             {getTaskPrompt(lang, "pictureDesc")}
           </p>
+        </div>
+      )}
+
+      {/* Lightbox / Zoom Modal */}
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-fade-in"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div
+            className="relative max-w-lg w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-white/20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+              <span className="text-xs font-bold text-slate-800">
+                Picture Description Scene
+              </span>
+              <button
+                onClick={() => setIsZoomed(false)}
+                className="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-100 transition-all active:scale-95"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <img
+              src="/cookie_theft_scene.jpg"
+              alt="Picture description scene enlarged"
+              className="w-full aspect-[3/2] object-cover"
+            />
+            <div className="p-3 bg-white text-center">
+              <p className="text-xs text-slate-500">
+                Tap the cross or outside the box to return to screening
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
