@@ -17,6 +17,7 @@ IMPORTANT:
 """
 
 import io
+import logging
 import os
 import re
 from pathlib import Path
@@ -42,6 +43,8 @@ from explainability import explain_single_prediction, SCIENTIFIC_FRAMING_DISCLAI
 # Load full spaCy English pipeline (disabling unused NER to conserve ~15 MB RAM while preserving identical POS/syntax)
 nlp = spacy.load("en_core_web_sm", disable=["ner"])
 
+logger = logging.getLogger("swarsanket.engine")
+
 # Global Faster-Whisper model instance (lazy loaded)
 _whisper_model: Optional[WhisperModel] = None
 
@@ -52,29 +55,76 @@ _whisper_model: Optional[WhisperModel] = None
 WHISPER_MODEL_SIZE = os.environ.get("SWARSANKET_WHISPER_MODEL", "tiny")
 
 
+def _whisper_threads() -> int:
+    """
+    Threads for transcription, which dominates the screening's wall clock.
+
+    Hard-coding one thread cost the deployment nothing, because the Render
+    container has a tenth of a CPU and its Dockerfile pins OMP_NUM_THREADS=1.
+    On any ordinary machine it left the work on a single core: measured on a
+    14 s clip, one thread took 14.0 s and four took 8.0 s for a transcript
+    identical to the word.
+
+    So the deployment's own pinning is the signal. Where OMP_NUM_THREADS is
+    set, follow it. Where nothing is set, use a few cores. os.cpu_count() is
+    not consulted for the cap because inside a container it reports the host's
+    cores rather than the share this process may use.
+    """
+    explicit = os.environ.get("SWARSANKET_WHISPER_THREADS")
+    if explicit:
+        try:
+            return max(1, int(explicit))
+        except ValueError:
+            pass
+
+    pinned = os.environ.get("OMP_NUM_THREADS")
+    if pinned:
+        try:
+            return max(1, int(pinned))
+        except ValueError:
+            pass
+
+    return max(1, min(4, os.cpu_count() or 1))
+
+
 def get_whisper_model() -> WhisperModel:
     """Returns a cached instance of Faster-Whisper (CPU float32 on Windows to avoid MKL GEMM malloc bug, int8 on Linux)."""
     global _whisper_model
     if _whisper_model is None:
         default_compute = "float32" if os.name == "nt" else "int8"
         compute_type = os.environ.get("SWARSANKET_WHISPER_COMPUTE", default_compute)
+        threads = _whisper_threads()
         try:
             _whisper_model = WhisperModel(
                 WHISPER_MODEL_SIZE,
                 device="cpu",
                 compute_type=compute_type,
-                cpu_threads=1,
+                cpu_threads=threads,
                 num_workers=1,
             )
         except Exception as err:
-            logger.warning(f"WhisperModel initialization with {compute_type} failed ({err}); falling back to float32")
+            # float32 is the safe compute type everywhere. Without a logger
+            # defined in this module this handler used to raise NameError and
+            # take the whole fallback with it.
+            logger.warning(
+                "WhisperModel init with %s failed (%s); falling back to float32",
+                compute_type,
+                err,
+            )
             _whisper_model = WhisperModel(
                 WHISPER_MODEL_SIZE,
                 device="cpu",
                 compute_type="float32",
-                cpu_threads=1,
+                cpu_threads=threads,
                 num_workers=1,
             )
+        logger.info(
+            "Whisper '%s' ready (%s, %d thread%s)",
+            WHISPER_MODEL_SIZE,
+            compute_type,
+            threads,
+            "" if threads == 1 else "s",
+        )
     return _whisper_model
 
 

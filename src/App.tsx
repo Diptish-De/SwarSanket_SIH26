@@ -380,6 +380,8 @@ const TX: Record<string, Record<string, string>> = {
 
     recordingReady: "Your recording is ready",
 
+    recordingVoice: "Recording...",
+
     listenBefore: "Listen before you continue",
 
     play: "Play",
@@ -398,7 +400,7 @@ const TX: Record<string, Record<string, string>> = {
       'Take a deep breath, then hold one steady "aaah" for as long as you comfortably can. Stop when you run out of breath.',
 
     batteryFluencyHint:
-      "Say the names of as many different animals as you can: pets, farm animals, wild animals, birds, fish, insects. The recording stops by itself after 60 seconds.",
+      "Say the names of as many different animals as you can: pets, farm animals, wild animals, birds, fish, insects. The recording stops by itself after 30 seconds.",
 
     batteryRecallHint:
       "Say every word you remember from the list you heard earlier, in any order. Guessing is fine.",
@@ -2459,7 +2461,7 @@ const TASK_RULES: Partial<Record<RecordingContext, TaskRecordingRule>> = {
 
   phonation: { minSeconds: 2, maxSeconds: 25, autoStop: true },
 
-  fluency: { minSeconds: 45, maxSeconds: 60, autoStop: true },
+  fluency: { minSeconds: 15, maxSeconds: 30, autoStop: true },
 
   recall: { minSeconds: 2, maxSeconds: 30, autoStop: true },
 }

@@ -26,6 +26,7 @@ strings):
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 import uuid
@@ -94,11 +95,36 @@ def warm_engine() -> None:
     threading.Thread(target=_load, daemon=True, name="engine-warmup").start()
 
 
-class ScreeningJobManager:
-    """Owns the worker thread, the in-memory job table and the Supabase mirror."""
+def _worker_count() -> int:
+    """
+    How many screenings may run at once.
 
-    def __init__(self, max_workers: int = 1):
-        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="screening")
+    One is right for the deployment: a tenth of a CPU and 512 MB, where two
+    concurrent transcriptions each finish later than the two run back to back.
+    It is wrong for a laptop, where a session's picture task queues behind the
+    battery's phonation, fluency and recall jobs and the person watches
+    "waiting for 2 screenings ahead of you" for a minute.
+
+    The deployment pins OMP_NUM_THREADS in its Dockerfile, so that is the
+    signal for a constrained container. Anywhere else, allow two.
+    """
+    explicit = os.environ.get("SWARSANKET_JOB_WORKERS")
+    if explicit:
+        try:
+            return max(1, int(explicit))
+        except ValueError:
+            pass
+
+    return 1 if os.environ.get("OMP_NUM_THREADS") else 2
+
+
+class ScreeningJobManager:
+    """Owns the worker threads, the in-memory job table and the Supabase mirror."""
+
+    def __init__(self, max_workers: Optional[int] = None):
+        workers = max_workers if max_workers is not None else _worker_count()
+        logger.info("[Jobs] screening workers: %d", workers)
+        self._executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="screening")
         self._jobs: "OrderedDict[str, Dict[str, Any]]" = OrderedDict()
         self._lock = threading.Lock()
 
