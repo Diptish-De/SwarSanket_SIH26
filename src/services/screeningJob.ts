@@ -246,6 +246,18 @@ const STAGE_ORDER: ScreeningJobStage[] = [
 export const SERVER_SLOW_MESSAGE =
   "The screening server is taking longer than expected. It may be waking up or busy - please wait a minute and try again. Your recording is kept."
 
+/**
+ * Consecutive 404s from the status endpoint before the job is declared lost.
+ * At the four-second poll interval this rides out roughly twenty seconds,
+ * which covers a server restart without leaving someone waiting on a job that
+ * really has gone.
+ */
+
+const MAX_MISSING_POLLS = 5
+
+export const JOB_LOST_MESSAGE =
+  "The screening server restarted while your recording was being analysed. Your recording is kept - please try again."
+
 export const SERVER_UNREACHABLE_MESSAGE =
   "The screening server did not respond. It may be restarting or overloaded - please wait a minute and try again. On a phone, also check your connection or the server address in Settings."
 
@@ -501,6 +513,8 @@ export function followScreeningJob<T = ScreeningApiResponse>(
 
     let pollTimer: ReturnType<typeof setTimeout> | null = null
 
+    let missingPolls = 0
+
     const deadline = setTimeout(
       () => finish(new Error(SERVER_SLOW_MESSAGE)),
 
@@ -720,6 +734,8 @@ export function followScreeningJob<T = ScreeningApiResponse>(
         if (res.ok) {
           const body = (await res.json()) as JobStatusResponse<T>
 
+          missingPolls = 0
+
           report(body.status, body.queue_position, "poll")
 
           if (
@@ -728,11 +744,20 @@ export function followScreeningJob<T = ScreeningApiResponse>(
             return
           }
         } else if (res.status === 404) {
-          // The worker restarted and forgot the job before Supabase had the row.
+          // The job is not visible to the server. That can be momentary: the
+          // row may not be inserted yet, or a dev-server reload may be in
+          // flight. Only a run of them means the job is really gone, which
+          // happens when the worker restarts before its row reaches the
+          // database. One 404 is not worth discarding a recording over.
+          missingPolls += 1
 
-          finish(new Error(SERVER_SLOW_MESSAGE))
+          if (missingPolls >= MAX_MISSING_POLLS) {
+            finish(new Error(JOB_LOST_MESSAGE))
 
-          return
+            return
+          }
+        } else {
+          missingPolls = 0
         }
       } catch {
         // transient; try again on the next tick

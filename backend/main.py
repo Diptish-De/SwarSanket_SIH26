@@ -650,4 +650,25 @@ if __name__ == "__main__":
     import uvicorn
     # Default to port 8001 to align with frontend audioRecorder configuration
     port = int(os.environ.get("PORT", 8001))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    # Reload watches only the modules that serve requests. A screening runs on
+    # a background worker inside this process, so every reload kills whatever
+    # is mid-flight and empties the job table: the phone's next poll 404s and
+    # the person is told the server gave up. Saving a test or re-running the
+    # benchmark should not do that.
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port,
+        reload=True,
+        reload_excludes=[
+            "test_*.py",
+            "benchmark_*.py",
+            "*.json",
+            "*.csv",
+            "*.pkl",
+            "*.pt",
+            "uploads/*",
+            "models/*",
+            "test_audio/*",
+        ],
+    )

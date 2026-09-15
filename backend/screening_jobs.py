@@ -182,19 +182,28 @@ class ScreeningJobManager:
         saved_path: Path = job["saved_path"]
         started = time.perf_counter()
         try:
-            # Store the audio first so the row is complete even if inference dies.
+            # Archiving the audio runs alongside the pipeline, not in front of
+            # it. The Supabase client has no timeout, so when DNS or the TLS
+            # handshake hangs this call blocks for tens of seconds; doing it
+            # first pinned the job at "uploading" for that whole time and the
+            # person watched a progress bar that had genuinely stopped. Storage
+            # is for durability and the screening does not depend on it, so it
+            # is started here and collected after scoring.
             self._set(job, "uploading")
-            upload = supabase_service.upload_audio_file(
-                saved_path, saved_path.name, content_type=job["content_type"]
+            archive = threading.Thread(
+                target=self._archive_audio,
+                args=(job, recording_id, saved_path),
+                daemon=True,
+                name=f"archive-{recording_id}",
             )
-            if upload.get("success"):
-                job["supabase_url"] = upload.get("public_url")
-                supabase_service.update_recording_status(recording_id, {
-                    "storage_path": upload.get("path"),
-                    "supabase_storage_url": upload.get("public_url"),
-                })
+            archive.start()
 
             result = self._score(job, saved_path)
+
+            # Scoring is done; give the upload a brief moment to finish so the
+            # stored row carries its audio URL. It is never waited on for long,
+            # because a stalled archive must not hold up a finished screening.
+            archive.join(timeout=10.0)
 
             result["filename"] = saved_path.name
             result["recording_id"] = recording_id
@@ -306,6 +315,25 @@ class ScreeningJobManager:
             "audio": tx["audio"],
             "battery": scored,
         }
+
+    def _archive_audio(self, job: Dict[str, Any], recording_id: str, saved_path: Path) -> None:
+        """
+        Copies the recording into Supabase Storage. Runs on its own thread so a
+        slow or unreachable Supabase cannot stall the screening, and swallows
+        everything: losing the archive copy is not a reason to fail a screening.
+        """
+        try:
+            upload = supabase_service.upload_audio_file(
+                saved_path, saved_path.name, content_type=job["content_type"]
+            )
+            if upload.get("success"):
+                job["supabase_url"] = upload.get("public_url")
+                supabase_service.update_recording_status(recording_id, {
+                    "storage_path": upload.get("path"),
+                    "supabase_storage_url": upload.get("public_url"),
+                })
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[Jobs] %s archive failed: %s", recording_id, exc)
 
     # ── helpers ─────────────────────────────────────────────────────────────
 
