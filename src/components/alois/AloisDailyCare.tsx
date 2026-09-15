@@ -143,7 +143,7 @@ export default function AloisDailyCare({
   ]
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none pb-28 relative">
+    <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none relative">
       {/* ─── Nav Bar ─────────────────────────────────────────────────── */}
       <header className="h-[72px] px-4 flex items-center justify-between bg-[#F4F4F4] border-b border-[#E0E0E0] sticky top-0 z-20">
         <div className="flex items-center gap-3">

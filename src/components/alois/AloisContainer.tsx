@@ -106,7 +106,7 @@ export default function AloisContainer({
   return (
     <div className="flex-1 flex flex-col h-full bg-[#F4F4F4] relative overflow-hidden select-none">
       {/* ─── Main Content Viewports (Tabs) ────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto pb-24">
+      <main className="flex-1 overflow-y-auto">
         {activeTab === "home" && (
           <AloisHomeDashboard
             patientName={patientName}
