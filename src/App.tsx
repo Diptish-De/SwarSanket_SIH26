@@ -3819,13 +3819,17 @@ function CheckHeader({
 
   total,
 
+  title,
+
   onBack,
 
   onExit,
 }: {
-  step: number
+  step?: number
 
-  total: number
+  total?: number
+
+  title?: string
 
   onBack: () => void
 
@@ -3839,7 +3843,13 @@ function CheckHeader({
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
-      <CheckProgress step={step} total={total} />
+      {title ? (
+        <span className="text-xs font-bold uppercase tracking-wider text-[#0F62FE] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+          {title}
+        </span>
+      ) : (
+        <CheckProgress step={step ?? 0} total={total ?? 4} />
+      )}
       <button
         onClick={onExit}
         className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center hover:text-[#161616] active:scale-95 transition-all shadow-2xs"
@@ -4449,9 +4459,9 @@ function SwarSanketApp({
 
     setBatteryResults([])
 
-    setRecordingContext("pictureDesc")
+    setNoiseReading(null)
 
-    navigate("pictureDesc")
+    navigate("noiseCheck")
   }
 
   // Submits a standardized task the moment its recording is reviewed. The
@@ -5685,6 +5695,57 @@ function SwarSanketApp({
           </div>
         )
 
+      case "noiseCheck":
+        return (
+          <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white animate-fade-in">
+            <StatusBar />
+            <CheckHeader
+              title="Surround Voice Check"
+              onBack={() => navigate("voiceIntro")}
+              onExit={() => navigate("home")}
+            />
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col px-6 py-6 justify-center gap-6">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-[#0F62FE] flex items-center justify-center mx-auto shadow-xs">
+                  <Volume2 className="w-7 h-7" />
+                </div>
+                <h1
+                  className="text-2xl font-bold text-[#161616]"
+                  style={{ fontFamily: F.display }}
+                >
+                  Testing Surround Voice
+                </h1>
+                <p className="text-xs text-[#6F6F6F] max-w-xs mx-auto leading-relaxed">
+                  We check your background sound and surrounding voices so your
+                  speech is recorded clearly.
+                </p>
+              </div>
+
+              <NoiseCheckCard
+                fontFamily={F.display}
+                labels={{
+                  title: "Room & Surround Voice",
+                  instruction:
+                    "Please stay quiet for 3 seconds while we test your surroundings.",
+                  listening: "Listening to surrounding audio…",
+                  begin: "Continue to Voice Check →",
+                  continueAnyway: "Continue Anyway →",
+                }}
+                onDone={(reading) => {
+                  setNoiseReading(reading)
+                  setRecordingContext("pictureDesc")
+                  navigate("pictureDesc")
+                }}
+                onSkip={() => {
+                  setRecordingContext("pictureDesc")
+                  navigate("pictureDesc")
+                }}
+              />
+            </div>
+            <HomeIndicator />
+          </div>
+        )
+
       case "instruction":
         return (
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
@@ -6014,7 +6075,7 @@ function SwarSanketApp({
             <CheckHeader
               step={BATTERY_STEP.pictureDesc ?? 1}
               total={BATTERY_TOTAL}
-              onBack={() => navigate("voiceIntro")}
+              onBack={() => navigate("noiseCheck")}
               onExit={() => navigate("home")}
             />
 
@@ -6044,6 +6105,10 @@ function SwarSanketApp({
                 <Btn
                   label={t(lang, "startSpeaking")}
                   onClick={() => {
+                    if (!noiseReading) {
+                      navigate("noiseCheck")
+                      return
+                    }
                     setRecordingContext("pictureDesc")
 
                     navigate("recording")
