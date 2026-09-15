@@ -58,6 +58,39 @@ NO_SPEECH_MESSAGE = (
 )
 
 
+def no_speech_message(audio: Dict[str, Any]) -> str:
+    """
+    Says which kind of empty recording this was.
+
+    "Please ensure the recording is clear and contains audible speech" is
+    unhelpful when the real problem is that the microphone captured a flat
+    line, or that the clip was under a second. The person can act on those.
+    """
+    duration = float(audio.get("duration_seconds") or 0.0)
+    peak = float(audio.get("peak_amplitude") or 0.0)
+
+    if duration < 1.0:
+        return (
+            "That recording was under a second long. Hold the button, or wait "
+            "for the timer to start, and describe the picture for about "
+            "fifteen seconds."
+        )
+
+    # A peak this low means the track is effectively a flat line: the wrong
+    # input device, a muted microphone, or permission granted to a device that
+    # is not the one being spoken into.
+    if peak < 0.01:
+        return (
+            "No sound reached the microphone. Check that the right microphone "
+            "is selected and unmuted, then try again."
+        )
+
+    return (
+        "No speech could be made out in that recording. Move somewhere "
+        "quieter, hold the phone closer, and speak at a normal volume."
+    )
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -335,8 +368,24 @@ class ScreeningJobManager:
             result = run_screening_pipeline(str(saved_path), on_stage=on_stage)
             if not result.get("success"):
                 # The engine returns success=False only when there is no speech
-                # to transcribe. That is a refusal, not a crash.
-                raise _JobRefused(NO_SPEECH_MESSAGE, detail=result.get("error"))
+                # to transcribe. That is a refusal, not a crash. Log what the
+                # audio actually contained: "no audible speech" is the same
+                # message whether the microphone captured nothing, the clip was
+                # a fraction of a second, or someone spoke too quietly, and
+                # those need different fixes.
+                audio = result.get("audio") or {}
+                logger.info(
+                    "[Jobs] %s refused: %.2fs audio, rms %.5f, peak %.3f, %.0f%% silent, %d bytes",
+                    job["recording_id"],
+                    float(audio.get("duration_seconds") or 0.0),
+                    float(audio.get("rms_energy") or 0.0),
+                    float(audio.get("peak_amplitude") or 0.0),
+                    float(audio.get("silence_percentage") or 0.0),
+                    job.get("size_bytes") or 0,
+                )
+                raise _JobRefused(
+                    no_speech_message(audio), detail=result.get("error")
+                )
             return result
 
         if task == "phonation":

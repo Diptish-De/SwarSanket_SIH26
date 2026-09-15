@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from auth import optional_supabase_user, require_supabase_user
-from screening_jobs import job_manager, warm_engine
+from screening_jobs import job_manager, no_speech_message, warm_engine
 from supabase_service import supabase_service
 from task_scoring import TASKS
 
@@ -559,11 +559,23 @@ async def analyze_audio(
         result = run_screening_pipeline(str(saved_path))
 
         if not result.get("success"):
-            error_msg = result.get("error", "Unknown error")
-            logger.error(f"Screening engine processing error on '{saved_path.name}': {error_msg}")
+            # Same wording as the job pipeline's refusal, so a person sees the
+            # same actionable message whichever path served them. The previous
+            # text was identical for a muted microphone, a half-second clip and
+            # speech too quiet to make out, which are three different fixes.
+            # Not `audio`: that name is the UploadFile parameter, and the
+            # finally block below closes it.
+            audio_metrics = result.get("audio") or {}
+            logger.info(
+                "Refused '%s': %.2fs audio, rms %.5f, peak %.3f, %.0f%% silent",
+                saved_path.name,
+                float(audio_metrics.get("duration_seconds") or 0.0),
+                float(audio_metrics.get("rms_energy") or 0.0),
+                float(audio_metrics.get("peak_amplitude") or 0.0),
+                float(audio_metrics.get("silence_percentage") or 0.0),
+            )
             raise HTTPException(
-                status_code=422,
-                detail="Unable to analyze audio recording. Please ensure the recording is clear and contains audible speech.",
+                status_code=422, detail=no_speech_message(audio_metrics)
             )
 
         # Attach saved filename metadata
