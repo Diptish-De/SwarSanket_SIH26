@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react"
 
 import {
-  ArrowLeft,
   Sparkles,
   ChevronRight,
   Info,
@@ -89,34 +88,23 @@ export default function CognitiveGamesHub({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#F8FAFC] text-[#0F172A] overflow-y-auto select-none">
+    <div className="flex-1 flex flex-col bg-[#F8FAFC] text-[#0F172A] overflow-y-auto select-none">
       {/* ─── Top Header ─────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 px-5 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Dashboard</span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-600 to-teal-800 text-white flex items-center justify-center shadow-xs">
+      <div className="h-[72px] px-4 flex items-center bg-[#F4F4F4] border-b border-[#E0E0E0] sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-white border border-[#E0E0E0] text-[#525252] flex items-center justify-center">
             <Brain className="w-4 h-4" />
           </div>
           <h1
             style={{ fontFamily }}
-            className="text-base sm:text-lg font-bold text-slate-800"
+            className="text-[20px] font-bold text-[#161616] tracking-tight"
           >
             Cognitive Games
           </h1>
         </div>
-
-        <div className="w-16" />
       </div>
 
-      <div className="flex-1 max-w-xl w-full mx-auto p-4 sm:p-6 space-y-4">
+      <div className="flex-1 max-w-xl w-full mx-auto p-4 pb-0 sm:p-6 sm:pb-0 space-y-4">
         {/* ─── Hero Banner: Cognitive Booster ────────────────────────── */}
         <div className="rounded-3xl bg-gradient-to-br from-[#0F766E] to-[#0D9488] text-white p-5 sm:p-6 shadow-xl relative overflow-hidden">
           <div className="relative z-10 flex items-start gap-4">

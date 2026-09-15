@@ -103,7 +103,7 @@ export default function AloisHomeDashboard({
     : null
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none pb-28">
+    <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none">
       {/* ─── 1. Home Nav Bar (Figma node 888:32886: 375 x 72pt) ───────────── */}
       <header className="h-[72px] px-4 flex items-center justify-between bg-[#F4F4F4] border-b border-[#E0E0E0] sticky top-0 z-20">
         <div>
@@ -194,11 +194,11 @@ export default function AloisHomeDashboard({
                     style={{ fontFamily }}
                     className="text-[20px] font-bold text-white tracking-tight leading-tight"
                   >
-                    Cognitive Booster
+                    Voice & Memory Test
                   </h3>
                 </div>
                 <p className="text-[13px] text-[#C6C6C6] mt-1 leading-snug">
-                  Voice Biomarker Screening with 8-Qubit Quantum ML Analysis
+                  A short voice test to check your memory and thinking.
                 </p>
               </div>
             </div>

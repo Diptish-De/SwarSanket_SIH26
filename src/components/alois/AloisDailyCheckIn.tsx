@@ -459,7 +459,7 @@ export default function AloisDailyCheckIn({
     const q = questions[questionIdx]
 
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none pb-28">
+      <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none">
         {header("Daily check-in", "Two quick questions")}
 
         <div className="px-4 pt-5 space-y-5 max-w-[375px] mx-auto">
@@ -515,7 +515,7 @@ export default function AloisDailyCheckIn({
     const canStop = elapsed >= MIN_RECORD_SECONDS
 
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none pb-28">
+      <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none">
         {header("Tell me about your day")}
 
         <div className="px-4 pt-5 space-y-5 max-w-[375px] mx-auto">
@@ -613,7 +613,7 @@ export default function AloisDailyCheckIn({
 
   if (step === "informant") {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none pb-28">
+      <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none">
         {header("One question for you", "For the family member")}
 
         <div className="px-4 pt-5 space-y-5 max-w-[375px] mx-auto">
@@ -669,7 +669,7 @@ export default function AloisDailyCheckIn({
   // ─── step 4: done ─────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none pb-28">
+    <div className="flex-1 overflow-y-auto bg-[#F4F4F4] text-[#161616] select-none">
       {header(alreadyDone ? "Today is done" : "Thank you")}
 
       <div className="px-4 pt-5 space-y-4 max-w-[375px] mx-auto">
