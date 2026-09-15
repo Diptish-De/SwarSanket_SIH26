@@ -229,15 +229,26 @@ def run_monte_carlo_inference(
         if isinstance(module, nn.BatchNorm1d):
             module.eval()
 
-    predictions = []
+    # All n_passes in one forward pass instead of n_passes sequential ones.
+    #
+    # This is not an approximation. Dropout samples an independent mask per
+    # element, and BatchNorm was just switched to eval above, so it uses its
+    # running statistics and the rows cannot influence one another. Stacking
+    # the same input n_passes times therefore draws exactly the same set of
+    # independent stochastic predictions.
+    #
+    # It matters because each forward pass evaluates the quantum circuit, and
+    # the per-call overhead dominates: thirty batch-of-one evaluations took
+    # about 6.5 s, which was more than the speech transcription it followed.
+    batch_size = tensor_input.shape[0]
     with torch.no_grad():
-        for _ in range(n_passes):
-            p = model(tensor_input).cpu().numpy().ravel()
-            predictions.append(p)
+        repeated = tensor_input.repeat(n_passes, 1)
+        flat = model(repeated).cpu().numpy().ravel()
 
     model.eval()
 
-    predictions_arr = np.array(predictions)  # shape (n_passes, batch_size)
+    # repeat() tiles the whole input, so row i of pass t sits at t*batch + i.
+    predictions_arr = flat.reshape(n_passes, batch_size)
     mean_prob = float(np.mean(predictions_arr[:, 0]))
     std_uncertainty = float(np.std(predictions_arr[:, 0]))
 

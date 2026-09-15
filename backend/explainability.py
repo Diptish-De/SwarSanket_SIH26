@@ -133,22 +133,30 @@ def explain_single_prediction(
         if isinstance(module, nn.BatchNorm1d):
             module.eval()
 
-    grad_accum = np.zeros(scaled_arr.shape[1], dtype=np.float64)
-    prob_accum = 0.0
-    for _ in range(passes):
-        x_tensor = torch.tensor(scaled_arr, dtype=torch.float64, requires_grad=True)
-        p = model(x_tensor)
-        model.zero_grad(set_to_none=True)
-        p.backward()
-        if x_tensor.grad is not None:
-            grad_accum += x_tensor.grad.detach().cpu().numpy().ravel()
-        prob_accum += float(p.item())
+    # One batched forward and backward instead of `passes` sequential ones.
+    #
+    # Each row carries its own dropout mask and BatchNorm is frozen above, so
+    # the rows are independent. Summing the outputs before backward therefore
+    # leaves row i's gradient at x.grad[i] = d(p_i)/d(x_i), and averaging those
+    # rows is the same average gradient the loop accumulated. Each pass costs a
+    # quantum circuit evaluation, and that per-call overhead dominated: thirty
+    # of them took about 6.2 s.
+    x_tensor = torch.tensor(
+        np.repeat(scaled_arr, passes, axis=0), dtype=torch.float64, requires_grad=True
+    )
+    p_batch = model(x_tensor)
+    model.zero_grad(set_to_none=True)
+    p_batch.sum().backward()
+
+    if x_tensor.grad is not None:
+        grad = x_tensor.grad.detach().cpu().numpy().mean(axis=0)
+    else:
+        grad = np.zeros(scaled_arr.shape[1], dtype=np.float64)
+
+    mc_mean_probability = float(p_batch.detach().cpu().numpy().mean())
 
     model.eval()
     model.zero_grad(set_to_none=True)
-
-    grad = grad_accum / passes
-    mc_mean_probability = prob_accum / passes
     scaled_vals = scaled_arr.ravel()
     raw_attributions = grad * scaled_vals
 
