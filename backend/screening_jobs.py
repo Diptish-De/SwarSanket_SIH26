@@ -67,6 +67,33 @@ class _JobRefused(Exception):
         self.detail = detail
 
 
+def warm_engine() -> None:
+    """
+    Loads the screening stack on a background thread, shortly after startup.
+
+    Boot has to stay small so the health probe answers and the deploy goes
+    live, which is why screening_engine is imported lazily. The cost does not
+    disappear though: it lands on whoever submits the first screening, who then
+    waits about ninety seconds watching a bar that looks stuck. Paying it here,
+    off the request path, gives both properties at once.
+
+    Daemon thread, and every failure is swallowed: a warm-up that cannot run is
+    a slow first screening, never a broken service.
+    """
+
+    def _load() -> None:
+        try:
+            started = time.perf_counter()
+            from screening_engine import get_whisper_model
+
+            get_whisper_model()
+            logger.info("[Jobs] engine warm after %.1fs", time.perf_counter() - started)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[Jobs] engine warm-up skipped: %s", exc)
+
+    threading.Thread(target=_load, daemon=True, name="engine-warmup").start()
+
+
 class ScreeningJobManager:
     """Owns the worker thread, the in-memory job table and the Supabase mirror."""
 
@@ -265,11 +292,18 @@ class ScreeningJobManager:
         on_stage = lambda stage: self._set(job, stage)  # noqa: E731
 
         if task == "picture":
-            # Imported here, not at module scope. screening_engine pulls in
-            # torch, PennyLane, spaCy and faster-whisper; at module scope that
-            # is ~490 MB resident before the app has served a request, against
-            # a 512 MB container. Deferring it keeps boot small enough that the
-            # health probe answers and the deploy can go live.
+            # Announce the stage before the import, not after. screening_engine
+            # pulls in torch, PennyLane, spaCy and faster-whisper, which on a
+            # cold process is around ninety seconds. Leaving the job on
+            # "uploading" through all of it showed a progress bar that had, as
+            # far as anyone watching could tell, stopped. Transcription is what
+            # this phase leads to, so that is what it reports.
+            on_stage("transcribing")
+
+            # Imported here rather than at module scope: at module scope the
+            # same stack is ~490 MB resident before the app serves a request,
+            # against a 512 MB container, and the health probe never answers.
+            # warm_engine() below removes the cost from the first screening.
             from screening_engine import run_screening_pipeline
 
             result = run_screening_pipeline(str(saved_path), on_stage=on_stage)

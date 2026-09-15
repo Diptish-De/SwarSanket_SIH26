@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from auth import optional_supabase_user, require_supabase_user
-from screening_jobs import job_manager
+from screening_jobs import job_manager, warm_engine
 from supabase_service import supabase_service
 from task_scoring import TASKS
 
@@ -115,6 +115,24 @@ def root_check():
         "health": "/api/health",
         "docs": "/docs",
     }
+
+
+@app.on_event("startup")
+def _warm_screening_engine() -> None:
+    """
+    Starts loading the model stack as soon as the server is listening.
+
+    Boot itself stays light so the health probe answers immediately and a
+    deployment can go live; this runs on a background thread behind it, so the
+    first person to submit a screening does not wait ninety seconds for torch,
+    PennyLane, spaCy and Whisper to load. Set SWARSANKET_WARMUP=0 to skip it.
+    """
+    if os.environ.get("SWARSANKET_WARMUP", "1").lower() in ("0", "false", "no"):
+        logger.info("Engine warm-up disabled by SWARSANKET_WARMUP.")
+        return
+
+    logger.info("Warming the screening engine in the background.")
+    warm_engine()
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
