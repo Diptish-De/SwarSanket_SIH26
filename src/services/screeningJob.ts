@@ -789,9 +789,26 @@ export async function runScreeningJob(
 
     // fallback and not a second supported path.
 
-    if (err instanceof JobEndpointMissingError && task === "picture") {
+    // A cold container is the common case on a free hosting tier: the first
+    // request absorbs a spin-up of a minute or more, the edge proxy gives up
+    // before the app answers, and the browser reports a bare network failure
+    // rather than a status code. Falling back only on a clean 404 meant that
+    // case never reached the synchronous endpoint at all, even though the
+    // first request had just finished waking the container and a second one
+    // would have succeeded in seconds.
+    const serverDidNotAnswer =
+      err instanceof Error &&
+      (err.message === SERVER_UNREACHABLE_MESSAGE ||
+        err.message === SERVER_SLOW_MESSAGE)
+
+    if (
+      (err instanceof JobEndpointMissingError || serverDidNotAnswer) &&
+      task === "picture"
+    ) {
       console.warn(
-        "[SwarSanket] Screening server has no job endpoint; using the synchronous one.",
+        err instanceof JobEndpointMissingError
+          ? "[SwarSanket] Screening server has no job endpoint; using the synchronous one."
+          : "[SwarSanket] Job submission got no answer; retrying on the synchronous endpoint.",
       )
 
       options.onProgress?.({
@@ -806,7 +823,18 @@ export async function runScreeningJob(
         task,
       })
 
-      return analyzeAudioWithBackend(blob, filename, options.overallTimeoutMs)
+      try {
+        return await analyzeAudioWithBackend(
+          blob,
+          filename,
+          options.overallTimeoutMs,
+        )
+      } catch (retryErr) {
+        // Both attempts failed. Report the second one: by now the container
+        // has had a full request to wake up, so its message is the more
+        // informative of the two.
+        throw retryErr
+      }
     }
 
     throw err
