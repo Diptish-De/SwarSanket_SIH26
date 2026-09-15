@@ -3479,38 +3479,36 @@ function PictureTaskCard({
   const [imgLoaded, setImgLoaded] = useState(true)
 
   return (
-    <div className="w-full space-y-2.5">
-      <div className="flex items-center justify-center gap-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0F62FE] bg-blue-50 px-3 py-1 rounded-full border border-blue-100/60">
-          {t(lang, "clinicalProtocolTag")}
-        </span>
-      </div>
+    <div className={`w-full ${compact ? "space-y-1.5" : "space-y-2.5"}`}>
+      {!compact && (
+        <div className="flex items-center justify-center gap-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0F62FE] bg-blue-50 px-3 py-1 rounded-full border border-blue-100/60">
+            {t(lang, "clinicalProtocolTag")}
+          </span>
+        </div>
+      )}
 
       <div
         className={`w-full ${
-          compact ? "aspect-[16/9] max-h-36" : "aspect-[3/2]"
-        } rounded-2xl bg-slate-50 border border-[#E0E0E0] overflow-hidden shadow-xs relative group ${
-          !compact ? "cursor-pointer" : ""
-        } transition-all hover:shadow-md`}
-        onClick={() => !compact && setIsZoomed(true)}
+          compact ? "aspect-[3/2] max-h-44" : "aspect-[3/2]"
+        } rounded-2xl bg-white border border-[#E0E0E0] overflow-hidden shadow-xs relative group cursor-pointer transition-all hover:shadow-md flex items-center justify-center`}
+        onClick={() => setIsZoomed(true)}
       >
         {imgLoaded ? (
           <img
             src="/cookie_theft_scene.jpg"
             alt="Clinical kitchen scene: a boy on a tilting stool taking cookies from a cupboard for a girl, while a mother at the sink lets water overflow."
-            className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
+            className="w-full h-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.01]"
             onError={() => setImgLoaded(false)}
           />
         ) : (
           <CookieTheftScene />
         )}
 
-        {!compact && (
-          <div className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[10px] font-medium flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-            <Maximize2 className="w-3 h-3" />
-            <span>Tap to enlarge</span>
-          </div>
-        )}
+        <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[10px] font-medium flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <Maximize2 className="w-3 h-3" />
+          <span>Tap to enlarge</span>
+        </div>
       </div>
 
       {!compact && (
@@ -5911,7 +5909,11 @@ function SwarSanketApp({
               onExit={() => navigate("home")}
             />
 
-            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 gap-6">
+            <div
+              className={`flex-1 overflow-y-auto min-h-0 flex flex-col items-center justify-center px-6 ${
+                recordingContext === "pictureDesc" ? "gap-3 py-2" : "gap-6"
+              }`}
+            >
               {/* The scene stays on screen while recording so the patient can keep
                   describing it rather than speaking from memory. */}
               {recordingContext === "pictureDesc" && (
