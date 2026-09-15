@@ -2479,16 +2479,14 @@ function taskRule(ctx: RecordingContext): TaskRecordingRule {
 /** Step numbers for the header: vowel, picture, five words, animals, recall. */
 
 const BATTERY_STEP: Partial<Record<RecordingContext, number>> = {
-  phonation: 1,
+  pictureDesc: 1,
 
-  pictureDesc: 2,
+  fluency: 3,
 
-  fluency: 4,
-
-  recall: 5,
+  recall: 4,
 }
 
-const BATTERY_TOTAL = 5
+const BATTERY_TOTAL = 4
 
 function batteryHint(lang: string, ctx: RecordingContext): string | null {
   switch (ctx) {
@@ -4451,9 +4449,9 @@ function SwarSanketApp({
 
     setBatteryResults([])
 
-    setRecordingContext("phonation")
+    setRecordingContext("pictureDesc")
 
-    navigate("instruction")
+    navigate("pictureDesc")
   }
 
   // Submits a standardized task the moment its recording is reviewed. The
@@ -4463,8 +4461,7 @@ function SwarSanketApp({
   // so the person never waits for it.
 
   const queueBatteryTask = (ctx: RecordingContext, blob: Blob | null) => {
-    const task =
-      ctx === "phonation" || ctx === "fluency" || ctx === "recall" ? ctx : null
+    const task = ctx === "fluency" || ctx === "recall" ? ctx : null
 
     if (!task || !blob || blob.size < 500) return
 
@@ -4537,8 +4534,6 @@ function SwarSanketApp({
 
   const collectBatteryResults = async (): Promise<BatteryTaskRecord[]> => {
     const order: BatteryTaskRecord["task"][] = [
-      "phonation",
-
       "fluency",
 
       "recall",
@@ -5697,7 +5692,15 @@ function SwarSanketApp({
             <CheckHeader
               step={BATTERY_STEP[recordingContext] ?? 0}
               total={BATTERY_TOTAL}
-              onBack={() => navigate("voiceIntro")}
+              onBack={() => {
+                if (recordingContext === "fluency") {
+                  navigate("memory")
+                } else if (recordingContext === "recall") {
+                  navigate("recordingReview")
+                } else {
+                  navigate("voiceIntro")
+                }
+              }}
               onExit={() => navigate("home")}
             />
 
@@ -5780,7 +5783,13 @@ function SwarSanketApp({
             <CheckHeader
               step={BATTERY_STEP[recordingContext] ?? 0}
               total={BATTERY_TOTAL}
-              onBack={() => navigate("instruction")}
+              onBack={() => {
+                if (recordingContext === "pictureDesc") {
+                  navigate("pictureDesc")
+                } else {
+                  navigate("instruction")
+                }
+              }}
               onExit={() => navigate("home")}
             />
 
@@ -5972,9 +5981,7 @@ function SwarSanketApp({
                       queueBatteryTask(recordingContext, reviewedBlob)
                     }
 
-                    if (recordingContext === "phonation") {
-                      navigate("pictureDesc")
-                    } else if (recordingContext === "pictureDesc") {
+                    if (recordingContext === "pictureDesc") {
                       navigate("memory")
                     } else if (recordingContext === "fluency") {
                       setRecordingContext("recall")
@@ -6005,9 +6012,9 @@ function SwarSanketApp({
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <CheckHeader
-              step={BATTERY_STEP.pictureDesc ?? 2}
+              step={BATTERY_STEP.pictureDesc ?? 1}
               total={BATTERY_TOTAL}
-              onBack={() => navigate("recordingReview")}
+              onBack={() => navigate("voiceIntro")}
               onExit={() => navigate("home")}
             />
 
@@ -6053,7 +6060,7 @@ function SwarSanketApp({
           <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white">
             <StatusBar />
             <CheckHeader
-              step={3}
+              step={2}
               total={BATTERY_TOTAL}
               onBack={() => navigate("pictureDesc")}
               onExit={() => navigate("home")}
