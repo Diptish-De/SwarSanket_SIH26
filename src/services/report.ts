@@ -1,6 +1,7 @@
 // ─── SwarSanket Clinical Screening Report Generator ───────────────────────────
 
 import { ScreeningSession } from "../types"
+import { SWARSANKET_LOGO_BASE64 } from "./logoBase64"
 
 export function generateAndDownloadReport(session: ScreeningSession): void {
   // Ambient noise measured before recording. Every acoustic biomarker below
@@ -135,7 +136,7 @@ export function generateAndDownloadReport(session: ScreeningSession): void {
   <div class="page">
     <div class="header">
       <div style="display: flex; align-items: center; gap: 14px;">
-        <img src="/logo.jpeg" style="width: 48px; height: 48px; border-radius: 12px; object-fit: contain; box-shadow: 0 2px 8px rgba(2,115,138,0.2);" alt="SwarSanket Logo" />
+        <img src="${SWARSANKET_LOGO_BASE64}" style="width: 48px; height: 48px; border-radius: 12px; object-fit: contain; box-shadow: 0 2px 8px rgba(2,115,138,0.2);" alt="SwarSanket Logo" />
         <div>
           <div class="logo-title">SwarSanket</div>
           <div class="tagline">Early Cognitive & Voice Biomarker Screening</div>
