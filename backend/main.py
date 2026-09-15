@@ -106,7 +106,18 @@ def _generate_saved_path(original_filename: str, content_type: str = "") -> Path
     return UPLOADS_DIR / unique_filename
 
 
-@app.get("/api/health")
+@app.api_route("/", methods=["GET", "HEAD"])
+def root_check():
+    """Root ping endpoint to satisfy cloud provider liveness probes and uptime monitors."""
+    return {
+        "status": "ok",
+        "service": "SwarSanket Voice Biomarker Backend",
+        "health": "/api/health",
+        "docs": "/docs",
+    }
+
+
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health_check():
     """Health check endpoint confirming service status, active configuration, and Supabase telemetry."""
     res = {
