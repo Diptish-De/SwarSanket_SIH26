@@ -41,6 +41,8 @@ interface AloisContainerProps {
 
   onStartVoiceCheck: () => void
 
+  onUploadVoiceFile?: (file: File, task?: string, duration?: number) => void
+
   onViewReport: () => void
 
   onSwitchProfile: () => void
@@ -75,6 +77,8 @@ export default function AloisContainer({
   latestSession,
 
   onStartVoiceCheck,
+
+  onUploadVoiceFile,
 
   onViewReport,
 
@@ -112,6 +116,7 @@ export default function AloisContainer({
             patientName={patientName}
             latestSession={latestSession}
             onStartVoiceCheck={onStartVoiceCheck}
+            onUploadVoiceFile={onUploadVoiceFile}
             onSelectTab={setActiveTab}
             onOpenDoctorModal={() => setShowDoctorModal(true)}
             onOpenCognitiveModal={() => setShowCognitiveModal(true)}

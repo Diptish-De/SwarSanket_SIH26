@@ -50,6 +50,7 @@ import {
   Bell,
   Edit3,
   Search,
+  Upload,
 } from "lucide-react"
 
 import {
@@ -138,6 +139,10 @@ import {
   APK_DOWNLOAD_URL,
   GITHUB_RELEASES_URL,
 } from "./components/ApkDownloadModal"
+
+import UploadVoiceModal, {
+  getAudioFileDuration,
+} from "./components/UploadVoiceModal"
 
 import {
   ALOIS_USER_STORAGE_KEY,
@@ -4090,6 +4095,9 @@ function SwarSanketApp({
 
   const [showApkModal, setShowApkModal] = useState<boolean>(false)
 
+  const [showRecordingUploadModal, setShowRecordingUploadModal] =
+    useState<boolean>(false)
+
   const [screeningsList, setScreeningsList] = useState<ScreeningSession[]>([])
 
   const [syncQueue, setSyncQueue] = useState<OfflineSyncItem[]>([])
@@ -4649,6 +4657,37 @@ function SwarSanketApp({
     return settled
   }
 
+  const handleUploadVoiceScreening = useCallback(
+    async (file: File, task: string = "picture", durationSeconds?: number) => {
+      const dur = durationSeconds ?? (await getAudioFileDuration(file))
+      console.log("[SwarSanket] Processing uploaded patient voice file:", {
+        name: file.name,
+        size: file.size,
+        duration: dur,
+        task,
+      })
+
+      if (task === "fluency") {
+        setRecordingContext("fluency")
+      } else if (task === "recall") {
+        setRecordingContext("recall")
+      } else {
+        setRecordingContext("pictureDesc")
+      }
+
+      pictureBlobRef.current = file
+      audioBlobRef.current = file
+      setCurrentAudioBlob(file)
+      pictureDurationRef.current = Math.round(dur)
+      batteryJobsRef.current = {}
+      setIsAnalyzing(false)
+      setAnalysisError(null)
+
+      navigate("processing")
+    },
+    [navigate],
+  )
+
   const handleRunRealScreening = useCallback(async () => {
     const audioBlob =
       pictureBlobRef.current ||
@@ -4748,7 +4787,12 @@ function SwarSanketApp({
 
       // it takes.
 
-      const apiResult = await runScreeningJob(audioBlob, "voice_check.webm", {
+      const uploadFilename =
+        audioBlob instanceof File && audioBlob.name
+          ? audioBlob.name
+          : "voice_check.webm"
+
+      const apiResult = await runScreeningJob(audioBlob, uploadFilename, {
         onProgress: (p) => {
           setAnalysisStep(p.stage)
 
@@ -5645,6 +5689,7 @@ function SwarSanketApp({
 
                   navigate("voiceIntro")
                 }}
+                onUploadVoiceFile={handleUploadVoiceScreening}
                 onViewReport={() => {
                   if (screeningsList[0]) {
                     generateAndDownloadReport(screeningsList[0])
@@ -5977,6 +6022,14 @@ function SwarSanketApp({
                       {batteryHint(lang, recordingContext) ??
                         t(lang, "tapMicrophone")}
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowRecordingUploadModal(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-[#0F62FE] hover:bg-blue-50 transition-colors mt-2"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload audio file of patient</span>
+                    </button>
                   </>
                 ) : (
                   <>
@@ -6037,6 +6090,18 @@ function SwarSanketApp({
                 />
               )}
             </div>
+
+            <UploadVoiceModal
+              isOpen={showRecordingUploadModal}
+              onClose={() => setShowRecordingUploadModal(false)}
+              patientName={activeMember?.displayName || userName}
+              fontFamily={F.display}
+              onStartAnalysis={(file, task, duration) => {
+                setShowRecordingUploadModal(false)
+                handleUploadVoiceScreening(file, task, duration)
+              }}
+            />
+
             <HomeIndicator />
           </div>
         )

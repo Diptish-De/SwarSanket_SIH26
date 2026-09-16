@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 import {
   Bell,
@@ -12,6 +12,7 @@ import {
   MessageSquareQuote,
   Users,
   Flame,
+  Upload,
 } from "lucide-react"
 
 import {
@@ -25,6 +26,7 @@ import {
 import { ScreeningSession } from "../../types"
 
 import { AloisTab } from "./types"
+import UploadVoiceModal from "../UploadVoiceModal"
 
 interface AloisHomeDashboardProps {
   patientName: string
@@ -32,6 +34,8 @@ interface AloisHomeDashboardProps {
   latestSession?: ScreeningSession | null
 
   onStartVoiceCheck: () => void
+
+  onUploadVoiceFile?: (file: File, task?: string, duration?: number) => void
 
   onSelectTab: (tab: AloisTab) => void
 
@@ -58,6 +62,8 @@ export default function AloisHomeDashboard({
 
   onStartVoiceCheck,
 
+  onUploadVoiceFile,
+
   onSelectTab,
 
   onViewReport,
@@ -67,6 +73,12 @@ export default function AloisHomeDashboard({
   const [trend, setTrend] = useState<DailyTrend | null>(null)
 
   const [today, setToday] = useState<DailyCheckIn | null>(null)
+
+  const [showUploadModal, setShowUploadModal] = useState(false)
+
+  const [droppedFile, setDroppedFile] = useState<File | null>(null)
+
+  const [isDraggingOverCard, setIsDraggingOverCard] = useState(false)
 
   // Loaded here rather than passed down: the card is the only consumer, and it
 
@@ -163,7 +175,31 @@ export default function AloisHomeDashboard({
 
           <div
             onClick={onStartVoiceCheck}
-            className="w-full rounded-2xl bg-[#393939] text-white p-5 relative overflow-hidden shadow-[0_8px_20px_rgba(0,0,0,0.12)] cursor-pointer hover:bg-[#2e2e2e] active:scale-[0.99] transition-all group"
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setIsDraggingOverCard(true)
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setIsDraggingOverCard(false)
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setIsDraggingOverCard(false)
+              const file = e.dataTransfer.files?.[0]
+              if (file) {
+                setDroppedFile(file)
+                setShowUploadModal(true)
+              }
+            }}
+            className={`w-full rounded-2xl text-white p-5 relative overflow-hidden shadow-[0_8px_20px_rgba(0,0,0,0.12)] cursor-pointer active:scale-[0.99] transition-all group ${
+              isDraggingOverCard
+                ? "bg-[#252525] ring-2 ring-[#4589FF]"
+                : "bg-[#393939] hover:bg-[#2e2e2e]"
+            }`}
           >
             {/* Ambient decorative waves */}
             <div className="absolute right-0 top-0 bottom-0 w-48 opacity-10 pointer-events-none">
@@ -204,11 +240,19 @@ export default function AloisHomeDashboard({
             </div>
 
             {/* Action CTA Row */}
-            <div className="mt-5 pt-4 border-t border-[#525252] flex items-center justify-between">
-              <span className="text-[12px] font-medium text-[#A8A8A8] flex items-center gap-1.5">
-                <Mic className="w-4 h-4 text-[#4589FF]" />
-                Tap to record voice
-              </span>
+            <div className="mt-5 pt-4 border-t border-[#525252] flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowUploadModal(true)
+                }}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-[#F4F4F4] text-[12px] font-medium flex items-center gap-1.5 border border-white/15 transition-all cursor-pointer shadow-2xs"
+                title="Upload patient voice recording (.wav, .mp3, .m4a)"
+              >
+                <Upload className="w-3.5 h-3.5 text-[#4589FF]" />
+                <span>Upload Voice</span>
+              </button>
 
               <button
                 type="button"
@@ -217,8 +261,9 @@ export default function AloisHomeDashboard({
 
                   onStartVoiceCheck()
                 }}
-                className="px-4 py-2 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                className="px-4 py-2 rounded-xl bg-[#0F62FE] hover:bg-[#0353e9] text-white text-[13px] font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
               >
+                <Mic className="w-3.5 h-3.5" />
                 <span>Start Check</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -400,6 +445,22 @@ export default function AloisHomeDashboard({
           )}
         </section>
       </div>
+
+      <UploadVoiceModal
+        isOpen={showUploadModal}
+        onClose={() => {
+          setShowUploadModal(false)
+          setDroppedFile(null)
+        }}
+        initialFile={droppedFile}
+        patientName={patientName}
+        fontFamily={fontFamily}
+        onStartAnalysis={(file, task, duration) => {
+          if (onUploadVoiceFile) {
+            onUploadVoiceFile(file, task, duration)
+          }
+        }}
+      />
     </div>
   )
 }
