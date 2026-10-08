@@ -9998,10 +9998,10 @@ function SwarSanketApp({
               className="text-xs font-bold text-white tracking-wide"
               style={{ fontFamily: F.display }}
             >
-              SwarSanket Mobile
+              SwarSanket
             </div>
             <div className="text-[10px] text-[#38bdf8] font-medium">
-              SIH 2026 AI Early Screening
+              Early Screening for Alzheimer's
             </div>
           </div>
         </div>
