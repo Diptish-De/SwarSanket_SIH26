@@ -19,14 +19,20 @@ const TASK_LABEL: Record<BatteryTaskRecord["task"], string> = {
   phonation: "Sustained vowel /a/",
 }
 
-const TASK_UNIT: Record<BatteryTaskRecord["task"], (
-  r: BatteryTaskRecord,
-) => string> = {
-  fluency: (r) => (r.score === null ? "—" : `${r.score} animals`),
+/**
+ * The verdict for each task, without the raw count.
+ *
+ * The count was the headline, which made a transcription failure read as a
+ * clinical finding: a mis-heard word list scores zero animals, and "0 animals"
+ * in bold is indistinguishable from someone who genuinely named none. Whether
+ * the task sits inside its published range is the part that is meaningful; the
+ * count and the matched words are still in the detail line below.
+ */
 
-  recall: (r) => (r.score === null ? "—" : `${r.score} of 5 words`),
+const TASK_VERDICT = (r: BatteryTaskRecord): string => {
+  if (!r.scored || r.flag === null) return "not scored"
 
-  phonation: (r) => (r.score === null ? "—" : `${r.score.toFixed(1)} s held`),
+  return r.flag ? "below typical range" : "typical range"
 }
 
 const TASK_RANGE: Record<BatteryTaskRecord["task"], string> = {
@@ -173,7 +179,7 @@ export default function BatteryCard({
                     {TASK_LABEL[r.task]}
                   </span>
                   <span
-                    className={`text-xs font-bold tabular-nums shrink-0 ${
+                    className={`text-xs font-bold shrink-0 ${
                       ok
                         ? "text-emerald-700"
                         : below
@@ -182,7 +188,7 @@ export default function BatteryCard({
                     }`}
                   >
                     {r.status === "completed"
-                      ? TASK_UNIT[r.task](r)
+                      ? TASK_VERDICT(r)
                       : r.status === "pending"
                         ? "scoring…"
                         : "—"}

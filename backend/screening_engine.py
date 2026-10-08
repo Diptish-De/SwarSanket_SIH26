@@ -427,6 +427,13 @@ def transcribe_for_task(
         beam_size=5,
         word_timestamps=True,
         vad_filter=True,
+        # Each window is decoded on its own. Carrying the previous text forward
+        # is what makes Whisper fall into a repetition loop on sparse audio: a
+        # recorded word list came back as "I got a ticket from the police to
+        # check in. I got a ticket from the police to the police." A fluency or
+        # recall task is exactly that shape, single words separated by pauses,
+        # so there is no running sentence for the context to help with anyway.
+        condition_on_previous_text=False,
     )
     words_list: List[Dict[str, Any]] = []
     transcript_parts: List[str] = []
@@ -496,6 +503,8 @@ def run_screening_pipeline(
             beam_size=5,
             word_timestamps=True,
             vad_filter=True,
+            # See transcribe_for_task: stops the repetition loop on word lists.
+            condition_on_previous_text=False,
         )
 
         words_list = []
