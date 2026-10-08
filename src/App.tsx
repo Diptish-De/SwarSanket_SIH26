@@ -107,6 +107,8 @@ import {
   type AnalysisStep,
   type JobTransport,
   type TaskJobResponse,
+  type ScreeningJobHandle,
+  type ScreeningJobProgress,
 } from "./services/screeningJob"
 
 import type { BatteryTaskRecord } from "./types"
@@ -4200,6 +4202,10 @@ function SwarSanketApp({
 
   const pictureDurationRef = useRef<number | null>(null)
 
+  // The picture job, submitted as soon as its recording is reviewed. It is
+  // the one the person waits for, so it must not queue behind the battery.
+  const pictureJobRef = useRef<Promise<ScreeningJobHandle> | null>(null)
+
   const batteryJobsRef =
     useRef<Partial<Record<BatteryTaskRecord["task"], Promise<BatteryTaskRecord>>>>(
       {},
@@ -4515,10 +4521,60 @@ function SwarSanketApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingSecs, isRecording, recordingContext])
 
+  const buildScreeningParams = () =>
+    patientId
+      ? {
+          patientId,
+
+          username: patientProfile.username,
+
+          fullName: patientProfile.fullName || userName,
+
+          age: Number.isFinite(Number(patientProfile.age))
+            ? Number(patientProfile.age)
+            : userAge,
+
+          gender: patientProfile.gender,
+
+          phone: patientProfile.phone,
+
+          caregiverName: patientProfile.caregiverName,
+
+          caregiverPhone: patientProfile.caregiverPhone,
+
+          caregiverEmail: patientProfile.caregiverEmail,
+        }
+      : undefined
+
+  /**
+   * Starts the model's screening the moment its clip is reviewed.
+   *
+   * Nothing is awaited here: the handle is kept and followed later from the
+   * processing screen. The point is purely queue position. One worker runs the
+   * jobs in the order they arrive, and this one is recorded first, so sending
+   * it first means it is usually scored before the person has finished the
+   * fluency and recall tasks.
+   */
+  const queuePictureJob = (blob: Blob | null) => {
+    if (!blob || blob.size < 1000) return
+
+    pictureJobRef.current = submitScreeningJob(blob, "voice_check.webm", {
+      params: buildScreeningParams(),
+    })
+
+    // A rejection here is handled where the job is awaited; attaching a no-op
+    // keeps it from surfacing as an unhandled rejection in the meantime.
+    pictureJobRef.current.catch(() => undefined)
+
+    console.log("[SwarSanket] Picture task queued ahead of the battery.")
+  }
+
   const startBattery = () => {
     pictureBlobRef.current = null
 
     pictureDurationRef.current = null
+
+    pictureJobRef.current = null
 
     batteryJobsRef.current = {}
 
@@ -4792,39 +4848,30 @@ function SwarSanketApp({
           ? audioBlob.name
           : "voice_check.webm"
 
-      const apiResult = await runScreeningJob(audioBlob, uploadFilename, {
-        onProgress: (p) => {
-          setAnalysisStep(p.stage)
+      const onProgress = (p: ScreeningJobProgress) => {
+        setAnalysisStep(p.stage)
 
-          setJobQueuePosition(p.queuePosition)
+        setJobQueuePosition(p.queuePosition)
 
-          setJobTransport(p.transport)
-        },
+        setJobTransport(p.transport)
+      }
 
-        params: patientId
-          ? {
-              patientId,
+      // Already submitted when the clip was reviewed, so by now it has usually
+      // been scored. Uploaded files and retries have no such job and submit
+      // here as before.
+      const pending = pictureJobRef.current
 
-              username: patientProfile.username,
+      pictureJobRef.current = null
 
-              fullName: patientProfile.fullName || userName,
+      const apiResult = pending
+        ? await followScreeningJob<ScreeningApiResponse>(await pending, {
+            onProgress,
+          })
+        : await runScreeningJob(audioBlob, uploadFilename, {
+            onProgress,
 
-              age: Number.isFinite(Number(patientProfile.age))
-                ? Number(patientProfile.age)
-                : userAge,
-
-              gender: patientProfile.gender,
-
-              phone: patientProfile.phone,
-
-              caregiverName: patientProfile.caregiverName,
-
-              caregiverPhone: patientProfile.caregiverPhone,
-
-              caregiverEmail: patientProfile.caregiverEmail,
-            }
-          : undefined,
-      })
+            params: buildScreeningParams(),
+          })
 
       // The standardized tasks were queued on the same worker before this
 
@@ -6164,6 +6211,8 @@ function SwarSanketApp({
                       pictureDurationRef.current =
                         getLastAudioRecordingResult()?.durationSeconds ??
                         recordingSecs
+
+                      queuePictureJob(reviewedBlob)
                     } else {
                       queueBatteryTask(recordingContext, reviewedBlob)
                     }
