@@ -1,4 +1,21 @@
+// ─── Browser Supabase client ─────────────────────────────────────────────────
+//
+// Everything in this file ships to the browser, so it may only ever hold the
+// anon key. The anon key is designed to be public: row access is governed by
+// Row Level Security, not by keeping the key secret.
+//
+// The service-role key is the opposite. It bypasses RLS entirely and grants
+// full read, write and delete over every table in the project. It used to live
+// in this file, which put it in the deployed JavaScript bundle where anyone
+// could read it out of DevTools. Account creation needs that level of access,
+// so it now happens on the backend, which is the only place that key belongs.
+//
+// If you are about to add a VITE_SUPABASE_SERVICE_ROLE_KEY, stop. Add a backend
+// endpoint instead.
+
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
+
+import { getApiBaseUrl } from "./apiConfig"
 
 const DEFAULT_SUPABASE_URL = "https://plfguopprxbfrkgwxsgf.supabase.co"
 
@@ -12,13 +29,6 @@ const supabaseUrl =
 const supabaseAnonKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined ||
   DEFAULT_SUPABASE_ANON_KEY
-
-export const DEFAULT_SUPABASE_SERVICE_ROLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsZmd1b3BwcnhiZnJrZ3d4c2dmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4OTIwODA0NCwiZXhwIjoyMTA0Nzg0MDQ0fQ.iw_zHks4qrXPnslsgkUzWDHBaYKXWXVZl1ZqOzl39AA"
-
-const supabaseServiceKey =
-  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined ||
-  DEFAULT_SUPABASE_SERVICE_ROLE_KEY
 
 export const supabase: SupabaseClient = createClient(
   supabaseUrl,
@@ -50,10 +60,40 @@ export async function getSupabaseAccessToken(): Promise<string | null> {
   return session?.access_token ?? null
 }
 
+/**
+ * The login address derived from a phone number.
+ *
+ * Patients sign in with a WhatsApp number, but Supabase Auth wants an email, so
+ * the last ten digits become one. Derived identically on the backend, in
+ * `register_patient_user`, and the two must not drift.
+ */
+
+export function virtualEmailForPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "")
+
+  return `${digits.slice(-10) || digits}@swarsanket.app`
+}
+
 export interface RegisteredUserResult {
   email: string
+
   userId: string
 }
+
+/**
+ * Creates the patient's account through the backend.
+ *
+ * The account has to be created already confirmed, because the email address is
+ * synthesised from a phone number and no confirmation link could ever be
+ * followed. Only the service role can do that, so only the backend can: this
+ * posts to `/api/auth/register`, which calls the Supabase admin API server-side
+ * and returns the login address to sign in with.
+ *
+ * Throws on failure rather than returning an empty id. Swallowing the error
+ * here is what produced the misleading "Invalid login credentials" on the
+ * registration screen: the account had never been created, and the sign-in that
+ * followed was being blamed for it.
+ */
 
 export async function registerVerifiedSupabaseUser(params: {
   fullName: string
@@ -64,114 +104,68 @@ export async function registerVerifiedSupabaseUser(params: {
   caregiverName?: string
   caregiverPhone?: string
 }): Promise<RegisteredUserResult> {
-  const digits = params.phone.replace(/\D/g, "")
+  const virtualEmail = virtualEmailForPhone(params.phone)
 
-  const phoneKey = digits.slice(-10) || digits
-
-  const phoneWithCode = digits.length === 10 ? `91${digits}` : digits
-
-  const virtualEmail = `${phoneKey}@swarsanket.app`
-
-  const payload = {
-    phone: phoneWithCode,
-
-    phone_confirm: true,
-
-    email: virtualEmail,
-
-    email_confirm: true,
-
-    password: params.password,
-
-    user_metadata: {
-      full_name: params.fullName,
-
-      username: params.fullName,
-
-      phone: params.phone,
-
-      clean_phone: phoneKey,
-
-      age: params.age,
-
-      gender: params.gender,
-
-      caregiver_name: params.caregiverName,
-
-      caregiver_phone: params.caregiverPhone,
-    },
-  }
+  let response: Response
 
   try {
-    const response = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+    response = await fetch(`${getApiBaseUrl()}/api/auth/register`, {
       method: "POST",
 
-      headers: {
-        apikey: supabaseServiceKey,
+      headers: { "Content-Type": "application/json" },
 
-        Authorization: `Bearer ${supabaseServiceKey}`,
+      body: JSON.stringify({
+        full_name: params.fullName,
 
-        "Content-Type": "application/json",
-      },
+        phone: params.phone,
 
-      body: JSON.stringify(payload),
+        password: params.password,
+
+        age: params.age,
+
+        gender: params.gender,
+
+        caregiver_name: params.caregiverName,
+
+        caregiver_phone: params.caregiverPhone,
+      }),
     })
-
-    if (response.ok) {
-      const data = await response.json()
-
-      return { email: virtualEmail, userId: data.id || "" }
-    }
-
-    // If already registered, update credentials so the chosen password works
-
-    const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-      headers: {
-        apikey: supabaseServiceKey,
-
-        Authorization: `Bearer ${supabaseServiceKey}`,
-      },
-    })
-
-    if (listRes.ok) {
-      const usersData = await listRes.json()
-
-      const existingUser = (usersData.users || []).find(
-        (u: { email?: string }) => u.email === virtualEmail,
-      )
-
-      if (existingUser) {
-        await fetch(`${supabaseUrl}/auth/v1/admin/users/${existingUser.id}`, {
-          method: "PUT",
-
-          headers: {
-            apikey: supabaseServiceKey,
-
-            Authorization: `Bearer ${supabaseServiceKey}`,
-
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            phone: phoneWithCode,
-
-            phone_confirm: true,
-
-            password: params.password,
-
-            user_metadata: payload.user_metadata,
-          }),
-        })
-
-        return { email: virtualEmail, userId: existingUser.id }
-      }
-    }
-  } catch (err) {
-    console.warn("Direct admin registration fallback:", err)
+  } catch {
+    throw new Error(
+      "Could not reach the registration server. Check your connection and try again.",
+    )
   }
 
-  return { email: virtualEmail, userId: "" }
+  if (!response.ok) {
+    let detail = `Registration failed (HTTP ${response.status}).`
+
+    try {
+      const body = await response.json()
+
+      if (body?.detail) detail = String(body.detail)
+    } catch {
+      // keep the status-code message
+    }
+
+    throw new Error(detail)
+  }
+
+  const data = await response.json()
+
+  return {
+    email: data.email || virtualEmail,
+
+    userId: data.user_id || "",
+  }
 }
+
+/**
+ * Resolves what someone typed into the login address to authenticate with.
+ *
+ * An email or a phone number resolves here without talking to anyone, because
+ * the mapping is a pure function. Only a name needs a directory search, and
+ * that requires listing users, which is service-role work: the backend does it.
+ */
 
 export async function lookupVerifiedSupabaseUser(
   identifier: string,
@@ -193,70 +187,35 @@ export async function lookupVerifiedSupabaseUser(
   const digits = raw.replace(/\D/g, "")
 
   if (digits.length >= 10) {
-    return {
-      found: true,
-
-      email: `${digits.slice(-10)}@swarsanket.app`,
-
-      phone: digits,
-    }
+    return { found: true, email: virtualEmailForPhone(digits), phone: digits }
   }
 
   try {
-    const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-      headers: {
-        apikey: supabaseServiceKey,
+    const response = await fetch(`${getApiBaseUrl()}/api/auth/lookup`, {
+      method: "POST",
 
-        Authorization: `Bearer ${supabaseServiceKey}`,
-      },
+      headers: { "Content-Type": "application/json" },
+
+      body: JSON.stringify({ identifier: raw }),
     })
 
-    if (listRes.ok) {
-      const usersData = await listRes.json()
+    if (response.ok) {
+      const data = await response.json()
 
-      for (const u of usersData.users || []) {
-        const meta = u.user_metadata || {}
+      if (data?.found && data?.email) {
+        return {
+          found: true,
 
-        const fn = String(meta.full_name || "")
+          email: data.email,
 
-          .trim()
+          fullName: data.full_name ?? undefined,
 
-          .toLowerCase()
-
-        const ph = String(meta.phone || "")
-
-          .trim()
-
-          .toLowerCase()
-
-        const cleanP = String(meta.clean_phone || "")
-
-          .trim()
-
-          .toLowerCase()
-
-        const target = raw.toLowerCase()
-
-        if (
-          target === fn ||
-          target === ph ||
-          target === cleanP ||
-          (target.length >= 3 && fn.includes(target))
-        ) {
-          return {
-            found: true,
-
-            email: u.email,
-
-            fullName: meta.full_name,
-
-            phone: meta.phone,
-          }
+          phone: data.phone ?? undefined,
         }
       }
     }
   } catch {
-    // fallback
+    // Fall through to the digits guess below.
   }
 
   if (digits) {

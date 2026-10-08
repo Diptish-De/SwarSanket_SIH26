@@ -349,7 +349,10 @@ export default function AloisAuthContainer({
         // Popup blocker fallback
       }
 
-      // Step 1: Register or sync user directly in Supabase Cloud
+      // Step 1: create the account. This goes through the backend, which holds
+      // the service-role key; the browser must never have it. Throws if the
+      // account could not be created, so the sign-in below is only attempted
+      // when there is something to sign in to.
 
       const regResult = await registerVerifiedSupabaseUser({
         fullName: formData.fullName.trim(),
@@ -362,26 +365,6 @@ export default function AloisAuthContainer({
 
         gender: formData.gender,
       })
-
-      // Also notify backend in background if available
-
-      fetch(`${getApiBaseUrl()}/api/auth/register`, {
-        method: "POST",
-
-        headers: { "Content-Type": "application/json" },
-
-        body: JSON.stringify({
-          full_name: formData.fullName.trim(),
-
-          phone: formData.phone.trim(),
-
-          password: password.trim(),
-
-          age: Number(formData.age),
-
-          gender: formData.gender,
-        }),
-      }).catch(() => {})
 
       // Step 2: Sign in with Supabase Auth to obtain a session
 
